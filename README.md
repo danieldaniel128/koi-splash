@@ -18,6 +18,9 @@ npm run build    # static web build in dist/
 ## Stack & assets
 
 - TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
+- The pond is a custom GLSL shader (`src/view/shaders/water.frag`): drifting caustic light from a cellular pattern,
+  plus ripple rings from swaps and matches that bend the light. It's one quad, computed per pixel on the GPU, with
+  no textures.
 - ESLint + Prettier, Vitest, a pre-commit hook
 - Koi art: `src/art/koiBank.ts`, a data-driven koi painter. Each variety is plain data and gets baked into a texture once, so the board is just sprites.
 
@@ -105,6 +108,7 @@ I used Claude (AI) as a helper during the project. So far:
 - `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
 - `tests/`: AI-written.
+- The water shader (`src/view/shaders/`, `src/view/PondWater.ts`): AI-written; I picked the look and tuned it.
 - `src/view/` (board rendering, swipe input, animations, HUD, end card), `src/game/` (the game scene) and
   `src/config/`: AI-written, step by step from my plan,
   reviewed and tested by me on desktop and phone.
