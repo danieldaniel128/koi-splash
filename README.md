@@ -34,6 +34,25 @@ I wanted it this way for two reasons. First, the rules can be tested without a b
 can't drift away from the real board, because the view never decides anything; it only animates what it's told.
 Effects and sound listen on an event bus, so I can add juice without touching the game logic.
 
+## Code standards
+
+I'd rather have the linter enforce the rules than rely on remembering them, so most of these fail the build:
+
+- **Naming:** camelCase for variables and functions, PascalCase for types and classes, UPPER_CASE only for top-level
+  constants.
+- **Layout:** the public API sits at the top of a file, private helpers below it. In classes: fields, constructor,
+  public methods, then private ones.
+- **Size:** functions over 40 lines, nesting deeper than 3 and high complexity are flagged, so long functions get
+  split into named steps.
+- **Module boundaries:** `src/model` and `src/core` can't import Pixi, GSAP or any presentation folder. It works
+  like an assembly definition: the rules stay engine-free and testable.
+- **No singletons:** objects get what they need through their constructor, and `main.ts` is the one place that
+  wires everything together.
+- **Errors:** try/catch only at the edges where things can really fail (boot and asset loading, reading the save,
+  audio), not around everything.
+- **Assets:** the koi are baked into textures once at startup and reused, never rebuilt mid-game.
+- **Patterns only where they pay off:** each one used here is explained below or in the code where it lives.
+
 ## Tests and why I have them
 
 `tests/rules.test.ts` was written by AI. I asked for it because the match-3 rules are the one part where a bug is
@@ -62,6 +81,7 @@ I used Claude (AI) as a helper during the project. So far:
 - `tests/rules.test.ts`: AI-written.
 - Run-time notes in `src/model/rules.ts`: I used AI as a second opinion on performance, to go over each method's
   cost and decide where a note is worth having (the non-obvious ones, not every getter).
+- Lint rules for the code standards above: I decided the standards, AI helped me turn them into ESLint config.
 - This README: I used AI to help me write it.
 
 ## Next steps

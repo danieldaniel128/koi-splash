@@ -112,24 +112,37 @@ function safeKind(board: Board, cell: Cell, kinds: number, rng: Random): Kind {
 
 /** Runs of 3+ along every row ('row') or every column ('col'). */
 function scanRuns(board: Board, direction: Match['direction']): Match[] {
-  const lines = direction === 'row' ? board.rows : board.cols;
-  const length = direction === 'row' ? board.cols : board.rows;
-  const at = (line: number, i: number): Cell =>
-    direction === 'row' ? { col: i, row: line } : { col: line, row: i };
-
+  const lineCount = direction === 'row' ? board.rows : board.cols;
   const matches: Match[] = [];
-  for (let line = 0; line < lines; line++) {
-    let start = 0;
-    for (let i = 1; i <= length; i++) {
-      const kind = board.kindAt(at(line, start));
-      if (i < length && kind !== null && board.kindAt(at(line, i)) === kind) continue;
-      if (kind !== null && i - start >= MIN_RUN) {
-        const cells: Cell[] = [];
-        for (let k = start; k < i; k++) cells.push(at(line, k));
-        matches.push({ kind, cells, direction });
-      }
-      start = i;
+  for (let line = 0; line < lineCount; line++) {
+    matches.push(...runsInLine(board, lineCells(board, direction, line), direction));
+  }
+  return matches;
+}
+
+/** The cells of one row or column, in order. */
+function lineCells(board: Board, direction: Match['direction'], line: number): Cell[] {
+  const length = direction === 'row' ? board.cols : board.rows;
+  return Array.from({ length }, (_, i) =>
+    direction === 'row' ? { col: i, row: line } : { col: line, row: i },
+  );
+}
+
+/** Runs of 3+ same-kind pieces along one line, given its cells in order. */
+function runsInLine(board: Board, cells: readonly Cell[], direction: Match['direction']): Match[] {
+  const kinds = cells.map((cell) => board.kindAt(cell));
+  const matches: Match[] = [];
+  let start = 0;
+  for (let i = 1; i <= cells.length; i++) {
+    const runKind = kinds[start] ?? null;
+    const runContinues = i < cells.length && runKind !== null && kinds[i] === runKind;
+    if (runContinues) continue;
+
+    const runLength = i - start;
+    if (runKind !== null && runLength >= MIN_RUN) {
+      matches.push({ kind: runKind, cells: cells.slice(start, i), direction });
     }
+    start = i;
   }
   return matches;
 }
