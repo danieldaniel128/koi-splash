@@ -60,6 +60,8 @@ I used Claude (AI) as a helper during the project. So far:
 - `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
 - `tests/rules.test.ts`: AI-written.
+- Run-time notes in `src/model/rules.ts`: I used AI as a second opinion on performance, to go over each method's
+  cost and decide where a note is worth having (the non-obvious ones, not every getter).
 - This README: I used AI to help me write it.
 
 ## Next steps

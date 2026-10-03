@@ -14,19 +14,27 @@ const MIN_RUN = 3;
 /** Safety net: a cascade this long means a bug, not a lucky player. */
 const MAX_CASCADE = 50;
 
-/** A full board with no ready-made matches and at least one valid move. */
+// Run times below use N = cols * rows (63 cells on the 7 x 9 board).
+
+/** A full board with no ready-made matches and at least one valid move. O(N) per try, see fillSafely. */
 export function createBoard(spec: BoardSpec, rng: Random): Board {
   const board = new Board(spec.cols, spec.rows);
   fillSafely(board, spec.kinds, rng);
   return board;
 }
 
-/** Every straight run of 3 or more same-kind pieces (a T or L shape gives one row match and one column match). */
+/**
+ * Every straight run of 3 or more same-kind pieces (a T or L shape gives one row match and one column match).
+ * O(N): one pass over the rows and one over the columns.
+ */
 export function findMatches(board: Board): Match[] {
   return [...scanRuns(board, 'row'), ...scanRuns(board, 'col')];
 }
 
-/** True when swapping these two cells would make at least one match. Leaves the board unchanged. */
+/**
+ * True when swapping these two cells would make at least one match. Leaves the board unchanged.
+ * O(cols + rows): only the lines through the two cells are checked, not the whole board.
+ */
 export function swapMakesMatch(board: Board, a: Cell, b: Cell): boolean {
   if (!isAdjacent(a, b) || !board.get(a) || !board.get(b)) return false;
   board.swap(a, b);
@@ -35,7 +43,10 @@ export function swapMakesMatch(board: Board, a: Cell, b: Cell): boolean {
   return result;
 }
 
-/** One valid swap, or null when the board is stuck. Also feeds the idle hint. */
+/**
+ * One valid swap, or null when the board is stuck. Also feeds the idle hint.
+ * O(N * (cols + rows)) worst case: tries every right and down swap. About 63 x 16 checks, fine after each turn.
+ */
 export function findMove(board: Board): [Cell, Cell] | null {
   for (const cell of board.cells()) {
     const right = { col: cell.col + 1, row: cell.row };
@@ -53,6 +64,7 @@ export function hasAnyMove(board: Board): boolean {
 /**
  * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then clears, drops and refills
  * until nothing matches, and returns every round as data so the view can animate it step by step.
+ * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
 export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Random): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
@@ -75,7 +87,10 @@ export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Ra
 
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Fills every cell with new pieces, avoiding ready-made matches, until the board has at least one move. */
+/**
+ * Fills every cell with new pieces, avoiding ready-made matches, until the board has at least one move.
+ * O(N) per try plus a findMove check. Almost always one try, but there is no fixed upper bound on retries.
+ */
 function fillSafely(board: Board, kinds: number, rng: Random): void {
   do {
     for (const cell of board.cells()) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
@@ -130,6 +145,8 @@ function runThrough(board: Board, cell: Cell): boolean {
   };
   return reach(-1, 0) + reach(1, 0) + 1 >= MIN_RUN || reach(0, -1) + reach(0, 1) + 1 >= MIN_RUN;
 }
+
+// clearMatches, applyGravity and refill are each O(N).
 
 function clearMatches(board: Board, matches: readonly Match[]): Cleared[] {
   const cleared: Cleared[] = [];
