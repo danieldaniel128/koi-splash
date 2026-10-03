@@ -10,6 +10,7 @@ import { GameScene } from './game/GameScene';
 import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
 import { Hud } from './view/Hud';
+import { ResultOverlay } from './view/ResultOverlay';
 import { KoiTextures } from './view/KoiTextures';
 import { SwipeInput } from './view/SwipeInput';
 
@@ -26,6 +27,7 @@ async function boot(host: HTMLElement): Promise<void> {
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
   const hud = new Hud(boardWidth);
   hud.position.set(boardLeft, HUD.top);
+  const result = new ResultOverlay(STAGE.width, STAGE.height);
 
   const scene = new GameScene({
     spec: BOARD,
@@ -34,11 +36,15 @@ async function boot(host: HTMLElement): Promise<void> {
     view: boardView,
     animator: new BoardAnimator(boardView, BOARD.cellSize),
     status: hud,
+    result,
+  });
+  result.on('restart', () => {
+    scene.restart();
   });
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
 
   const stage = new Container();
-  stage.addChild(hud, boardView);
+  stage.addChild(hud, boardView, result);
   app.stage.addChild(stage);
 
   const fit = (): void => {

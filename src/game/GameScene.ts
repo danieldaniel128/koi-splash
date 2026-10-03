@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createBoard, trySwap } from '../model/rules';
+import { createBoard, resetBoard, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
 import type { Cell } from '../model/types';
@@ -27,11 +27,19 @@ const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'resolving', to: 'won', when: (level) => level.score >= level.targetScore },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
+  { from: 'won', to: 'idle' }, // play again
+  { from: 'lost', to: 'idle' },
 ];
 
 /** The display side the scene drives. Implemented by the HUD view. */
 export interface StatusDisplay {
   update(status: GameStatus): void;
+}
+
+/** The end-of-level card. Implemented by the result overlay view. */
+export interface ResultDisplay {
+  show(outcome: 'won' | 'lost', status: GameStatus): void;
+  hide(): void;
 }
 
 export interface LevelRules {
@@ -47,6 +55,7 @@ export interface GameSceneDeps {
   readonly view: BoardView;
   readonly animator: BoardAnimator;
   readonly status: StatusDisplay;
+  readonly result: ResultDisplay;
 }
 
 /**
@@ -62,7 +71,18 @@ export class GameScene {
   constructor(private readonly deps: GameSceneDeps) {
     this.board = createBoard(deps.spec, deps.rng);
     this.level = { movesLeft: deps.level.moves, score: 0, targetScore: deps.level.targetScore };
-    this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level);
+    this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
+      won: {
+        onEnter: (level) => {
+          deps.result.show('won', level);
+        },
+      },
+      lost: {
+        onEnter: (level) => {
+          deps.result.show('lost', level);
+        },
+      },
+    });
     deps.view.render(this.board);
     deps.status.update(this.level);
   }
@@ -72,6 +92,18 @@ export class GameScene {
     if (!this.turn.can('swapping')) return;
     void this.playTurn(from, to);
   };
+
+  /** Starts the level over with a fresh board. Only allowed once the level has ended. */
+  restart(): void {
+    if (!this.turn.is('won') && !this.turn.is('lost')) return;
+    resetBoard(this.board, this.deps.spec, this.deps.rng);
+    this.level.movesLeft = this.deps.level.moves;
+    this.level.score = 0;
+    this.deps.view.render(this.board);
+    this.deps.status.update(this.level);
+    this.deps.result.hide();
+    this.turn.transition('idle');
+  }
 
   private async playTurn(from: Cell, to: Cell): Promise<void> {
     const pair = this.placedPair(from, to);

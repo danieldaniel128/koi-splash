@@ -24,6 +24,14 @@ export function createBoard(spec: BoardSpec, rng: Random): Board {
 }
 
 /**
+ * Gives an existing board a fresh layout (for playing the level again). Piece ids keep counting up from where they
+ * were, so the view never mistakes a new koi for an old sprite with the same id.
+ */
+export function resetBoard(board: Board, spec: BoardSpec, rng: Random): void {
+  fillSafely(board, spec.kinds, rng);
+}
+
+/**
  * Every straight run of 3 or more same-kind pieces (a T or L shape gives one row match and one column match).
  * O(N): one pass over the rows and one over the columns.
  */
