@@ -1,31 +1,31 @@
 import { Application, Container } from 'pixi.js';
 import { BOARD } from './config/board';
+import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
 import { BOARD_LAYOUT, STAGE } from './config/layout';
 import { Random } from './core/Random';
-import { createBoard } from './model/rules';
+import { createBoard, trySwap } from './model/rules';
 import { BoardView } from './view/BoardView';
 import { KoiTextures } from './view/KoiTextures';
+import { SwipeInput } from './view/SwipeInput';
 
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
 async function boot(host: HTMLElement): Promise<void> {
-  const app = new Application();
-  await app.init({
-    resizeTo: host,
-    background: STAGE.background,
-    antialias: true,
-    resolution: window.devicePixelRatio,
-    autoDensity: true,
-  });
-  host.appendChild(app.canvas);
+  const app = await createApp(host);
 
   const koiSize = BOARD.cellSize * KOI_LOOK.scale;
   const textures = new KoiTextures(KOI_SET, koiSize, app.renderer.resolution * KOI_LOOK.bakeResolution);
-  const board = createBoard(BOARD, new Random());
+  const rng = new Random();
+  const board = createBoard(BOARD, rng);
 
-  const boardView = new BoardView(textures, BOARD.cellSize, koiSize);
+  const boardView = new BoardView(textures, { ...BOARD, koiSize });
   boardView.position.set((STAGE.width - BOARD.cols * BOARD.cellSize) / 2, BOARD_LAYOUT.top);
   boardView.render(board);
+
+  new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, (from, to) => {
+    const result = trySwap(board, from, to, BOARD, rng);
+    if (result.valid) boardView.render(board); // no animation yet: jump straight to the settled board
+  });
 
   const stage = new Container();
   stage.addChild(boardView);
@@ -36,6 +36,19 @@ async function boot(host: HTMLElement): Promise<void> {
   };
   fit();
   app.renderer.on('resize', fit);
+}
+
+async function createApp(host: HTMLElement): Promise<Application> {
+  const app = new Application();
+  await app.init({
+    resizeTo: host,
+    background: STAGE.background,
+    antialias: true,
+    resolution: window.devicePixelRatio,
+    autoDensity: true,
+  });
+  host.appendChild(app.canvas);
+  return app;
 }
 
 /** Scales the logical stage to fit the window and centres it (letterboxed, never stretched). */
