@@ -59,11 +59,24 @@ async function boot(host: HTMLElement): Promise<void> {
   putUnderWater(app, boardView, pond);
   stage.addChild(pond.bank, pond.bottom, boardView, pond.surface, splashes, createScenery(app), hud, result);
   app.stage.addChild(stage);
+  keepFitted(app, stage, boardView, pond);
+}
 
+/**
+ * Fits the stage to the window now and on every resize, and tells the pond how the stage maps onto the screen
+ * (the koi filter's position, line widths, the bank's cached painting).
+ */
+function keepFitted(app: Application, stage: Container, boardView: BoardView, pond: PondWater): void {
   const fit = (): void => {
     fitStage(stage, app.screen.width, app.screen.height);
     const areaOrigin = boardView.toGlobal({ x: -WATER.koiReach, y: -WATER.koiReach });
-    pond.mapToScreen(areaOrigin, stage.position, stage.scale.x, app.renderer.resolution);
+    pond.mapToScreen(areaOrigin, {
+      offset: stage.position,
+      scale: stage.scale.x,
+      resolution: app.renderer.resolution,
+      screenWidth: app.screen.width,
+      screenHeight: app.screen.height,
+    });
   };
   fit();
   app.renderer.on('resize', fit);

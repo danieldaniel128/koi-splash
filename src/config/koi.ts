@@ -12,7 +12,7 @@ export const KOI_LOOK = {
   /** Bake textures at this multiple of the screen resolution, so they stay sharp when the stage is scaled up. */
   bakeResolution: 2,
   /** Poses in one baked tail beat, and how far the tail swings in them (1 = the painter's widest). */
-  swimFrames: 10,
+  swimFrames: 12,
   tailSwing: 0.55,
 } as const;
 

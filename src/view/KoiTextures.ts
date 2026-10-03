@@ -26,7 +26,7 @@ export class KoiTextures {
   private readonly shadows: Texture[];
 
   /**
-   * O(kinds x frames) canvas paints plus GPU uploads: the heavy part of boot, done once (5 kinds x 10 poses take
+   * O(kinds x frames) canvas paints plus GPU uploads: the heavy part of boot, done once (5 kinds x 12 poses take
    * a few tens of ms on a phone).
    */
   constructor(varietyIds: readonly string[], bake: KoiBake) {
