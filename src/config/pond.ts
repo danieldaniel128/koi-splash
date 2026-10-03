@@ -39,17 +39,32 @@ export const POND = {
 
   /**
    * Stones, lily pads and reeds at the corners and on the open water, never over the board. Stones and pads also
-   * shape the water: ripples stop at them and the foam outlines them. At most 8 stones and pads (MAX_PROPS).
+   * shape the water: ripples stop at them and the foam outlines them. At most 8 stones and pads (MAX_PROPS). Reeds
+   * fan out toward their `turn` (0 = up).
    */
   props: [
-    { kind: 'stone', at: [-2, 106], radius: [34, 22], turn: -0.25, seed: 11 },
-    { kind: 'stone', at: [42, 98], radius: [14, 9], turn: 0.5, seed: 12 },
-    { kind: 'reeds', at: [372, 90], radius: [50, 50], turn: 0, seed: 21 },
-    { kind: 'stone', at: [348, 114], radius: [13, 8], turn: 0.3, seed: 13 },
-    { kind: 'lotus-pad', at: [46, 586], radius: [23, 23], turn: 0, seed: 31 },
-    { kind: 'pad', at: [92, 606], radius: [15, 15], turn: 0, seed: 32 },
-    { kind: 'pad', at: [176, 600], radius: [10, 10], turn: 0, seed: 34 },
-    { kind: 'stone', at: [352, 616], radius: [34, 22], turn: 0.18, seed: 14 },
-    { kind: 'reeds', at: [-14, 646], radius: [54, 54], turn: 0, seed: 22 },
+    { kind: 'stone', at: [-4, 108], radius: [40, 26], turn: -0.25, seed: 11 },
+    { kind: 'stone', at: [48, 98], radius: [16, 10], turn: 0.5, seed: 12 },
+    { kind: 'reeds', at: [370, 96], radius: [52, 52], turn: -1.75, seed: 21 },
+    { kind: 'stone', at: [344, 112], radius: [18, 11], turn: 0.3, seed: 13 },
+    { kind: 'lotus-pad', at: [48, 590], radius: [27, 27], turn: 0, seed: 31 },
+    { kind: 'pad', at: [100, 612], radius: [17, 17], turn: 0, seed: 32 },
+    { kind: 'pad', at: [186, 604], radius: [11, 11], turn: 0, seed: 34 },
+    { kind: 'stone', at: [352, 620], radius: [42, 27], turn: 0.18, seed: 14 },
+    { kind: 'reeds', at: [12, 672], radius: [66, 66], turn: 0.3, seed: 22 },
+    { kind: 'reeds', at: [302, 680], radius: [54, 54], turn: -0.3, seed: 23 },
   ] satisfies readonly PondProp[] as readonly PondProp[],
+
+  /** Fireflies over the bank: where each one hovers (stage px; below 640 is only seen on tall phones). */
+  fireflies: [
+    [34, 12],
+    [296, 8],
+    [150, 652],
+    [338, 640],
+    [84, 700],
+  ],
+  /** How far a firefly wanders from its spot (px), and its glow's size (px) and colour. */
+  fireflyRoam: 22,
+  fireflySize: 26,
+  firefly: '#f3f7b0',
 } as const;

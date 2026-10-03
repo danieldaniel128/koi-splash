@@ -26,9 +26,9 @@ const SHADOW_OFFSET: Pt = [-3, 5];
 const SHADOW = 'rgba(2, 8, 18, 0.5)';
 
 const STONE = { lit: '#8ea2c2', top: '#56647f', mid: '#2b364d', dark: '#121928', ink: '#060a13' } as const;
-const PAD = { rim: '#a6dcae', centre: '#4f9a63', edge: '#2a6644', vein: 'rgba(190, 235, 190, 0.35)', ink: '#0b2618' };
+const PAD = { rim: '#86c595', centre: '#4f9a63', edge: '#2a6644', vein: 'rgba(190, 235, 190, 0.35)', ink: '#0b2618' };
 const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)', heart: '#f4cf4f' } as const;
-const REED = { blade: '#173a2b', edge: 'rgba(150, 205, 170, 0.45)', head: '#5a3a22' } as const;
+const REED = { blade: '#21503a', edge: 'rgba(170, 225, 190, 0.6)', head: '#6b4528' } as const;
 
 /** Paints one prop into a fresh canvas, centred; the canvas is padded for the shadow. */
 export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement {
@@ -112,11 +112,11 @@ function paintPad(ctx: Ctx, radius: number, random: () => number, lotus: boolean
   const body = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
   body.addColorStop(0, PAD.centre);
   body.addColorStop(1, PAD.edge);
-  ctx.translate(-1.6, 1.6);
+  ctx.translate(-1.2, 1.2);
   leaf();
   ctx.fillStyle = body;
   ctx.fill();
-  ctx.translate(1.6, -1.6);
+  ctx.translate(1.2, -1.2);
   veins(ctx, radius, notch);
   ctx.restore();
   leaf();
@@ -173,10 +173,13 @@ function petal(ctx: Ctx, angle: number, length: number, width: number): void {
 
 // ---------------------------------------------------------------------------- reeds
 
-/** A clump of reeds seen from above: tapered blades fanning out from the root, two with seed heads. */
+/**
+ * A clump of reeds seen from above: tapered blades fanning out from the root (toward the top of the canvas; rotate
+ * the sprite to lean them over the water), two with seed heads.
+ */
 function paintReeds(ctx: Ctx, reach: number, random: () => number): void {
   const blades = Array.from({ length: 11 }, () => ({
-    angle: random() * TAU,
+    angle: -Math.PI / 2 + (random() - 0.5) * 2.6,
     length: reach * (0.55 + random() * 0.45),
     bend: (random() - 0.5) * 0.5,
     width: 2 + random() * 1.6,
