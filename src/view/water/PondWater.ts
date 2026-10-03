@@ -8,7 +8,7 @@ import koiRefraction from './shaders/koiRefraction.frag?raw';
 import surface from './shaders/surface.frag?raw';
 import pondBottom from './shaders/water.frag?raw';
 import vertex from './shaders/water.vert?raw';
-import { waterShapes } from './PondProps';
+import { MAX_PROPS, waterShapes } from './PondProps';
 import { WaterSim, withCommon, withWaves } from './WaterSim';
 import type { SimArea } from './WaterSim';
 
@@ -163,17 +163,17 @@ function bankArea(layout: PondLayout): SimArea {
 }
 
 /**
- * Where the water is, for the shaders (uPond, uPondShape, uProps, uPropTurns in common.glsl): the pond's outline
+ * Where the water is, for the shaders (uPond, uPondShape, uProps, uPropAxes in common.glsl): the pond's outline
  * and the stones and pads in it. Shared by the simulation and every pass, so they all agree on the shore.
  */
 function pondShape(layout: PondLayout): UniformGroup {
   const pond = pondRect(layout.board);
-  const { shapes, turns } = waterShapes(layout.props);
+  const { shapes, axes } = waterShapes(layout.props);
   return new UniformGroup({
     uPond: { value: [pond.x, pond.y, pond.width, pond.height], type: 'vec4<f32>' },
     uPondShape: { value: [POND.cornerRadius, POND.shoreWobble, POND.shoreBend], type: 'vec3<f32>' },
-    uProps: { value: shapes, type: 'vec4<f32>', size: turns.length },
-    uPropTurns: { value: turns, type: 'f32', size: turns.length },
+    uProps: { value: shapes, type: 'vec4<f32>', size: MAX_PROPS },
+    uPropAxes: { value: axes, type: 'vec2<f32>', size: MAX_PROPS },
   });
 }
 

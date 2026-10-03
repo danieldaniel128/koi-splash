@@ -6,11 +6,11 @@
 uniform vec4 uPond;
 uniform vec3 uPondShape;
 
-// stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and rotation (radians).
-// Unused slots have a zero size.
+// stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and the cosine and sine of
+// the rotation. Unused slots have a zero size.
 const int MAX_PROPS = 8;
 uniform vec4 uProps[MAX_PROPS];
-uniform float uPropTurns[MAX_PROPS];
+uniform vec2 uPropAxes[MAX_PROPS];
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -60,10 +60,9 @@ float propEdge(vec2 p) {
     for (int i = 0; i < MAX_PROPS; i++) {
         vec4 prop = uProps[i];
         if (prop.z <= 0.0) continue;
-        float c = cos(uPropTurns[i]);
-        float s = sin(uPropTurns[i]);
+        vec2 axis = uPropAxes[i];
         vec2 q = p - prop.xy;
-        q = vec2(c * q.x + s * q.y, c * q.y - s * q.x); // into the prop's own frame
+        q = vec2(axis.x * q.x + axis.y * q.y, axis.x * q.y - axis.y * q.x); // into the prop's own frame
         d = min(d, (length(q / prop.zw) - 1.0) * min(prop.z, prop.w));
     }
     return d;
@@ -72,6 +71,14 @@ float propEdge(vec2 p) {
 // Distance (px) to where the open water ends: the shore, or a stone or pad in it. Negative on the water.
 float waterEdge(vec2 p) {
     return max(pondEdge(p), -propEdge(p));
+}
+
+// Washi paper: a soft mottle plus long faint fibres, as a brightness factor around 1. Fixed to the stage, like
+// the print itself, so the whole scene reads as one sheet.
+float paper(vec2 p) {
+    float mottle = noise(p * 0.11) * 0.6 + noise(p * 0.37 + 5.0) * 0.4;
+    float fibres = smoothstep(0.78, 0.95, noise(vec2(p.x * 0.05 + p.y * 0.02, p.y * 0.7)));
+    return 0.95 + mottle * 0.08 + fibres * 0.05;
 }
 
 // Coverage (0..1) of a line `width` device px wide, for a pixel `dist` device px from its centre line. Antialiased

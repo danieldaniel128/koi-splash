@@ -46,18 +46,19 @@ float lightNet(vec2 p) {
     return max(loopLine(a), loopLine(b) * 0.6);
 }
 
-// The moon's reflection: a soft pale disc and halo with a slow shimmer, broken into strips by thin dark gaps (the
-// way ink prints draw a moon on water), and bent by every ripple that passes over it.
+// The moon's reflection, as an ink print draws it: a crisp pale disc with a soft halo, its lower part cut by thin
+// dark bands that drift down like small waves, the whole of it shimmering and bent by every ripple that passes.
 vec3 moonReflection(vec3 color, vec2 seen) {
-    seen.x += sin(seen.y * 0.7 + uTime * 1.6) * 0.8;
+    seen.x += sin(seen.y * 0.8 + uTime * 1.4) * 0.7;
     vec2 d = seen - uMoonAt.xy;
-    float r = length(d) / uMoonAt.z;
-    float disc = 1.0 - smoothstep(0.86, 1.0, r);
-    float strips = smoothstep(0.15, 0.45, abs(fract(d.y / uMoonAt.z * 2.2 + 0.25 + uTime * 0.05) - 0.5) * 2.0);
-    disc *= mix(1.0, strips, smoothstep(-0.2, 0.6, d.y / uMoonAt.z)); // whole on top, in strips below
-    float glow = (1.0 - r * 0.35) * disc;
-    float halo = exp(-max(r - 0.9, 0.0) * 1.4) * 0.16;
-    return mix(color + uMoon * halo, uMoon, clamp(glow, 0.0, 1.0) * 0.75);
+    float r = length(d);
+    float disc = clamp((uMoonAt.z - r) * uPixelRatio + 0.5, 0.0, 1.0);
+    float period = uMoonAt.z / 2.6;
+    float band = abs(fract(d.y / period - uTime * 0.15) - 0.5) * period; // px from the nearest band
+    float gaps = lineCover(band * uPixelRatio, 1.3 * uPixelRatio) * smoothstep(-0.2, 0.5, d.y / uMoonAt.z);
+    float shade = 1.0 - 0.18 * smoothstep(-0.6, 1.0, (d.y - d.x) / uMoonAt.z); // lit from the upper right
+    float halo = exp(-max(r - uMoonAt.z, 0.0) / (uMoonAt.z * 0.8)) * 0.16;
+    return mix(color + uMoon * halo, uMoon * shade, disc * (1.0 - gaps) * 0.88);
 }
 
 vec3 water(vec2 p, float edge, vec3 w) {
@@ -81,5 +82,6 @@ void main() {
         return;
     }
     vec3 color = water(p, max(edge, -propEdge(p)), waves(p)); // lighter shallows by the shore and around stones
+    color *= mix(1.0, paper(p), 0.6); // the same washi grain as the bank, a little softer under the water
     finalColor = vec4(color * inside, inside); // premultiplied alpha, as Pixi blends it
 }

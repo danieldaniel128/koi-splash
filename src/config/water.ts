@@ -19,13 +19,13 @@ export const WATER = {
   // --- koi disturbing the water (pushes are in water-height units, -1..1; radius in px)
   /** A moving koi pushes the water at its tail every this many px of travel, so the pushes line up into a wake. */
   wakeSpacing: 7,
-  wakePush: 0.04,
+  wakePush: 0.035,
   wakeRadius: 8,
   /** Speed (px/s) at which the wake is at full strength, and the strongest wake a gliding (falling) koi leaves. */
   wakeFullSpeed: 400,
   glideWake: 0.5,
   /** A tail flick: push and radius. */
-  flickPush: 0.08,
+  flickPush: 0.12,
   flickRadius: 6,
   /** Where a koi dives (a match): push and radius; a new koi surfacing pushes less. */
   divePush: 0.16,
@@ -50,17 +50,17 @@ export const WATER = {
   lightDir: [0.6, -0.8],
   /** The faint net of light loops on the bottom (caustics): colour, strength, loop size (px), line width (px). */
   lightNet: '#7cc4d6',
-  lightNetStrength: 0.13,
+  lightNetStrength: 0.1,
   lightNetSize: 80,
   lightNetWidth: 1.1,
 
   // --- ripples: drawn as thin ink lines between each crest and trough (no filled foam)
   ink: '#e3f0f2',
   /** Wave slope (height per px) where a ripple line starts to show, and where it's at full strength. */
-  rippleGate: [0.0006, 0.0035],
+  rippleGate: [0.0008, 0.004],
   /** Line width in stage px, and strength under the koi (between them) and over them (faint, so koi stay clear). */
   rippleWidth: 1.2,
-  rippleStrength: 0.85,
+  rippleStrength: 0.72,
   rippleOverKoi: 0.22,
 
   // --- surface details (over the water, never over a koi)

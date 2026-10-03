@@ -44,17 +44,18 @@ export class PondProps extends Container {
 
 /**
  * The stones and pads that sit in the water, as rotated ellipses for the shaders (uProps: centre and half size;
- * uPropTurns: rotation). Unused slots have a zero size. Reeds don't block the water.
+ * uPropAxes: cosine and sine of the rotation, worked out once here instead of per pixel). Unused slots have a zero
+ * size. Reeds don't block the water.
  */
-export function waterShapes(props: readonly PondProp[]): { shapes: Float32Array; turns: Float32Array } {
+export function waterShapes(props: readonly PondProp[]): { shapes: Float32Array; axes: Float32Array } {
   const shapes = new Float32Array(MAX_PROPS * 4);
-  const turns = new Float32Array(MAX_PROPS);
+  const axes = new Float32Array(MAX_PROPS * 2);
   props
     .filter((prop) => prop.kind !== 'reeds')
     .slice(0, MAX_PROPS)
     .forEach((prop, i) => {
       shapes.set([...prop.at, ...prop.radius], i * 4);
-      turns[i] = prop.turn;
+      axes.set([Math.cos(prop.turn), Math.sin(prop.turn)], i * 2);
     });
-  return { shapes, turns };
+  return { shapes, axes };
 }

@@ -39,7 +39,7 @@ float goldLeaf(vec2 p) {
     vec2 centre = (cell + 0.2 + 0.6 * vec2(hash(cell + 2.0), hash(cell + 5.0))) * uGoldLook.y;
     float angle = (hash(cell + 9.0) - 0.5) * 0.7;
     vec2 d = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * (p - centre);
-    float sliver = length(d / vec2(3.4, 0.8));
+    float sliver = length(d / vec2(4.6, 1.0));
     return (1.0 - smoothstep(0.6, 1.0, sliver)) * shown;
 }
 

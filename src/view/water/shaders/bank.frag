@@ -29,13 +29,6 @@ float seigaiha(vec2 p, float size) {
     return 0.0;
 }
 
-// Washi paper: a soft mottle plus long faint fibres, as a brightness factor around 1.
-float paper(vec2 p) {
-    float mottle = noise(p * 0.11) * 0.6 + noise(p * 0.37 + 5.0) * 0.4;
-    float fibres = smoothstep(0.78, 0.95, noise(vec2(p.x * 0.05 + p.y * 0.02, p.y * 0.7)));
-    return 0.95 + mottle * 0.08 + fibres * 0.05;
-}
-
 void main() {
     vec2 p = vPosition;
     float edge = pondEdge(p);
