@@ -1,33 +1,27 @@
-// The pond under the koi, stylized: clean depth bands (bright shore, mid, deep), a few big soft stones, a net of
-// soft oval light loops, crisp white ripple rings and a wobbling foam line at the shore. The waves refract all of
+// The pond under the koi, toon style: a saturated blue that lightens toward the shore, soft lighter patches that
+// drift on the water body, and crisp two-tone light where the simulated waves focus it. The waves refract all of
 // it. Around the pond, an indigo bank with a faint seigaiha (overlapping waves) pattern.
-// Waves and the pond shape come from waves.glsl, prepended to this file.
+// Waves come from waves.glsl, prepended to this file.
 
 in vec2 vPosition;
 out vec4 finalColor;
 
 uniform vec2 uSize;
-// pond rectangle (x, y, width, height) and corner radius, in stage pixels
 uniform vec4 uPond;
 uniform float uPondRadius;
-
 uniform vec3 uBank;
 uniform vec3 uBankPattern;
 uniform float uPatternSize;
 uniform vec3 uMoon;
 uniform vec2 uMoonPos;
-
 uniform vec3 uShore;
-uniform vec3 uMid;
+uniform vec3 uShallow;
 uniform vec3 uDeep;
-// where the bands change, in px from the shore: shore -> mid, mid -> deep
-uniform vec2 uBands;
-uniform vec3 uStone;
-uniform vec3 uLight;
-uniform float uLightStrength;
-uniform float uLightSpacing;
+uniform float uDepth;
+uniform float uShoreBand;
+uniform vec3 uCaustic;
+uniform float uCausticStrength;
 uniform float uRefraction;
-uniform float uRingWidth;
 
 // Seigaiha: rows of overlapping circles, each row in front of the one above, every circle drawn as rings.
 float seigaiha(vec2 p, float size) {
@@ -46,47 +40,18 @@ float seigaiha(vec2 p, float size) {
     return 0.0;
 }
 
-// The prototype's light net: one soft oval loop per grid cell, each with its own offset, size and tilt.
-float lightLoops(vec2 pos, float spacing) {
-    vec2 cell = floor(pos / spacing);
-    float light = 0.0;
+// Soft cellular patches (distance to the nearest drifting point), for the gentle light/dark mottling of toon water.
+float patches(vec2 p) {
+    vec2 cell = floor(p);
+    float nearest = 2.0;
     for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
             vec2 id = cell + vec2(float(x), float(y));
-            vec2 centre = (id + 0.5 + vec2(hash(id) - 0.5, hash(id + 17.3) - 0.5)) * spacing;
-            vec2 radii = spacing * vec2(0.4 + hash(id + 41.9) * 0.3, 0.3 + hash(id + 73.1) * 0.3);
-            float angle = hash(id + 5.7) * 3.0;
-            vec2 q = pos - centre;
-            q = vec2(cos(angle) * q.x + sin(angle) * q.y, -sin(angle) * q.x + cos(angle) * q.y);
-            float edge = abs((length(q / radii) - 1.0) * min(radii.x, radii.y));
-            light = max(light, smoothstep(1.6, 0.6, edge)); // clean line, no glow: stylized
+            vec2 point = id + 0.5 + 0.4 * sin(uTime * 0.35 + 6.2831 * vec2(hash(id), hash(id + 7.1)));
+            nearest = min(nearest, length(p - point));
         }
     }
-    return light;
-}
-
-// A few big, flat, soft-edged stones on the bottom (at most one per 90 px cell).
-float stones(vec2 p) {
-    vec2 cell = floor(p / 90.0);
-    if (hash(cell + 3.3) > 0.45) return 0.0;
-    vec2 centre = (cell + 0.3 + vec2(hash(cell), hash(cell + 8.1)) * 0.4) * 90.0;
-    vec2 radii = vec2(14.0 + hash(cell + 2.2) * 12.0, 10.0 + hash(cell + 4.4) * 8.0);
-    float d = length((p - centre) / radii);
-    return smoothstep(1.0, 0.85, d);
-}
-
-// Crisp white rings at each ripple's front.
-float rippleRings(vec2 p) {
-    float rings = 0.0;
-    for (int i = 0; i < MAX_RIPPLES; i++) {
-        vec4 r = uRipples[i];
-        float age = uTime - r.z;
-        if (r.w <= 0.0 || age < 0.0 || age > uRippleLife) continue;
-        float fromFront = abs(length(p - r.xy) - age * uRippleSpeed);
-        float fade = 1.0 - age / uRippleLife;
-        rings += smoothstep(uRingWidth, uRingWidth * 0.4, fromFront) * fade * min(r.w, 1.0);
-    }
-    return min(rings, 1.0);
+    return nearest;
 }
 
 vec3 bank(vec2 p) {
@@ -97,21 +62,21 @@ vec3 bank(vec2 p) {
 
 vec3 pond(vec2 p, float edge) {
     vec2 slope = waveSlope(p);
-    vec2 seen = p + slope * uRefraction; // where the bottom appears through the moving surface
+    vec2 seen = p + slope * uRefraction; // the water body seen through the moving surface
 
-    // depth bands with clean, slightly wobbling borders
-    float fromShore = -edge + (noise(seen * 0.04 + uTime * 0.15) - 0.5) * 6.0;
-    vec3 color = mix(uShore, uMid, smoothstep(uBands.x - 1.5, uBands.x + 1.5, fromShore));
-    color = mix(color, uDeep, smoothstep(uBands.y - 1.5, uBands.y + 1.5, fromShore));
+    float fromShore = -edge;
+    vec3 color = mix(uShallow, uDeep, smoothstep(0.0, uDepth, fromShore));
+    color = mix(uShore, color, smoothstep(uShoreBand - 2.0, uShoreBand + 2.0, fromShore)); // light shore band
+    color *= 0.93 + 0.14 * smoothstep(0.15, 0.6, patches(seen / 70.0));
 
-    color = mix(color, color * uStone, stones(seen) * 0.6);
-    color += uLight * lightLoops(seen + slope * 6.0, uLightSpacing) * uLightStrength;
-    color = mix(color, vec3(1.0), rippleRings(p) * 0.75);
-
-    // foam: a clean white line just inside the shore, wobbling with the waves
-    float foamEdge = edge + (noise(p * 0.08 + vec2(uTime * 0.4, -uTime * 0.3)) - 0.5) * 2.5;
-    float foam = smoothstep(-5.5, -4.5, foamEdge) * (1.0 - smoothstep(-2.5, -1.5, foamEdge));
-    return mix(color, vec3(0.95, 1.0, 1.0), foam * 0.85);
+    // light gathered under wave crests, posterized to two tones
+    float step = uSimArea.z / uSimSize.x;
+    float h = waterHeight(p);
+    float curvature = waterHeight(p + vec2(step, 0.0)) + waterHeight(p - vec2(step, 0.0))
+        + waterHeight(p + vec2(0.0, step)) + waterHeight(p - vec2(0.0, step)) - 4.0 * h;
+    float caustic = -curvature * uCausticStrength;
+    color = mix(color, uCaustic, smoothstep(0.45, 0.55, caustic) * 0.35 + smoothstep(0.15, 0.25, caustic) * 0.12);
+    return color;
 }
 
 void main() {

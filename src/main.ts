@@ -13,6 +13,7 @@ import { BoardView } from './view/BoardView';
 import { Hud } from './view/Hud';
 import { ResultOverlay } from './view/ResultOverlay';
 import { KoiTextures } from './view/KoiTextures';
+import { FishWake } from './view/water/FishWake';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 
@@ -48,7 +49,7 @@ async function boot(host: HTMLElement): Promise<void> {
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
 
   const stage = new Container();
-  putUnderWater(boardView, pond);
+  putUnderWater(app, boardView, pond, koiSize);
   stage.addChild(pond.bottom, boardView, pond.surface, hud, result);
   app.stage.addChild(stage);
 
@@ -61,7 +62,6 @@ async function boot(host: HTMLElement): Promise<void> {
   app.renderer.on('resize', fit);
 }
 
-/** The water behind everything, framing the board, animated by the app's clock. */
 /** The koi and their shadows, baked once at the screen's resolution. */
 function createTextures(app: Application, koiSize: number): KoiTextures {
   const resolution = app.renderer.resolution * KOI_LOOK.bakeResolution;
@@ -70,7 +70,7 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
 
 /** The water below and above the board, animated by the app's clock. */
 function createPond(app: Application, boardLeft: number): PondWater {
-  const pond = new PondWater({
+  const pond = new PondWater(app.renderer, {
     width: STAGE.width,
     height: STAGE.height,
     boardX: boardLeft,
@@ -84,8 +84,15 @@ function createPond(app: Application, boardLeft: number): PondWater {
   return pond;
 }
 
-/** The koi are seen through the water: the pond's refraction filter bends the whole board layer. */
-function putUnderWater(boardView: BoardView, pond: PondWater): void {
+/**
+ * Puts the koi in the water: the pond's filter bends the whole board layer through the waves, and every frame the
+ * koi push the water back (wakes when they move, tail flicks when they rest).
+ */
+function putUnderWater(app: Application, boardView: BoardView, pond: PondWater, koiSize: number): void {
+  const wake = new FishWake(pond, boardView.position, koiSize);
+  app.ticker.add((ticker) => {
+    wake.update(boardView.koi(), ticker.deltaMS / 1000);
+  });
   const margin = WATER.pondMargin;
   boardView.filters = [pond.koiFilter];
   boardView.filterArea = new Rectangle(

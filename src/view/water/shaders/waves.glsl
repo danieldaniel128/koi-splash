@@ -1,12 +1,12 @@
-// Shared by the pond bottom, the water surface and the koi refraction, so all three see the same waves.
-// Positions are stage pixels. The including shader declares MAX_RIPPLES before this chunk.
+// Reads the water simulation for the shaders that draw with it (pond bottom, surface, koi refraction), so all three
+// show the same waves. Positions are stage pixels; the simulation covers the pond rectangle.
 
-uniform float uTime;
-// each ripple: xy = centre (stage pixels), z = start time (s), w = strength (0 = unused slot)
-uniform vec4 uRipples[MAX_RIPPLES];
-uniform float uRippleSpeed;
-uniform float uRippleLife;
+uniform sampler2D uState;
+// pond rectangle on the stage (x, y, width, height) and the simulation size in cells
+uniform vec4 uSimArea;
+uniform vec2 uSimSize;
 uniform float uWaveScale;
+uniform float uTime;
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -17,43 +17,33 @@ float noise(vec2 p) {
     vec2 i = floor(p);
     vec2 f = fract(p);
     vec2 u = f * f * (3.0 - 2.0 * f);
-    float a = hash(i);
-    float b = hash(i + vec2(1.0, 0.0));
-    float c = hash(i + vec2(0.0, 1.0));
-    float d = hash(i + vec2(1.0, 1.0));
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
-// Ripple wavelets behind each ring's front, fading with age. Feeds the slope, so rings bend the koi too.
-float rippleHeight(vec2 p) {
-    float h = 0.0;
-    for (int i = 0; i < MAX_RIPPLES; i++) {
-        vec4 r = uRipples[i];
-        float age = uTime - r.z;
-        if (r.w <= 0.0 || age < 0.0 || age > uRippleLife) continue;
-        float behindFront = length(p - r.xy) - age * uRippleSpeed;
-        float fade = 1.0 - age / uRippleLife;
-        h += sin(behindFront * 0.32) * exp(-behindFront * behindFront / 400.0) * fade * fade * r.w;
-    }
-    return h;
+float unpackHeight(vec4 texel) {
+    return (texel.r + texel.g / 255.0) * 2.0 - 1.0;
 }
 
-// Water surface height: a slow swell from a few directions, one drifting noise layer, plus the ripples.
-// Kept cheap on purpose: it runs a few times per pixel on phones.
-float waveHeight(vec2 p) {
-    float t = uTime;
-    float h = sin(dot(p, vec2(0.031, 0.012)) + t * 1.1) * 0.35;
-    h += sin(dot(p, vec2(-0.017, 0.029)) + t * 0.9) * 0.3;
-    h += sin(dot(p, vec2(0.045, -0.038)) + t * 1.6) * 0.15;
-    h += (noise(p * 0.035 + vec2(t * 0.25, -t * 0.2)) - 0.5) * 0.8;
-    return h + rippleHeight(p) * 1.6;
+// Height at a stage point, smoothly interpolated between simulation cells (the packed texels can't be filtered by
+// the GPU, so the bilinear blend is done here).
+float waterHeight(vec2 stagePos) {
+    vec2 cell = (stagePos - uSimArea.xy) / uSimArea.zw * uSimSize - 0.5;
+    vec2 base = floor(cell);
+    vec2 f = cell - base;
+    vec2 texel = 1.0 / uSimSize;
+    vec2 uv = (base + 0.5) * texel;
+    float a = unpackHeight(texture(uState, uv));
+    float b = unpackHeight(texture(uState, uv + vec2(texel.x, 0.0)));
+    float c = unpackHeight(texture(uState, uv + vec2(0.0, texel.y)));
+    float d = unpackHeight(texture(uState, uv + texel));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// Surface slope (dh/dx, dh/dy), scaled by uWaveScale. Drives the refraction of the bottom and the koi.
+// Surface slope (dh/dx, dh/dy) at a stage point, scaled by uWaveScale.
 vec2 waveSlope(vec2 p) {
-    const float e = 1.5;
-    float h = waveHeight(p);
-    return vec2(waveHeight(p + vec2(e, 0.0)) - h, waveHeight(p + vec2(0.0, e)) - h) / e * uWaveScale;
+    float step = uSimArea.z / uSimSize.x; // one simulation cell, in stage pixels
+    float h = waterHeight(p);
+    return vec2(waterHeight(p + vec2(step, 0.0)) - h, waterHeight(p + vec2(0.0, step)) - h) * uWaveScale;
 }
 
 // Signed distance to a rounded rectangle centred on the origin: negative inside.
