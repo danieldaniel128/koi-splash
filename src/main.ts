@@ -24,10 +24,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const boardWidth = BOARD.cols * BOARD.cellSize;
   const boardLeft = (STAGE.width - boardWidth) / 2;
 
-  const pond = new PondWater(STAGE.width, STAGE.height);
-  app.ticker.add((ticker) => {
-    pond.tick(ticker.deltaMS / 1000);
-  });
+  const pond = createPond(app, boardLeft);
 
   const boardView = new BoardView(textures, { ...BOARD, koiSize });
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
@@ -58,6 +55,23 @@ async function boot(host: HTMLElement): Promise<void> {
   };
   fit();
   app.renderer.on('resize', fit);
+}
+
+/** The water behind everything, framing the board, animated by the app's clock. */
+function createPond(app: Application, boardLeft: number): PondWater {
+  const pond = new PondWater({
+    width: STAGE.width,
+    height: STAGE.height,
+    boardX: boardLeft,
+    boardY: BOARD_LAYOUT.top,
+    cellSize: BOARD.cellSize,
+    cols: BOARD.cols,
+    rows: BOARD.rows,
+  });
+  app.ticker.add((ticker) => {
+    pond.tick(ticker.deltaMS / 1000);
+  });
+  return pond;
 }
 
 async function createApp(host: HTMLElement): Promise<Application> {
