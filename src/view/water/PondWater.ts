@@ -44,7 +44,7 @@ export class PondWater {
           uAreaOrigin: { value: [0, 0], type: 'vec2<f32>' },
           uStageTransform: { value: [0, 0, 1], type: 'vec3<f32>' },
           uKoiRefraction: { value: WATER.koiRefraction, type: 'f32' },
-          uWaterTint: { value: color(WATER.shallowWater), type: 'vec3<f32>' },
+          uWaterTint: { value: color(WATER.mid), type: 'vec3<f32>' },
         },
       },
     });
@@ -121,27 +121,28 @@ function pondShape(layout: PondLayout): UniformDefs {
 function bottomLook(layout: PondLayout): UniformDefs {
   return {
     uSize: { value: [layout.width, layout.height], type: 'vec2<f32>' },
-    uBankDark: { value: color(WATER.bankDark), type: 'vec3<f32>' },
-    uBankMoss: { value: color(WATER.bankMoss), type: 'vec3<f32>' },
-    uSand: { value: color(WATER.sand), type: 'vec3<f32>' },
-    uPebble: { value: color(WATER.pebble), type: 'vec3<f32>' },
-    uShallowWater: { value: color(WATER.shallowWater), type: 'vec3<f32>' },
-    uDeepWater: { value: color(WATER.deepWater), type: 'vec3<f32>' },
-    uCausticColor: { value: color(WATER.caustic), type: 'vec3<f32>' },
-    uCausticStrength: { value: WATER.causticStrength, type: 'f32' },
-    uDepth: { value: WATER.depth, type: 'f32' },
+    uBank: { value: color(WATER.bank), type: 'vec3<f32>' },
+    uBankPattern: { value: color(WATER.bankPattern), type: 'vec3<f32>' },
+    uPatternSize: { value: WATER.patternSize, type: 'f32' },
+    uShore: { value: color(WATER.shore), type: 'vec3<f32>' },
+    uMid: { value: color(WATER.mid), type: 'vec3<f32>' },
+    uDeep: { value: color(WATER.deep), type: 'vec3<f32>' },
+    uBands: { value: [...WATER.bands], type: 'vec2<f32>' },
+    uStone: { value: color(WATER.stone), type: 'vec3<f32>' },
+    uLight: { value: color(WATER.light), type: 'vec3<f32>' },
+    uLightStrength: { value: WATER.lightStrength, type: 'f32' },
+    uLightSpacing: { value: WATER.lightSpacing, type: 'f32' },
     uRefraction: { value: WATER.refraction, type: 'f32' },
+    uRingWidth: { value: WATER.ringWidth, type: 'f32' },
   };
 }
 
 function surfaceLook(): UniformDefs {
   return {
-    uGlintStrength: { value: WATER.glintStrength, type: 'f32' },
-    uGlintSharpness: { value: WATER.glintSharpness, type: 'f32' },
-    uMoonReflection: { value: WATER.moonReflection, type: 'f32' },
     uBoardGlare: { value: WATER.boardGlare, type: 'f32' },
-    uSkyReflection: { value: WATER.skyReflection, type: 'f32' },
-    uFoam: { value: WATER.foam, type: 'f32' },
+    uSparkleSpacing: { value: WATER.sparkleSpacing, type: 'f32' },
+    uSparkleChance: { value: WATER.sparkleChance, type: 'f32' },
+    uSparkleSize: { value: WATER.sparkleSize, type: 'f32' },
   };
 }
 
