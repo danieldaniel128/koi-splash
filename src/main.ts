@@ -1,10 +1,11 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Rectangle } from 'pixi.js';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
 import { HUD } from './config/hud';
 import { BOARD_LAYOUT, STAGE } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
+import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
 import { BoardAnimator } from './view/BoardAnimator';
@@ -12,7 +13,7 @@ import { BoardView } from './view/BoardView';
 import { Hud } from './view/Hud';
 import { ResultOverlay } from './view/ResultOverlay';
 import { KoiTextures } from './view/KoiTextures';
-import { PondWater } from './view/PondWater';
+import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
@@ -47,26 +48,29 @@ async function boot(host: HTMLElement): Promise<void> {
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
 
   const stage = new Container();
-  stage.addChild(pond, hud, boardView, result);
+  putUnderWater(boardView, pond);
+  stage.addChild(pond.bottom, boardView, pond.surface, hud, result);
   app.stage.addChild(stage);
 
   const fit = (): void => {
     fitStage(stage, app.screen.width, app.screen.height);
+    const areaOrigin = boardView.toGlobal({ x: -WATER.pondMargin, y: -WATER.pondMargin });
+    pond.mapKoiFilter(areaOrigin, stage.position, stage.scale.x);
   };
   fit();
   app.renderer.on('resize', fit);
 }
 
 /** The water behind everything, framing the board, animated by the app's clock. */
+/** The water below and above the board, animated by the app's clock. */
 function createPond(app: Application, boardLeft: number): PondWater {
   const pond = new PondWater({
     width: STAGE.width,
     height: STAGE.height,
     boardX: boardLeft,
     boardY: BOARD_LAYOUT.top,
-    cellSize: BOARD.cellSize,
-    cols: BOARD.cols,
-    rows: BOARD.rows,
+    boardWidth: BOARD.cols * BOARD.cellSize,
+    boardHeight: BOARD.rows * BOARD.cellSize,
   });
   app.ticker.add((ticker) => {
     pond.tick(ticker.deltaMS / 1000);
@@ -74,14 +78,26 @@ function createPond(app: Application, boardLeft: number): PondWater {
   return pond;
 }
 
+/** The koi are seen through the water: the pond's refraction filter bends the whole board layer. */
+function putUnderWater(boardView: BoardView, pond: PondWater): void {
+  const margin = WATER.pondMargin;
+  boardView.filters = [pond.koiFilter];
+  boardView.filterArea = new Rectangle(
+    -margin,
+    -margin,
+    BOARD.cols * BOARD.cellSize + margin * 2,
+    BOARD.rows * BOARD.cellSize + margin * 2,
+  );
+}
+
 async function createApp(host: HTMLElement): Promise<Application> {
   const app = new Application();
   await app.init({
     resizeTo: host,
     background: STAGE.background,
-    preference: 'webgl', // the pond shader is written in GLSL
+    preference: 'webgl', // the water shaders are written in GLSL
+    resolution: Math.min(window.devicePixelRatio, 2), // the water is per-pixel work: cap it on 3x phones
     antialias: true,
-    resolution: window.devicePixelRatio,
     autoDensity: true,
   });
   host.appendChild(app.canvas);
