@@ -12,6 +12,7 @@ import { BoardView } from './view/BoardView';
 import { Hud } from './view/Hud';
 import { ResultOverlay } from './view/ResultOverlay';
 import { KoiTextures } from './view/KoiTextures';
+import { PondWater } from './view/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
@@ -43,8 +44,13 @@ async function boot(host: HTMLElement): Promise<void> {
   });
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
 
+  const pond = new PondWater(STAGE.width, STAGE.height);
+  app.ticker.add((ticker) => {
+    pond.tick(ticker.deltaMS / 1000);
+  });
+
   const stage = new Container();
-  stage.addChild(hud, boardView, result);
+  stage.addChild(pond, hud, boardView, result);
   app.stage.addChild(stage);
 
   const fit = (): void => {
@@ -59,6 +65,7 @@ async function createApp(host: HTMLElement): Promise<Application> {
   await app.init({
     resizeTo: host,
     background: STAGE.background,
+    preference: 'webgl', // the pond shader is written in GLSL
     antialias: true,
     resolution: window.devicePixelRatio,
     autoDensity: true,
