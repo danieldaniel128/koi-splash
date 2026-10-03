@@ -2,12 +2,15 @@ import { Application, Container } from 'pixi.js';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
+import { HUD } from './config/hud';
 import { BOARD_LAYOUT, STAGE } from './config/layout';
+import { LEVEL, SCORE } from './config/level';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
-import { createBoard } from './model/rules';
 import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
+import { Hud } from './view/Hud';
+import { ResultOverlay } from './view/ResultOverlay';
 import { KoiTextures } from './view/KoiTextures';
 import { SwipeInput } from './view/SwipeInput';
 
@@ -17,19 +20,31 @@ async function boot(host: HTMLElement): Promise<void> {
 
   const koiSize = BOARD.cellSize * KOI_LOOK.scale;
   const textures = new KoiTextures(KOI_SET, koiSize, app.renderer.resolution * KOI_LOOK.bakeResolution);
-  const rng = new Random();
-  const board = createBoard(BOARD, rng);
+  const boardWidth = BOARD.cols * BOARD.cellSize;
+  const boardLeft = (STAGE.width - boardWidth) / 2;
 
   const boardView = new BoardView(textures, { ...BOARD, koiSize });
-  boardView.position.set((STAGE.width - BOARD.cols * BOARD.cellSize) / 2, BOARD_LAYOUT.top);
-  boardView.render(board);
+  boardView.position.set(boardLeft, BOARD_LAYOUT.top);
+  const hud = new Hud(boardWidth);
+  hud.position.set(boardLeft, HUD.top);
+  const result = new ResultOverlay(STAGE.width, STAGE.height);
 
-  const animator = new BoardAnimator(boardView, BOARD.cellSize);
-  const scene = new GameScene({ board, spec: BOARD, rng, view: boardView, animator });
+  const scene = new GameScene({
+    spec: BOARD,
+    level: { ...LEVEL, ...SCORE },
+    rng: new Random(),
+    view: boardView,
+    animator: new BoardAnimator(boardView, BOARD.cellSize),
+    status: hud,
+    result,
+  });
+  result.on('restart', () => {
+    scene.restart();
+  });
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
 
   const stage = new Container();
-  stage.addChild(boardView);
+  stage.addChild(hud, boardView, result);
   app.stage.addChild(stage);
 
   const fit = (): void => {
