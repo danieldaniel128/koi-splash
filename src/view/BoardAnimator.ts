@@ -1,13 +1,20 @@
 import { gsap } from 'gsap';
-import type { Sprite } from 'pixi.js';
+import { Point } from 'pixi.js';
+import type { PointData, Sprite } from 'pixi.js';
 import { TIMING } from '../config/timing';
-import type { CascadeStep, Cell, Fall, Piece, Spawn } from '../model/types';
+import { WATER } from '../config/water';
+import type { CascadeStep, Cell, Fall, Match, Piece, Spawn } from '../model/types';
 import type { BoardView } from './BoardView';
 
 /** A piece and the cell it sits in when an animation starts. */
 export interface PlacedPiece {
   readonly piece: Piece;
   readonly at: Cell;
+}
+
+/** Something that can show a ripple ring at a point in global space (the pond). */
+export interface RippleSurface {
+  ripple(globalPoint: PointData, strength: number): void;
 }
 
 /**
@@ -18,10 +25,12 @@ export class BoardAnimator {
   constructor(
     private readonly view: BoardView,
     private readonly cellSize: number,
+    private readonly water: RippleSurface,
   ) {}
 
   /** Two koi trade places. */
   async swap(first: PlacedPiece, second: PlacedPiece): Promise<void> {
+    this.rippleBetween([first.at, second.at], WATER.swapRipple);
     await Promise.all([this.slide(first, second.at), this.slide(second, first.at)]);
   }
 
@@ -32,12 +41,24 @@ export class BoardAnimator {
 
   /** One cascade round: matched koi shrink away while the koi above fall and new ones drop in. */
   async playStep(step: CascadeStep): Promise<void> {
+    for (const match of step.matches) this.rippleBetween(match.cells, matchStrength(match));
     const fallDelay = step.cleared.length > 0 ? TIMING.clear * TIMING.fallStartAt : 0;
     await Promise.all([
       ...step.cleared.map(({ piece }) => this.vanish(piece.id)),
       ...step.falls.map((fall) => this.drop(this.view.spriteOf(fall.piece.id), fall, fallDelay)),
       ...step.spawns.map((spawn) => this.dropIn(spawn, fallDelay)),
     ]);
+  }
+
+  /** A ripple ring at the centre of a group of cells. */
+  private rippleBetween(cells: readonly Cell[], strength: number): void {
+    const centre = new Point();
+    for (const cell of cells) {
+      const point = this.view.cellToPoint(cell);
+      centre.x += point.x / cells.length;
+      centre.y += point.y / cells.length;
+    }
+    this.water.ripple(this.view.toGlobal(centre), strength);
   }
 
   private async slide(placed: PlacedPiece, to: Cell): Promise<void> {
@@ -87,4 +108,9 @@ export class BoardAnimator {
       .to(sprite, { y: target.y - TIMING.landBounce, duration: TIMING.landBounceTime, ease: 'power1.out' })
       .to(sprite, { y: target.y, duration: TIMING.landBounceTime, ease: 'power1.in' });
   }
+}
+
+/** Bigger matches make stronger ripples. */
+function matchStrength(match: Match): number {
+  return WATER.matchRipple + (match.cells.length - 3) * WATER.matchRippleExtra;
 }
