@@ -24,7 +24,10 @@ export class BoardView extends Container {
     this.hitArea = new Rectangle(0, 0, layout.cols * layout.cellSize, layout.rows * layout.cellSize);
   }
 
-  /** Makes the sprites match the board: adds new pieces, moves existing ones, removes the ones that are gone. */
+  /**
+   * Makes the sprites match the board: adds new pieces, moves existing ones, removes the ones that are gone.
+   * O(N) over the cells plus O(S) over the sprites; each sprite is found by id in O(1). Runs once per turn.
+   */
   render(board: Board): void {
     const seen = new Set<number>();
     for (const cell of board.cells()) {

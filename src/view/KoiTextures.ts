@@ -9,6 +9,7 @@ import type { Kind } from '../model/types';
 export class KoiTextures {
   private readonly textures: Texture[];
 
+  /** O(kinds), but each one is a full canvas paint plus a GPU upload: the heavy part of boot, done once. */
   constructor(varietyIds: readonly string[], size: number, resolution: number) {
     this.textures = varietyIds.map((id) => Texture.from(bakeKoi(getVariety(id), { size, resolution })));
   }
