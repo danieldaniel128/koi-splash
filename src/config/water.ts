@@ -21,9 +21,8 @@ export const WATER = {
   wakeSpacing: 7,
   wakePush: 0.035,
   wakeRadius: 8,
-  /** Speed (px/s) at which the wake is at full strength, and the strongest wake a gliding (falling) koi leaves. */
+  /** Speed (px/s) at which the wake is at full strength. */
   wakeFullSpeed: 400,
-  glideWake: 0.5,
   /** A tail flick: push and radius. */
   flickPush: 0.12,
   flickRadius: 6,
