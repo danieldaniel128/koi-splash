@@ -18,11 +18,10 @@ npm run build    # static web build in dist/
 ## Stack & assets
 
 - TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
-- The pond is a custom GLSL shader (`src/view/shaders/water.frag`): drifting caustic light from a cellular pattern,
-  plus ripple rings from swaps and matches that bend the light. It's one quad, computed per pixel on the GPU, with
-  no textures.
-- ESLint + Prettier, Vitest, a pre-commit hook
-- Koi art: `src/art/koiBank.ts`, a data-driven koi painter. Each variety is plain data and gets baked into a texture once, so the board is just sprites.
+- The pond is a custom GLSL shader (`src/view/shaders/water.frag`): a night bank with a moon glow, a rounded pond
+  with a lit rim, faint sockets under the cells, a net of soft oval caustic loops (two copies drifting against each
+  other make the water shimmer) and ripple rings from swaps and matches that bend the light. It's one quad, computed
+  per pixel on the GPU, with no textures.
 
 ## How it's built
 

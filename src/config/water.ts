@@ -1,14 +1,20 @@
-/** The pond water shader's look. Colours are 0..1 RGB. */
+/** The pond water shader's look. */
 export const WATER = {
-  deep: [0.02, 0.07, 0.11],
-  shallow: [0.05, 0.2, 0.25],
-  light: [0.55, 0.85, 0.9],
-  /** Size of one caustic cell in stage units: bigger = broader light pattern. */
-  causticScale: 46,
-  causticSpeed: 0.6,
-  causticStrength: 0.3,
-  /** How much darker the corners get (0 = none). */
-  vignette: 0.45,
+  bankTop: '#0b2038',
+  bankBottom: '#050d19',
+  moon: '#fff4d2',
+  /** Moon glow position as a share of the board (0..1 across, 0..1 down). */
+  moonAt: [0.76, 0.2],
+  pondIn: '#1d5876',
+  pondOut: '#0f3450',
+  edgeGlow: '#5ac8f0',
+  caustic: '#bef0ff',
+  /** The pond reaches this far past the board on every side, with this corner radius. */
+  pondMargin: 14,
+  pondRadius: 24,
+  /** Grid spacing of the caustic net's oval loops, and how bright the loops are. */
+  causticSpacing: 30,
+  causticAlpha: 0.075,
   /** Ripple rings: px per second outward, ring thickness in px, seconds until gone. */
   rippleSpeed: 140,
   rippleWidth: 12,
