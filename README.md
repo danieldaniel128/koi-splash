@@ -104,8 +104,9 @@ I used Claude (AI) as a helper during the project. So far:
 - Project setup and tooling config (Vite, TypeScript, ESLint/Prettier, the CI and deploy workflows): AI-written.
 - `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
-- `tests/rules.test.ts`: AI-written.
-- `src/view/` (board rendering, swipe input, animations) and `src/config/`: AI-written, step by step from my plan,
+- `tests/`: AI-written.
+- `src/view/` (board rendering, swipe input, animations, HUD, end card), `src/game/` (the game scene) and
+  `src/config/`: AI-written, step by step from my plan,
   reviewed and tested by me on desktop and phone.
 - `src/core/StateMachine.ts`: the guarded-transition design with enter/exit hooks is mine; AI wrote the code and
   its tests.

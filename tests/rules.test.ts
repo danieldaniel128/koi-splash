@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
 import { Board } from '../src/model/Board';
-import { createBoard, findMatches, findMove, swapMakesMatch, trySwap } from '../src/model/rules';
+import { createBoard, findMatches, findMove, resetBoard, swapMakesMatch, trySwap } from '../src/model/rules';
 import type { BoardSpec } from '../src/model/rules';
 
 const SPEC: BoardSpec = { cols: 7, rows: 9, kinds: 5 };
@@ -40,6 +40,18 @@ describe('createBoard', () => {
 
   it('is reproducible from a seed', () => {
     expect(kindsOf(createBoard(SPEC, new Random(42)))).toEqual(kindsOf(createBoard(SPEC, new Random(42))));
+  });
+});
+
+describe('resetBoard', () => {
+  it('gives a fresh playable layout with new piece ids', () => {
+    const rng = new Random(5);
+    const board = createBoard(SPEC, rng);
+    const oldIds = new Set([...board.cells()].map((cell) => board.get(cell)?.id));
+    resetBoard(board, SPEC, rng);
+    expect(findMatches(board)).toEqual([]);
+    expect(findMove(board)).not.toBeNull();
+    for (const cell of board.cells()) expect(oldIds.has(board.get(cell)?.id)).toBe(false);
   });
 });
 
