@@ -1,5 +1,5 @@
-// The water surface, drawn above the koi: moonlight glints on the wave facets, a wobbling reflection of the moon,
-// a faint sky sheen on steep slopes and foam along the shore. Transparent everywhere else, so the koi show through.
+// The water surface, drawn above the koi: a few small four-point sparkles that twinkle on the water. Transparent
+// everywhere else, so the koi show through. Over the board they're dimmer, so they never hide a piece.
 // Waves and the pond shape come from waves.glsl, prepended to this file.
 
 in vec2 vPosition;
@@ -7,51 +7,37 @@ out vec4 finalColor;
 
 uniform vec4 uPond;
 uniform float uPondRadius;
-uniform vec2 uMoonPos;
-uniform vec3 uMoon;
-uniform float uGlintStrength;
-uniform float uGlintSharpness;
-uniform float uMoonReflection;
-// the board rectangle (x, y, width, height): glare over it is scaled by uBoardGlare so it never hides a koi
+// the board rectangle (x, y, width, height): sparkles over it are scaled by uBoardGlare
 uniform vec4 uBoard;
 uniform float uBoardGlare;
-uniform float uSkyReflection;
-uniform float uFoam;
+uniform float uSparkleSpacing;
+uniform float uSparkleChance;
+uniform float uSparkleSize;
+
+// A four-point star: two thin crossed streaks and a bright dot, sized by `size` (px).
+float star(vec2 d, float size) {
+    vec2 a = abs(d) / size;
+    float streaks = max(smoothstep(0.12, 0.0, a.y) * smoothstep(1.0, 0.0, a.x),
+                        smoothstep(0.12, 0.0, a.x) * smoothstep(1.0, 0.0, a.y));
+    return max(streaks, smoothstep(0.3, 0.0, length(a)));
+}
 
 void main() {
     vec2 p = vPosition;
     float edge = roundedBox(p - (uPond.xy + uPond.zw * 0.5), uPond.zw * 0.5, uPondRadius);
-    if (edge > 2.0) {
+    vec2 cell = floor(p / uSparkleSpacing);
+    // outside the water, or a cell without a sparkle: nothing to draw
+    if (edge > -2.0 || hash(cell + 9.1) > uSparkleChance) {
         finalColor = vec4(0.0);
         return;
     }
-    float inside = 1.0 - smoothstep(-1.0, 1.0, edge);
 
-    vec2 slope = waveSlope(p);
-    vec3 normal = normalize(vec3(-slope, 1.0));
-
-    // glints: facets tilted so the moon reflects straight up into the eye
-    vec3 toMoon = normalize(vec3((uMoonPos - p) / 260.0, 1.0));
-    vec3 halfway = normalize(toMoon + vec3(0.0, 0.0, 1.0));
-    float glint = pow(max(dot(normal, halfway), 0.0), uGlintSharpness) * uGlintStrength;
-
-    // the moon's own reflection: a soft bright patch near the moon, broken up by the waves
-    float moonPatch = exp(-length(p + slope * 22.0 - uMoonPos) / 18.0) * uMoonReflection;
+    vec2 centre = (cell + 0.2 + vec2(hash(cell), hash(cell + 3.7)) * 0.6) * uSparkleSpacing;
+    float twinkle = pow(max(sin(uTime * (1.2 + hash(cell + 1.3) * 1.6) + hash(cell + 7.7) * 6.28), 0.0), 6.0);
+    float size = uSparkleSize * (0.6 + 0.4 * twinkle);
 
     vec2 fromBoard = abs(p - (uBoard.xy + uBoard.zw * 0.5)) - uBoard.zw * 0.5;
     float overBoard = 1.0 - smoothstep(-12.0, 12.0, max(fromBoard.x, fromBoard.y));
-    float glare = mix(1.0, uBoardGlare, overBoard);
-    glint *= glare;
-    moonPatch *= glare;
-
-    // steeper slopes reflect more of the sky (a cheap Fresnel)
-    float sheen = clamp(length(slope) * 1.5, 0.0, 1.0) * uSkyReflection;
-
-    // foam: a broken band hugging the shore
-    float foamBand = smoothstep(-9.0, -1.0, edge) * (1.0 - smoothstep(-1.0, 1.0, edge));
-    float foam = foamBand * smoothstep(0.45, 0.8, noise(p * 0.25 + vec2(uTime * 0.6, -uTime * 0.4))) * uFoam;
-
-    float alpha = clamp(glint + moonPatch + sheen + foam, 0.0, 1.0) * inside;
-    vec3 color = mix(vec3(0.75, 0.88, 1.0), uMoon, clamp(glint + moonPatch, 0.0, 1.0));
-    finalColor = vec4(color * alpha, alpha); // premultiplied alpha, as Pixi blends it
+    float alpha = star(p - centre, size) * twinkle * mix(1.0, uBoardGlare, overBoard);
+    finalColor = vec4(vec3(1.0, 0.98, 0.9) * alpha, alpha); // premultiplied alpha, as Pixi blends it
 }

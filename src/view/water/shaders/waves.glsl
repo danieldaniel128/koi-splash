@@ -24,18 +24,7 @@ float noise(vec2 p) {
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-float fbm(vec2 p) {
-    float sum = 0.0;
-    float amp = 0.5;
-    for (int i = 0; i < 4; i++) {
-        sum += noise(p) * amp;
-        p = p * 2.03 + vec2(17.1, 9.2);
-        amp *= 0.5;
-    }
-    return sum;
-}
-
-// Ripple rings: a short train of wavelets travelling outward from each drop point, fading with age.
+// Ripple wavelets behind each ring's front, fading with age. Feeds the slope, so rings bend the koi too.
 float rippleHeight(vec2 p) {
     float h = 0.0;
     for (int i = 0; i < MAX_RIPPLES; i++) {
@@ -43,25 +32,24 @@ float rippleHeight(vec2 p) {
         float age = uTime - r.z;
         if (r.w <= 0.0 || age < 0.0 || age > uRippleLife) continue;
         float behindFront = length(p - r.xy) - age * uRippleSpeed;
-        float envelope = exp(-behindFront * behindFront / 400.0);
         float fade = 1.0 - age / uRippleLife;
-        h += sin(behindFront * 0.32) * envelope * fade * fade * r.w;
+        h += sin(behindFront * 0.32) * exp(-behindFront * behindFront / 400.0) * fade * fade * r.w;
     }
     return h;
 }
 
-// Water surface height: slow wind swell from a few directions, a drifting noise chop, plus the ripples.
+// Water surface height: a slow swell from a few directions, one drifting noise layer, plus the ripples.
+// Kept cheap on purpose: it runs a few times per pixel on phones.
 float waveHeight(vec2 p) {
     float t = uTime;
     float h = sin(dot(p, vec2(0.031, 0.012)) + t * 1.1) * 0.35;
     h += sin(dot(p, vec2(-0.017, 0.029)) + t * 0.9) * 0.3;
     h += sin(dot(p, vec2(0.045, -0.038)) + t * 1.6) * 0.15;
     h += (noise(p * 0.035 + vec2(t * 0.25, -t * 0.2)) - 0.5) * 0.8;
-    h += (noise(p * 0.09 - vec2(t * 0.4, t * 0.3)) - 0.5) * 0.35;
     return h + rippleHeight(p) * 1.6;
 }
 
-// Surface slope (dh/dx, dh/dy), scaled by uWaveScale. Drives refraction, caustics and glints.
+// Surface slope (dh/dx, dh/dy), scaled by uWaveScale. Drives the refraction of the bottom and the koi.
 vec2 waveSlope(vec2 p) {
     const float e = 1.5;
     float h = waveHeight(p);
