@@ -24,15 +24,18 @@ export const HUD = {
   bump: 1.18,
 } as const;
 
-/** The end-of-level card. */
+/** The end-of-level card: a panel in the HUD's style over the dimmed pond. */
 export const RESULT = {
-  dimColor: '#06121c',
+  dimColor: '#040c18',
   dimAlpha: 0.72,
-  textColor: '#f3ead8',
-  titleSize: 32,
-  detailSize: 18,
+  /** The dim reaches this many stage sizes past the stage, so tall and wide screens are dimmed edge to edge. */
+  dimReach: 1.5,
+  cardWidth: 270,
+  cardHeight: 168,
+  titleSize: 30,
+  detailSize: 17,
+  hintSize: 13,
   lineGap: 40,
-  hintAlpha: 0.7,
   fadeIn: 0.3,
   popIn: 0.45,
 } as const;
