@@ -18,11 +18,13 @@ npm run build    # static web build in dist/
 ## Stack & assets
 
 - TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
-- The water is custom GLSL in three passes that share one wave function (`src/view/water/shaders/`):
-  - **bottom**, under the koi: a sandy, pebbly bottom refracted through the waves, caustics with a slight colour
-    fringe, and deeper, bluer water toward the middle
-  - **surface**, over the koi: moon glints on the wave facets, the moon's broken reflection, sky sheen and shore
-    foam; dimmed over the board so it never hides a piece
+- The water is custom GLSL in three passes that share one wave function (`src/view/water/shaders/`). The look is
+  stylized on purpose: clear shapes and a small palette read better on a phone than photo-real water, and the
+  pieces stay easy to scan.
+  - **bottom**, under the koi: clean depth bands (bright shore, mid, deep) with wobbling borders, a few soft
+    stones, a net of light loops, crisp white ripple rings and a foam line at the shore, all refracted by the waves.
+    Around the pond, an indigo bank with a faint seigaiha (overlapping waves) pattern, a nod to Japanese koi ponds.
+  - **surface**, over the koi: a few four-point sparkles that twinkle, dimmer over the board
   - **koi refraction**, a filter on the koi layer: the koi and their shadows bend under the same waves, and the
     ripples from swaps and matches pass over them
     Koi cast blurred shadows on the bottom, baked once at startup.
