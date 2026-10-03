@@ -24,6 +24,11 @@ async function boot(host: HTMLElement): Promise<void> {
   const boardWidth = BOARD.cols * BOARD.cellSize;
   const boardLeft = (STAGE.width - boardWidth) / 2;
 
+  const pond = new PondWater(STAGE.width, STAGE.height);
+  app.ticker.add((ticker) => {
+    pond.tick(ticker.deltaMS / 1000);
+  });
+
   const boardView = new BoardView(textures, { ...BOARD, koiSize });
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
   const hud = new Hud(boardWidth);
@@ -35,7 +40,7 @@ async function boot(host: HTMLElement): Promise<void> {
     level: { ...LEVEL, ...SCORE },
     rng: new Random(),
     view: boardView,
-    animator: new BoardAnimator(boardView, BOARD.cellSize),
+    animator: new BoardAnimator(boardView, BOARD.cellSize, pond),
     status: hud,
     result,
   });
@@ -43,11 +48,6 @@ async function boot(host: HTMLElement): Promise<void> {
     scene.restart();
   });
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
-
-  const pond = new PondWater(STAGE.width, STAGE.height);
-  app.ticker.add((ticker) => {
-    pond.tick(ticker.deltaMS / 1000);
-  });
 
   const stage = new Container();
   stage.addChild(pond, hud, boardView, result);

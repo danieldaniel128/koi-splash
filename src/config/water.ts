@@ -11,8 +11,12 @@ export const WATER = {
   vignette: 0.45,
   /** Ripple rings: px per second outward, ring thickness in px, seconds until gone. */
   rippleSpeed: 140,
-  rippleWidth: 10,
+  rippleWidth: 12,
   rippleLife: 1.4,
+  /** Ring strength for a swap, and for a match of 3 (each extra koi in the match adds matchRippleExtra). */
+  swapRipple: 0.7,
+  matchRipple: 1.3,
+  matchRippleExtra: 0.25,
   /** Most rings alive at once; must match MAX_RIPPLES in water.frag. */
   maxRipples: 8,
 } as const;

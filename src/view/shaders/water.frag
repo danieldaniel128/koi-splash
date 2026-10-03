@@ -75,7 +75,7 @@ void main() {
 
     vec3 color = mix(uDeep, uShallow, smoothstep(0.0, 1.0, 1.0 - length(uv - vec2(0.5, 0.42)) * 1.25));
     color += uLight * caustic * uCausticStrength;
-    color += uLight * wave.x * 0.35;
+    color += uLight * wave.x * 0.5;
 
     float vignette = smoothstep(0.85, 0.2, length(uv - 0.5));
     color *= mix(1.0 - uVignette, 1.0, vignette);
