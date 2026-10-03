@@ -1,7 +1,7 @@
-import { Container, Point, Rectangle, Sprite } from 'pixi.js';
+import { Container, Graphics, Point, Rectangle, Sprite } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import type { Board } from '../model/Board';
-import type { Cell } from '../model/types';
+import type { Cell, Piece } from '../model/types';
 import type { KoiTextures } from './KoiTextures';
 
 export interface BoardViewLayout {
@@ -20,8 +20,14 @@ export class BoardView extends Container {
     private readonly layout: BoardViewLayout,
   ) {
     super();
+    const width = layout.cols * layout.cellSize;
+    const height = layout.rows * layout.cellSize;
     // the whole board area takes pointer input, including the gaps between koi
-    this.hitArea = new Rectangle(0, 0, layout.cols * layout.cellSize, layout.rows * layout.cellSize);
+    this.hitArea = new Rectangle(0, 0, width, height);
+    // new koi start above the top edge; the mask hides them until they slide in
+    const mask = new Graphics().rect(0, 0, width, height).fill(0xffffff);
+    this.addChild(mask);
+    this.mask = mask;
   }
 
   /**
@@ -38,6 +44,25 @@ export class BoardView extends Container {
       sprite.position.copyFrom(this.cellToPoint(cell));
     }
     this.removeSpritesNotIn(seen);
+  }
+
+  /** The sprite showing a piece. Throws when the piece has no sprite, which means the view fell out of sync. */
+  spriteOf(id: number): Sprite {
+    const sprite = this.sprites.get(id);
+    if (!sprite) throw new Error(`no sprite for piece ${id}`);
+    return sprite;
+  }
+
+  /** Adds a sprite for a new piece at a cell (the cell may be above the board, for koi about to drop in). */
+  addPiece(piece: Piece, at: Cell): Sprite {
+    const sprite = this.createSprite(piece.id, piece.kind);
+    sprite.position.copyFrom(this.cellToPoint(at));
+    return sprite;
+  }
+
+  removePiece(id: number): void {
+    this.sprites.get(id)?.destroy();
+    this.sprites.delete(id);
   }
 
   /** Centre of a cell, in this container's space. */
@@ -64,10 +89,8 @@ export class BoardView extends Container {
   }
 
   private removeSpritesNotIn(ids: ReadonlySet<number>): void {
-    for (const [id, sprite] of this.sprites) {
-      if (ids.has(id)) continue;
-      sprite.destroy();
-      this.sprites.delete(id);
+    for (const id of this.sprites.keys()) {
+      if (!ids.has(id)) this.removePiece(id);
     }
   }
 }
