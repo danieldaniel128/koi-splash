@@ -1,12 +1,27 @@
-/** HUD look, in stage units. It sits in the space above the board (see BOARD_LAYOUT.top). */
+/** HUD look, in stage units. It sits on the bank above the pond (see BOARD_LAYOUT.top). */
 export const HUD = {
-  top: 40,
-  fontSize: 20,
-  textColor: '#f3ead8',
-  barTop: 34,
-  barHeight: 8,
-  barBack: '#1d3a4f',
-  barFill: '#ffc94a',
+  top: 26,
+  /** Moonlight white for text and rims, gold for the score and the goal bar. */
+  ink: '#eef4f2',
+  muted: '#9fb6c4',
+  gold: '#ffd76a',
+  /** Panels: deep indigo, a little see-through, with a thin moonlit rim like the pond's foam lines. */
+  panel: '#0b1a33',
+  panelAlpha: 0.9,
+  rim: '#d4e8ee',
+  rimAlpha: 0.4,
+  /** The moves counter is a water drop this wide (px); the score sits in a pill this tall. */
+  dropRadius: 22,
+  pillHeight: 50,
+  pillLeft: 62,
+  barHeight: 6,
+  barBack: '#1a3150',
+  /** A print-like serif with lining figures (Georgia's old-style figures make a 0 look like an o). */
+  numberFont: '"Palatino Linotype", Palatino, "Book Antiqua", "Noto Serif", serif',
+  labelFont: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  /** How long the score takes to count up to a new value, and how much it swells while it does (s, scale). */
+  countUp: 0.55,
+  bump: 1.18,
 } as const;
 
 /** The end-of-level card. */

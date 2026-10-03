@@ -5,12 +5,19 @@ import { POINTS, SPLASH } from '../config/fx';
 
 /**
  * Effects drawn over the water where koi dive: thin ink rings that spread and fade, a few droplets thrown up, and
- * the points the match earned. Everything is short-lived and thin, so the board is readable again at once.
+ * the points the match earned, which fly up to the score. Everything is short-lived and thin, so the board is readable again at once.
  * Positions are in the board's space: this layer sits exactly on the board.
  */
 export class SplashFx extends Container {
   /** Score labels are reused: making a Text draws a canvas, too slow to do for every match. */
   private readonly spareLabels: Text[] = [];
+
+  constructor(
+    /** Where the score is shown, in this layer's space: the points fly there. */
+    private readonly scoreAt: PointData,
+  ) {
+    super();
+  }
 
   /** A koi dives at `at`: rings spread from it and droplets fly up. O(rings + droplets). */
   splash(at: PointData): void {
@@ -18,7 +25,7 @@ export class SplashFx extends Container {
     for (let i = 0; i < SPLASH.droplets; i++) this.droplet(at, (i + Math.random() * 0.6) / SPLASH.droplets);
   }
 
-  /** The points a match earned rise from `at` and fade. */
+  /** The points a match earned pop up at `at`, then fly to the score and shrink into it. */
   points(at: PointData, amount: number): void {
     const label = this.spareLabels.pop() ?? createLabel();
     label.text = `+${amount}`;
@@ -26,6 +33,7 @@ export class SplashFx extends Container {
     label.alpha = 1;
     label.scale.set(0.4);
     this.addChild(label);
+    const flyAt = POINTS.pop + POINTS.hold;
     gsap
       .timeline({
         onComplete: () => {
@@ -33,9 +41,11 @@ export class SplashFx extends Container {
           this.spareLabels.push(label);
         },
       })
-      .to(label.scale, { x: 1, y: 1, duration: 0.28, ease: 'back.out(3)' }, 0)
-      .to(label, { y: at.y - POINTS.rise, duration: POINTS.life, ease: 'power1.out' }, 0)
-      .to(label, { alpha: 0, duration: POINTS.life * 0.35 }, POINTS.life * 0.65);
+      .to(label.scale, { x: 1, y: 1, duration: POINTS.pop, ease: 'back.out(3)' }, 0)
+      .to(label, { y: at.y - POINTS.rise, duration: flyAt, ease: 'power1.out' }, 0)
+      .to(label, { x: this.scoreAt.x, y: this.scoreAt.y, duration: POINTS.flight, ease: 'power2.in' }, flyAt)
+      .to(label.scale, { x: POINTS.landScale, y: POINTS.landScale, duration: POINTS.flight, ease: 'power1.in' }, flyAt)
+      .to(label, { alpha: 0, duration: 0.1 }, flyAt + POINTS.flight - 0.1);
   }
 
   /** One ring: grows fast then slows, thinning and fading as it goes. */
@@ -69,7 +79,7 @@ export class SplashFx extends Container {
     const reach = near + Math.random() * (far - near);
     const life = SPLASH.dropletLife * (0.8 + Math.random() * 0.4);
     const drop = new Graphics().circle(0, 0, SPLASH.dropletSize).fill(SPLASH.ink);
-    drop.position.copyFrom(at);
+    drop.position.set(at.x + Math.cos(angle) * SPLASH.dropletStart, at.y + Math.sin(angle) * SPLASH.dropletStart);
     this.addChild(drop);
     gsap
       .timeline({
@@ -91,7 +101,7 @@ function createLabel(): Text {
       fill: POINTS.fill,
       fontSize: POINTS.fontSize,
       fontWeight: '800',
-      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontFamily: POINTS.font,
       stroke: { color: POINTS.stroke, width: 4, join: 'round' },
     },
   });

@@ -11,6 +11,7 @@ import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
 import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
+import { Fireflies } from './view/Fireflies';
 import { Hud } from './view/Hud';
 import { ResultOverlay } from './view/ResultOverlay';
 import { SplashFx } from './view/SplashFx';
@@ -33,10 +34,11 @@ async function boot(host: HTMLElement): Promise<void> {
 
   const boardView = new BoardView(textures, { ...BOARD, koiSize });
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
-  const splashes = new SplashFx();
-  splashes.position.copyFrom(boardView.position);
   const hud = new Hud(boardWidth);
   hud.position.set(boardLeft, HUD.top);
+  const score = hud.scoreAnchor();
+  const splashes = new SplashFx({ x: hud.x + score.x - boardLeft, y: hud.y + score.y - BOARD_LAYOUT.top });
+  splashes.position.copyFrom(boardView.position);
   const result = new ResultOverlay(STAGE.width, STAGE.height);
 
   const scene = new GameScene({
@@ -55,7 +57,7 @@ async function boot(host: HTMLElement): Promise<void> {
 
   const stage = new Container();
   putUnderWater(app, boardView, pond);
-  stage.addChild(pond.bank, pond.bottom, boardView, pond.surface, splashes, createProps(app), hud, result);
+  stage.addChild(pond.bank, pond.bottom, boardView, pond.surface, splashes, createScenery(app), hud, result);
   app.stage.addChild(stage);
 
   const fit = (): void => {
@@ -67,13 +69,22 @@ async function boot(host: HTMLElement): Promise<void> {
   app.renderer.on('resize', fit);
 }
 
-/** Stones, lily pads and reeds around the pond, painted once; the pads rock with the app's clock. */
-function createProps(app: Application): PondProps {
+/** Stones, lily pads and reeds around the pond (painted once) and fireflies over the bank, on the app's clock. */
+function createScenery(app: Application): Container {
   const props = new PondProps(POND.props, app.renderer.resolution * KOI_LOOK.bakeResolution);
+  const fireflies = new Fireflies({
+    spots: POND.fireflies,
+    roam: POND.fireflyRoam,
+    size: POND.fireflySize,
+    color: POND.firefly,
+  });
   app.ticker.add((ticker) => {
     props.tick(ticker.deltaMS / 1000);
+    fireflies.tick(ticker.deltaMS / 1000);
   });
-  return props;
+  const scenery = new Container();
+  scenery.addChild(props, fireflies);
+  return scenery;
 }
 
 /** The koi (one tail beat of poses each) and their shadows, baked once at the screen's resolution. */

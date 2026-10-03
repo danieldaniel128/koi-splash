@@ -7,22 +7,27 @@ export const SPLASH = {
   ringGap: 0.09,
   ringLife: 0.6,
   /** A ring grows from this radius to that one, and thins from this line width to that one. */
-  ringFrom: 7,
-  ringTo: 30,
+  ringFrom: 11,
+  ringTo: 34,
   ringWidth: [1.8, 0.5],
-  /** Droplets thrown up per diving koi, how far they land (px, random in this range) and how long they fly. */
-  droplets: 4,
-  dropletReach: [10, 24],
-  dropletLife: 0.45,
-  dropletSize: 1.7,
+  /** Droplets thrown up per diving koi: they start this far out (px), land this far (px, random in this range). */
+  droplets: 5,
+  dropletStart: 8,
+  dropletReach: [18, 32],
+  dropletLife: 0.42,
+  dropletSize: 1.3,
 } as const;
 
-/** The points that rise from a match. */
+/** The points that pop up over a match, then fly to the score. */
 export const POINTS = {
   fill: '#ffd76a',
   stroke: '#0a1a2e',
-  fontSize: 22,
-  /** How far they rise (px) and how long they stay. */
-  rise: 30,
-  life: 0.85,
+  fontSize: 24,
+  font: '"Palatino Linotype", Palatino, "Book Antiqua", "Noto Serif", serif',
+  /** Pop in, rise a little and hold (s, px), then fly to the score and shrink into it (s, scale). */
+  pop: 0.28,
+  rise: 14,
+  hold: 0.2,
+  flight: 0.5,
+  landScale: 0.45,
 } as const;
