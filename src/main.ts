@@ -21,7 +21,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const app = await createApp(host);
 
   const koiSize = BOARD.cellSize * KOI_LOOK.scale;
-  const textures = new KoiTextures(KOI_SET, koiSize, app.renderer.resolution * KOI_LOOK.bakeResolution);
+  const textures = createTextures(app, koiSize);
   const boardWidth = BOARD.cols * BOARD.cellSize;
   const boardLeft = (STAGE.width - boardWidth) / 2;
 
@@ -62,6 +62,12 @@ async function boot(host: HTMLElement): Promise<void> {
 }
 
 /** The water behind everything, framing the board, animated by the app's clock. */
+/** The koi and their shadows, baked once at the screen's resolution. */
+function createTextures(app: Application, koiSize: number): KoiTextures {
+  const resolution = app.renderer.resolution * KOI_LOOK.bakeResolution;
+  return new KoiTextures(KOI_SET, koiSize, resolution, WATER.shadowBlur);
+}
+
 /** The water below and above the board, animated by the app's clock. */
 function createPond(app: Application, boardLeft: number): PondWater {
   const pond = new PondWater({

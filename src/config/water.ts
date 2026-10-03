@@ -15,7 +15,7 @@ export const WATER = {
   sand: '#7d6b4f',
   pebble: '#4d4a44',
   shallowWater: '#1f4f58',
-  deepWater: '#071c28',
+  deepWater: '#0b2633',
   /** Distance from the shore (px) over which the pond goes from shallow to fully deep. */
   depth: 110,
   caustic: '#cdeef0',
@@ -32,13 +32,15 @@ export const WATER = {
   /** Higher = smaller, sharper moon glints. */
   glintSharpness: 220,
   moonReflection: 0.28,
+  /** Glints and moon reflection over the board itself are scaled by this, so they never hide a koi. */
+  boardGlare: 0.35,
   /** Faint sky reflection on the surface, stronger on steep wave slopes. */
   skyReflection: 0.06,
   foam: 0.45,
 
   // --- koi under the surface
   /** How far the waves shift the koi (px per unit of slope). */
-  koiRefraction: 3,
+  koiRefraction: 1.8,
   shadowOffset: [5, 9],
   shadowAlpha: 0.38,
   shadowBlur: 5,

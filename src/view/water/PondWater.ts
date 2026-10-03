@@ -103,6 +103,10 @@ function pondShape(layout: PondLayout): UniformDefs {
       type: 'vec4<f32>',
     },
     uPondRadius: { value: WATER.pondRadius, type: 'f32' },
+    uBoard: {
+      value: [layout.boardX, layout.boardY, layout.boardWidth, layout.boardHeight],
+      type: 'vec4<f32>',
+    },
     uMoonPos: {
       value: [
         layout.boardX + layout.boardWidth * WATER.moonAt[0],
@@ -135,6 +139,7 @@ function surfaceLook(): UniformDefs {
     uGlintStrength: { value: WATER.glintStrength, type: 'f32' },
     uGlintSharpness: { value: WATER.glintSharpness, type: 'f32' },
     uMoonReflection: { value: WATER.moonReflection, type: 'f32' },
+    uBoardGlare: { value: WATER.boardGlare, type: 'f32' },
     uSkyReflection: { value: WATER.skyReflection, type: 'f32' },
     uFoam: { value: WATER.foam, type: 'f32' },
   };

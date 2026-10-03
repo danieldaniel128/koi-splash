@@ -12,6 +12,9 @@ uniform vec3 uMoon;
 uniform float uGlintStrength;
 uniform float uGlintSharpness;
 uniform float uMoonReflection;
+// the board rectangle (x, y, width, height): glare over it is scaled by uBoardGlare so it never hides a koi
+uniform vec4 uBoard;
+uniform float uBoardGlare;
 uniform float uSkyReflection;
 uniform float uFoam;
 
@@ -34,6 +37,12 @@ void main() {
 
     // the moon's own reflection: a soft bright patch near the moon, broken up by the waves
     float moonPatch = exp(-length(p + slope * 22.0 - uMoonPos) / 18.0) * uMoonReflection;
+
+    vec2 fromBoard = abs(p - (uBoard.xy + uBoard.zw * 0.5)) - uBoard.zw * 0.5;
+    float overBoard = 1.0 - smoothstep(-12.0, 12.0, max(fromBoard.x, fromBoard.y));
+    float glare = mix(1.0, uBoardGlare, overBoard);
+    glint *= glare;
+    moonPatch *= glare;
 
     // steeper slopes reflect more of the sky (a cheap Fresnel)
     float sheen = clamp(length(slope) * 1.5, 0.0, 1.0) * uSkyReflection;
