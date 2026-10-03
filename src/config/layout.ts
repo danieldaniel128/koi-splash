@@ -5,7 +5,6 @@
 export const STAGE = {
   width: 360,
   height: 640,
-  background: '#03090f',
 } as const;
 
 /** Where the board sits on the stage. The space above it is kept for the HUD. */
