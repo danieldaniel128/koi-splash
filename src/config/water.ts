@@ -65,7 +65,7 @@ export const WATER = {
 
   // --- surface details (over the water, never over a koi)
   /** Shore foam: a calligraphic stroke inside the shore that swells, tapers and breaks; width (px) and strength. */
-  foamWidth: 2.2,
+  foamWidth: 2.7,
   foamStrength: 0.9,
   /** How far waves arriving at the shore push the foam (px per unit of height). */
   foamBreath: 60,

@@ -33,8 +33,8 @@ export const POND = {
   wetBand: 16,
 
   // --- the moon's reflection on the open water below the board: centre (stage px) and radius (px)
-  moonAt: [262, 584],
-  moonRadius: 16,
+  moonAt: [262, 582],
+  moonRadius: 19,
   moon: '#f7ecc8',
 
   /**

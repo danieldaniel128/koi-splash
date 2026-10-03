@@ -64,10 +64,12 @@ vec3 moonReflection(vec3 color, vec2 seen) {
 vec3 water(vec2 p, float edge, vec3 w) {
     vec2 seen = p + w.yz * uRefraction; // the bottom seen through the moving surface
     float fromShore = -edge;
-    vec3 color = mix(uShallow, uMid, smoothstep(0.0, uDepth.x, fromShore));
-    color = mix(color, uDeep, smoothstep(uDepth.x, uDepth.y, fromShore));
+    float shallows = uDepth.x * (0.55 + 0.9 * noise(p / 90.0)); // the shelf by the shore is wider in places
+    float deep = smoothstep(uDepth.x, uDepth.y, fromShore);
+    vec3 color = mix(uShallow, uMid, smoothstep(0.0, shallows, fromShore));
+    color = mix(color, uDeep, deep);
     color *= 1.0 - uLip.x * (1.0 - smoothstep(0.0, uLip.y, fromShore));
-    color += uLightNet * lightNet(seen) * uNetLook.x;
+    color += uLightNet * lightNet(seen) * uNetLook.x * (1.0 - 0.45 * deep); // light focuses best in the shallows
     color *= 1.0 - dot(w.yz, uLightDir) * uRelief;
     color = moonReflection(color, seen);
     return mix(color, uInk, rippleLines(w, uRipple.xy, uRipple.z) * uRipple.w);
