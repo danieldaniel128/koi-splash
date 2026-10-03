@@ -68,6 +68,11 @@ export class BoardView extends Container {
     return sprites.koi;
   }
 
+  /** Every koi sprite on the board, for effects that follow the fish (wakes in the water). O(K) to walk. */
+  *koi(): IterableIterator<Sprite> {
+    for (const { koi } of this.pieces.values()) yield koi;
+  }
+
   /** Adds a sprite for a new piece at a cell (the cell may be above the board, for koi about to drop in). */
   addPiece(piece: Piece, at: Cell): Sprite {
     const koi = this.createSprites(piece.id, piece.kind);
