@@ -1,0 +1,21 @@
+# Every push to a working branch and every pull request runs the checks, so a PR shows a pass/fail before merging.
+name: Checks
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
