@@ -1,4 +1,5 @@
-# Every push to main runs the checks, builds the game and publishes it to GitHub Pages.
+# Only main is deployed: a push to main (a finished milestone) runs the checks, builds the game and publishes it
+# to GitHub Pages, so the public link always has a stable version.
 name: Deploy
 
 on:

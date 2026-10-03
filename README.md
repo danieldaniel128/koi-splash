@@ -4,8 +4,7 @@ A calm but juicy match-3 on a moonlit koi pond. Built for the mini-game home ass
 
 Play it here: https://danieldaniel128.github.io/koi-splash/
 
-The build is hosted on GitHub Pages. A GitHub Actions workflow (`.github/workflows/deploy.yml`) runs the
-typecheck, lint and tests on every push to `main`, then builds with Vite and deploys the `dist/` folder.
+The build is hosted on GitHub Pages and always shows the last finished milestone (see Workflow below).
 
 ## Running it
 
@@ -15,8 +14,6 @@ npm run dev      # local server, also reachable from a phone on the same Wi-Fi
 npm run check    # typecheck + lint + tests
 npm run build    # static web build in dist/
 ```
-
-Every push to `main` runs the checks and deploys to GitHub Pages.
 
 ## Stack & assets
 
@@ -32,7 +29,10 @@ spawned). The presenter then plays those steps through the view one at a time.
 
 I wanted it this way for two reasons. First, the rules can be tested without a browser. Second, the board on screen
 can't drift away from the real board, because the view never decides anything; it only animates what it's told.
-Effects and sound listen on an event bus, so I can add juice without touching the game logic.
+Effects and sound will listen on an event bus, so I can add juice without touching the game logic.
+
+The turn itself runs on a small state machine with guarded transitions: the end of a turn picks won, lost or idle
+from a table (won is listed before lost, so winning on the last move counts), instead of an if/else chain.
 
 ## Code standards
 
@@ -52,6 +52,32 @@ I'd rather have the linter enforce the rules than rely on remembering them, so m
   audio), not around everything.
 - **Assets:** the koi are baked into textures once at startup and reused, never rebuilt mid-game.
 - **Patterns only where they pay off:** each one used here is explained below or in the code where it lives.
+
+## Workflow
+
+I split the work the way I'd run it on a team:
+
+```
+feature/<task>  ->  develop  ->  main
+```
+
+- **feature branches:** one per task (`feature/animation`, `feature/game-scene`...). Small commits, one idea each.
+- **develop:** where finished tasks come together. A task gets merged through a pull request with a short note on
+  what changed and how I checked it.
+- **main:** only finished milestones. Merging into `main` is what deploys the playable build, so the public link
+  never shows half-done work.
+
+Two GitHub Actions workflows back this up: `ci.yml` runs the typecheck, lint, tests and a build on every working
+branch and every pull request, and `deploy.yml` runs the same checks and publishes to GitHub Pages, only from `main`.
+
+The milestones, in order:
+
+1. **Playable core:** board, swipe, swap/clear/fall animations, turn flow, moves and win/lose
+2. **Goal system:** lily pads and lotus buds that bloom, with the goal as a swappable piece
+3. **Juice:** splashes, ripples, squash and stretch, shake, the water shader, sound
+4. **Specials:** the special koi made by bigger matches, and their combos
+5. **Boosters**
+6. **Screens and content:** title, tutorial, hint, handmade levels and an endless mode
 
 ## Tests and why I have them
 
@@ -75,10 +101,14 @@ I used Claude (AI) as a helper during the project. So far:
 - Prototype: before starting this repo I had AI build a quick throwaway prototype to test the idea and the feel
   (koi on water, splashes, the lotus goal). This repo is a clean rebuild with a proper structure.
 
-- Project setup and tooling config (Vite, TypeScript, ESLint/Prettier, the deploy workflow): AI-written.
+- Project setup and tooling config (Vite, TypeScript, ESLint/Prettier, the CI and deploy workflows): AI-written.
 - `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
 - `tests/rules.test.ts`: AI-written.
+- `src/view/` (board rendering, swipe input, animations) and `src/config/`: AI-written, step by step from my plan,
+  reviewed and tested by me on desktop and phone.
+- `src/core/StateMachine.ts`: the guarded-transition design with enter/exit hooks is mine; AI wrote the code and
+  its tests.
 - Run-time notes in `src/model/rules.ts`: I used AI as a second opinion on performance, to go over each method's
   cost and decide where a note is worth having (the non-obvious ones, not every getter).
 - Lint rules for the code standards above: I decided the standards, AI helped me turn them into ESLint config.
