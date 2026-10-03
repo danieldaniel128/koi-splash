@@ -53,6 +53,9 @@ instead of in the middle of a playtest.
 
 I used Claude (AI) as a helper during the project. So far:
 
+- Prototype: before starting this repo I had AI build a quick throwaway prototype to test the idea and the feel
+  (koi on water, splashes, the lotus goal). This repo is a clean rebuild with a proper structure.
+
 - Project setup and tooling config (Vite, TypeScript, ESLint/Prettier, the deploy workflow): AI-written.
 - `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
