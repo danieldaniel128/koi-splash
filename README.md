@@ -18,20 +18,26 @@ npm run build    # static web build in dist/
 ## Stack & assets
 
 - TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
-- The water is a real wave simulation on the GPU, drawn in a toon style (`src/view/water/`). I wanted the middle
-  ground between the two: water that behaves for real, so the fish actually disturb it, but drawn with clean shapes
-  and a small palette that read well on a phone and keep the pieces easy to scan.
-  - **simulation** (`WaterSim`, `sim.frag`): a height field stepped 60 times a second with the wave equation. Each
-    cell's height and speed are packed into two 8-bit channels, so it runs on any phone GPU without float textures.
-    Waves spread, bounce off the shore and calm down.
-  - **the fish push the water** (`FishWake`): a moving koi leaves a wake, a resting koi flicks its tail now and then,
-    and swaps and matches splash. Later, dives and jumps are just bigger pushes.
-  - **drawing**, three passes that read the same waves: the water body under the koi (saturated blue, lighter by
-    the shore, light gathered under the crests), the surface over the koi (white foam lines on wave crests, short
-    glint dashes, shore foam, sparkles) and a filter on the koi layer (the koi bend under the waves and get a broken
-    white foam outline, like objects in toon water).
-  - Around the pond, an indigo bank with a faint seigaiha (overlapping waves) pattern, a nod to Japanese koi ponds.
-  - Koi cast blurred shadows on the bottom, baked once at startup.
+- The pond is an ink print by moonlight: a real wave simulation on the GPU, drawn with a small palette and thin
+  lines (`src/view/water/`). I wanted the middle ground between the two: water that behaves for real, so the fish
+  actually disturb it, but drawn clean enough that the pieces stay easy to scan on a phone.
+  - **simulation** (`WaterSim`, `sim.frag`): a height field stepped 60 times a second with the wave equation (a
+    9-point stencil, so rings stay round). Each cell's height and speed are packed into two 8-bit channels, so it
+    runs on any phone GPU without float textures. The shore, the stones and the lily pads soak waves up, so a splash
+    fades out instead of bouncing back across the board.
+  - **the fish push the water** (`KoiLife`): a moving koi pushes the water behind it every few px, which lines up
+    into a wake; now and then a resting koi flicks its tail and turns, sending a small ring from its tail. Matched
+    koi dive (a bigger push) and new koi surface. Later, jumps are just bigger pushes.
+  - **drawing**, passes that read the same waves and share one outline of the pond: the water under the koi (deep
+    indigo-teal, lighter shallows by the shore, a faint drifting net of light loops, the moon's reflection, and thin
+    moonlight lines between every crest and trough, so ripples read as stacked rings and wakes as arcs, never as
+    filled foam), a filter on the koi layer (the koi bend under the waves) and a sparse surface over them
+    (calligraphic shore foam around the bank, stones and pads, a few gold-leaf glints on the open water).
+  - Around the pond, an indigo bank with a faint seigaiha (overlapping waves) pattern and washi grain, painted once
+    per screen size into a texture. Stones, lily pads with a lotus and reeds are painted on a canvas at startup
+    (`src/art/pondProps.ts`), like the koi.
+  - The koi are baked once at startup: a tail beat of poses per colour, stepped through as they swim in place, and
+    one soft shadow each, cast away from the moon.
 
 ## How it's built
 
@@ -117,9 +123,10 @@ I used Claude (AI) as a helper during the project. So far:
 - `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
 - `tests/`: AI-written.
-- The water (`src/view/water/`: simulation, fish wakes, toon drawing) and koi shadows: AI-written. I set the
-  direction (water that reacts to the fish, toon look from a reference picture, readable for a match-3, room for
-  koi to dive and jump later) and judged each round against screenshots.
+- The water (`src/view/water/`: simulation, ink-print drawing), the koi swimming (`KoiLife`, `Koi`), the match
+  effects, the pond dressing (`src/art/pondProps.ts`) and koi shadows: AI-written. I set the direction (water that
+  reacts to the fish, a stylized look from a reference picture, readable for a match-3, room for koi to dive and
+  jump later) and judged each round against screenshots.
 - `src/view/` (board rendering, swipe input, animations, HUD, end card), `src/game/` (the game scene) and
   `src/config/`: AI-written, step by step from my plan,
   reviewed and tested by me on desktop and phone.
