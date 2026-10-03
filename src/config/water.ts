@@ -1,28 +1,57 @@
-/** The pond water shader's look. */
+/** The pond's look: the water shaders (bottom and surface), koi shadows and refraction. */
 export const WATER = {
-  bankTop: '#0b2038',
-  bankBottom: '#050d19',
+  // --- bank around the pond
+  bankDark: '#050b10',
+  bankMoss: '#13261f',
   moon: '#fff4d2',
-  /** Moon glow position as a share of the board (0..1 across, 0..1 down). */
-  moonAt: [0.76, 0.2],
-  pondIn: '#1d5876',
-  pondOut: '#0f3450',
-  edgeGlow: '#5ac8f0',
-  caustic: '#bef0ff',
-  /** The pond reaches this far past the board on every side, with this corner radius. */
+  /** Moon position as a share of the board (0..1 across, 0..1 down): its glow and its reflection on the water. */
+  moonAt: [0.78, 0.12],
+
+  // --- pond shape: reaches this far past the board on every side, with this corner radius
   pondMargin: 14,
-  pondRadius: 24,
-  /** Grid spacing of the caustic net's oval loops, and how bright the loops are. */
-  causticSpacing: 30,
-  causticAlpha: 0.075,
-  /** Ripple rings: px per second outward, ring thickness in px, seconds until gone. */
-  rippleSpeed: 140,
-  rippleWidth: 12,
-  rippleLife: 1.4,
+  pondRadius: 26,
+
+  // --- bottom and water body
+  sand: '#7d6b4f',
+  pebble: '#4d4a44',
+  shallowWater: '#1f4f58',
+  deepWater: '#0b2633',
+  /** Distance from the shore (px) over which the pond goes from shallow to fully deep. */
+  depth: 110,
+  caustic: '#cdeef0',
+  causticStrength: 0.32,
+  /** How far the waves shift the bottom (px per unit of slope). */
+  refraction: 14,
+
+  // --- waves
+  /** Overall steepness of the waves: scales refraction, caustic bending and glints together. */
+  waveScale: 3.2,
+
+  // --- surface (drawn above the koi)
+  glintStrength: 0.75,
+  /** Higher = smaller, sharper moon glints. */
+  glintSharpness: 220,
+  moonReflection: 0.28,
+  /** Glints and moon reflection over the board itself are scaled by this, so they never hide a koi. */
+  boardGlare: 0.35,
+  /** Faint sky reflection on the surface, stronger on steep wave slopes. */
+  skyReflection: 0.06,
+  foam: 0.45,
+
+  // --- koi under the surface
+  /** How far the waves shift the koi (px per unit of slope). */
+  koiRefraction: 1.8,
+  shadowOffset: [5, 9],
+  shadowAlpha: 0.38,
+  shadowBlur: 5,
+
+  // --- ripple rings
+  rippleSpeed: 120,
+  rippleLife: 1.8,
   /** Ring strength for a swap, and for a match of 3 (each extra koi in the match adds matchRippleExtra). */
-  swapRipple: 0.7,
-  matchRipple: 1.3,
-  matchRippleExtra: 0.25,
-  /** Most rings alive at once; must match MAX_RIPPLES in water.frag. */
+  swapRipple: 0.6,
+  matchRipple: 1.1,
+  matchRippleExtra: 0.2,
+  /** Most rings alive at once; must match MAX_RIPPLES in the shaders. */
   maxRipples: 8,
 } as const;
