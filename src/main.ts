@@ -18,7 +18,8 @@ import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
 import type { PondProp } from './config/pond';
-import { BOOSTERS, GOAL_TRAY } from './config/ui';
+import { BOOSTERS, GOAL_TRAY, SPECIAL_MENU } from './config/ui';
+import { BOOSTER_MOTION } from './config/specials';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
@@ -45,6 +46,12 @@ import { SpecialTextures } from './view/SpecialTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
+import { BoardMarks } from './view/BoardMarks';
+import { BoosterMotions } from './view/BoosterMotions';
+import { BoosterControl } from './game/BoosterControl';
+import { InstructionPill } from './ui/InstructionPill';
+import { SpecialMenu } from './ui/SpecialMenu';
+import type { Cell, Special } from './model/types';
 import type { GoalIcons } from './ui/GoalTray';
 import { Hud } from './ui/Hud';
 import { BoosterBar } from './ui/BoosterBar';
@@ -64,7 +71,6 @@ async function boot(host: HTMLElement): Promise<void> {
   const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, { goalIcons: goalIcons(app), stars: LEVEL.stars });
-  new BoosterBar(ui, layout.bar, BOOSTERS);
 
   const bake = koiBake(app, board.piece);
   const textures = new KoiTextures(KOI_SET, bake); // the koi, baked once at the screen's resolution
@@ -77,7 +83,9 @@ async function boot(host: HTMLElement): Promise<void> {
   const pads = createPads(app, pond, hud, board);
 
   const effects = createSpecialEffects(boardView, specials, pond, board);
-  startGame({ boardView, pond, popups, hud, pads, result, specials: effects }, board.cell);
+  const boosterViews = createBoosterViews(app, boardView, specials, pond, board.cell);
+  const parts = { boardView, pond, popups, hud, pads, result, specials: effects, boosters: boosterViews };
+  startGame(parts, { ui, layout });
 
   const stage = new Container();
   putUnderWater(app, boardView, pond, board);
@@ -85,10 +93,12 @@ async function boot(host: HTMLElement): Promise<void> {
     pond.bank,
     createGarden(app, layout),
     pond.bottom,
+    boosterViews.marks, // under the koi: the gold ring round a picked koi
     boardView,
     pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
     effects.fx, // the specials' light, over the water
+    boosterViews.motions, // the feed's pellets and the special booster's sparkles
     popups,
     createScenery(app, layout, shore),
   );
@@ -125,34 +135,124 @@ function keepFitted(
 }
 
 /** The game: the scene (presenter) wired to every display it drives, and the swipe input that feeds it. */
-function startGame(
-  parts: {
-    boardView: BoardView;
-    pond: PondWater;
-    popups: ScorePopups;
-    hud: Hud;
-    pads: PadView;
-    result: ResultCard;
-    specials: { fx: SpecialFx; motions: SpecialMotions };
-  },
-  cell: number,
-): void {
-  const { boardView, pond, popups, hud, pads, result, specials } = parts;
+function startGame(parts: GameParts, screen: Screen): void {
+  const { boardView, hud, pads, result } = parts;
+  const bar = new BoosterBar(screen.ui, screen.layout.bar, BOOSTERS);
   const level = { ...LEVEL, ...SCORE };
+  const animator = createAnimator(parts, screen, bar);
+  const view = boardView;
   const scene = new GameScene({
     spec: BOARD,
     level,
     rng: new Random(),
-    view: boardView,
-    animator: new BoardAnimator(boardView, cell, pond, popups, level.pointsPerPiece, specials),
+    view,
+    animator,
     status: hud,
     pads,
     result,
   });
+  const control = createBoosterControl(scene, { bar, marks: parts.boosters.marks, screen, boardView });
   result.onRestart(() => {
     scene.restart();
+    control.reset();
   });
-  new SwipeInput(boardView, cell * INPUT.swipeThreshold, scene.handleSwipe);
+  new SwipeInput(boardView, screen.layout.board.cell * INPUT.swipeThreshold, {
+    swipe: (from, to) => {
+      if (!control.armed) scene.handleSwipe(from, to); // while a booster is armed, the board takes its taps
+    },
+    tap: (cell) => {
+      control.tap(cell);
+    },
+  });
+}
+
+/**
+ * The animator: plays the model's results on the board, with the specials' effects and the boosters' motions (the
+ * feed's pellets are thrown from its button, found in the UI and brought into the board's space).
+ */
+function createAnimator(parts: GameParts, screen: Screen, bar: BoosterBar): BoardAnimator {
+  const { board } = screen.layout;
+  const feedFrom = (): PointData => {
+    const at = screen.ui.centreOf(bar.buttonOf('feed') ?? screen.ui.root);
+    return { x: at.x - board.x, y: at.y - board.y };
+  };
+  const { boardView, pond, popups, specials, boosters } = parts;
+  return new BoardAnimator(boardView, board.cell, pond, popups, SCORE.pointsPerPiece, specials, {
+    motions: boosters.motions,
+    feedFrom,
+  });
+}
+
+/** Everything the game is played on: the board and its water, the HUD, the popups, the end card, the effects. */
+interface GameParts {
+  readonly boardView: BoardView;
+  readonly pond: PondWater;
+  readonly popups: ScorePopups;
+  readonly hud: Hud;
+  readonly pads: PadView;
+  readonly result: ResultCard;
+  readonly specials: { fx: SpecialFx; motions: SpecialMotions };
+  readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
+}
+
+/** Where the UI goes: its layer, and the layout. */
+interface Screen {
+  readonly ui: UiLayer;
+  readonly layout: GameLayout;
+}
+
+/** The boosters' views on the board: their motions (over the koi) and the marks while one is armed (under them). */
+function createBoosterViews(
+  app: Application,
+  boardView: BoardView,
+  specials: SpecialTextures,
+  pond: PondWater,
+  cell: number,
+): { motions: BoosterMotions; marks: BoardMarks } {
+  const motions = new BoosterMotions(boardView, pond, cell, specials.sparkle);
+  const marks = new BoardMarks(boardView, cell);
+  for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);
+  app.ticker.add((ticker) => {
+    marks.follow(ticker.deltaMS / 1000);
+  });
+  return { motions, marks };
+}
+
+/** The boosters' presenter, wired to the bar, the pill over the pond, the board's marks and the petal menu. */
+function createBoosterControl(
+  scene: GameScene,
+  views: { bar: BoosterBar; marks: BoardMarks; screen: Screen; boardView: BoardView },
+): BoosterControl {
+  const { ui, layout } = views.screen;
+  const { board } = layout;
+  const pillRect = { x: layout.hud.x, y: board.y - 52, width: layout.hud.width, height: 40 };
+  const pill = new InstructionPill(ui, pillRect);
+  const menuBoard = {
+    cellCentre: (cell: Cell) => ({
+      x: board.x + (cell.col + 0.5) * board.cell,
+      y: board.y + (cell.row + 0.5) * board.cell,
+    }),
+    stageWidth: layout.stage.width,
+    preview: (cell: Cell, type: Special['type']) => views.boardView.previewAt(cell, type),
+  };
+  const control = new BoosterControl({
+    game: scene,
+    buttons: views.bar,
+    pill,
+    marks: views.marks,
+    picker: new SpecialMenu(ui, menuBoard, SPECIAL_MENU.choices, board.cell),
+    sounds: { arm: () => undefined, cancel: () => undefined, wrong: () => undefined, lift: () => undefined },
+    slots: BOOSTERS,
+    feedLines: BOOSTER_MOTION.feed.lines,
+    random: Math.random,
+  });
+  views.bar.onPress((type) => {
+    control.press(type);
+  });
+  pill.onClose(() => {
+    control.cancel();
+  });
+  return control;
 }
 
 /** The koi on the board, placed on the layout's board. */

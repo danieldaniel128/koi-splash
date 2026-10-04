@@ -34,6 +34,7 @@ export class SpecialTextures {
   readonly sparkle: Texture;
   readonly prism: Texture;
   private readonly cache = new Map<string, Texture[]>();
+  private readonly previews = new Map<string, string>();
 
   constructor(
     private readonly varieties: readonly string[],
@@ -81,6 +82,23 @@ export class SpecialTextures {
     return texture;
   }
 
+  /**
+   * A picture of a koi of this kind as a special, as an image URL for the UI (the special booster's petals): the
+   * striped or rainbow koi as it swims, a whirlpool's eddy with its koi curled in the eye. Cached.
+   */
+  preview(type: Special['type'], kind: Kind): string {
+    const key = `${type}:${kind}`;
+    const known = this.previews.get(key);
+    if (known) return known;
+    const special: Special = type === 'line' ? { type, along: 'col' } : { type };
+    const [pose] = this.poses(special, kind);
+    const koi = pose ? canvasOf(pose) : null;
+    if (!koi) throw new Error(`no ${type} preview for kind ${kind}`);
+    const url = (type === 'whirl' ? onEddy(canvasOf(this.eddy(kind)), koi) : koi).toDataURL();
+    this.previews.set(key, url);
+    return url;
+  }
+
   /** A kind's colours as a special. */
   color(kind: Kind): SpecialColors {
     const colors = this.colors[kind];
@@ -101,4 +119,23 @@ export class SpecialTextures {
     this.cache.set(key, made);
     return made;
   }
+}
+
+/** The canvas a texture was made from (every special texture is painted on one). */
+function canvasOf(texture: Texture): HTMLCanvasElement {
+  const resource: unknown = texture.source.resource;
+  if (!(resource instanceof HTMLCanvasElement)) throw new Error('special texture without a canvas');
+  return resource;
+}
+
+/** A whirlpool's koi drawn in its eddy's eye, on one canvas the eddy's size. */
+function onEddy(eddy: HTMLCanvasElement, koi: HTMLCanvasElement): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = eddy.width;
+  canvas.height = eddy.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('special preview: 2D canvas not available');
+  ctx.drawImage(eddy, 0, 0);
+  ctx.drawImage(koi, (eddy.width - koi.width) / 2, (eddy.height - koi.height) / 2);
+  return canvas;
 }

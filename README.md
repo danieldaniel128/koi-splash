@@ -94,7 +94,13 @@ The specials (`src/model/specials.ts`) are made from shapes: the matched runs ar
 rainbow koi, where the player swapped. A special fires when it's matched, swapped (even without a match) or caught in
 another's blast; what each one reaches is one entry in a Strategy map, and a queue fires the specials each blast
 catches, so chains just happen. Each round reports what was made, what fired and which blast took each koi, which is
-all the view needs to time it. The lily
+all the view needs to time it.
+
+The boosters (Swap any two koi, Feed a colour into lines, power a koi up into a Special) follow the same split. The
+model plans what each does to the board (`src/model/boosters.ts`: the feed plans its lines nearest the food and
+always makes a match), the scene applies it and settles the board like after a swap (no move spent), and
+`BoosterControl` runs the arming flow (armed, picked, choosing, playing) on the same guarded state machine as the
+turn, with the bar, the pill, the board's marks, the petal menu and the sounds injected, so it's tested with fakes. The lily
 pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
 and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
 its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
@@ -198,7 +204,7 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 - The same preset approach as the UI theme for the effects.
 - The prototype's combos (two specials swapped together: cross, giant current, rainbow wave, maelstrom). Swapping
   two specials already fires both.
-- The boosters themselves (the bar, icons and counts are in place).
+- Earning more boosters (a level gives one of each for now).
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 - Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

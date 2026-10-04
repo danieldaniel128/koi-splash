@@ -7,6 +7,7 @@ import { TIMING } from '../config/timing';
 import type { Cell, Fired, Kind } from '../model/types';
 import type { BlastPlan } from './specialTiming';
 import type { SpecialTextures } from './SpecialTextures';
+import { hitStop } from './hitStop';
 import type { WaterSurface } from './water/PondWater';
 
 /** What the effects need from the board: where its cells are, and how big it is (board space). */
@@ -133,14 +134,16 @@ export class SpecialFx extends Container {
     });
     gsap.delayedCall(at + stay, () => {
       this.splash(fired.at, look.pop, look.popRadius);
-      hitStop();
+      hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
   }
 
   /** Prism beams arc from the rainbow koi to every koi it takes, nearest first, each in a colour of the spectrum. */
   private prism({ fired, at }: BlastPlan): void {
     const { rainbowRise, rainbowStep } = TIMING.specials;
-    gsap.delayedCall(at + rainbowRise, hitStop);
+    gsap.delayedCall(at + rainbowRise, () => {
+      hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
+    });
     fired.reach.forEach((cell, n) => {
       this.arc(fired, cell, n, at + rainbowRise + n * rainbowStep);
     });
@@ -235,18 +238,6 @@ function pointOn({ from, control, to }: Curve, t: number): PointData {
 function spinAngle(t: number, rampUp: number, spin0: number, spinMax: number): number {
   const extra = spinMax - spin0;
   return spin0 * t + (t < rampUp ? (extra * t * t) / (2 * rampUp) : extra * (t - rampUp / 2));
-}
-
-/**
- * The animations' clock slows to a crawl for an instant: the hit lands. Timed in real time, so the slowdown can't
- * slow itself; the water and the koi's swimming keep their own clock.
- */
-function hitStop(): void {
-  const { scale, time } = SPECIAL_FX.hitStop;
-  gsap.globalTimeline.timeScale(scale);
-  window.setTimeout(() => {
-    gsap.globalTimeline.timeScale(1);
-  }, time * 1000);
 }
 
 function easeOutBack(t: number): number {
