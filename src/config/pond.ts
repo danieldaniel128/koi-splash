@@ -77,3 +77,29 @@ export const POND = {
   fireflySize: 26,
   firefly: '#f3f7b0',
 } as const;
+
+/** The lily pads on the board (between the koi) and how they react: sizes in stage px, times in seconds. */
+export const BOARD_PADS = {
+  /** Pad radius as a share of a cell: small enough to sit in the gap between four koi. */
+  radius: 0.36,
+  /** Baked opening stages of a bud, from closed to full bloom. */
+  stages: 4,
+  /** Gentle rocking on the water (radians, radians per second). */
+  rock: 0.06,
+  rockSpeed: 0.9,
+  /** A hit: the pad pops to this size and settles back. */
+  hitPop: 1.3,
+  hitTime: 0.35,
+  /** A bloom: the lotus rises to this size, holds, then flies to the goal in the HUD. */
+  bloomLift: 1.7,
+  bloomRise: 0.45,
+  bloomHold: 0.25,
+  flyTime: 0.65,
+  /** An empty pad drifts this far away (px) while it fades. */
+  driftDistance: 36,
+  driftTime: 0.9,
+  /** How hard each event pushes the water (see WaterSurface.push), and the ring's radius (px). */
+  hitPush: 0.6,
+  bloomPush: 1.4,
+  pushRadius: 16,
+} as const;
