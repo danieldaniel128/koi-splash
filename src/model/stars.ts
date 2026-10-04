@@ -1,15 +1,9 @@
-/**
- * The win rating, as in the prototype: one star for completing the goal, two or three when at least this share of the
- * level's moves is still left at that moment.
- */
+/** The rating: a star for each of these scores reached, lowest first. */
 export interface StarRule {
-  readonly two: number;
-  readonly three: number;
+  readonly scores: readonly [number, number, number];
 }
 
-/** The stars a win right now would earn (1 to 3). O(1). */
-export function starsFor(movesLeft: number, moves: number, rule: StarRule): number {
-  const left = moves > 0 ? movesLeft / moves : 0;
-  if (left >= rule.three) return 3;
-  return left >= rule.two ? 2 : 1;
+/** How many stars this score has earned (0 to 3). O(1). */
+export function starsFor(score: number, rule: StarRule): number {
+  return rule.scores.filter((needed) => score >= needed).length;
 }

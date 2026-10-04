@@ -24,8 +24,8 @@ export const LEVEL = {
     { type: 'lotus', count: 3 },
     { type: 'koi', kind: 0, count: 10 }, // 10 red koi
   ] as readonly GoalDef[],
-  /** The win rating (as in the prototype): 2 stars with 15% of the moves left, 3 with 35%. */
-  stars: { two: 0.15, three: 0.35 },
+  /** The rating: a star at each of these scores (see starsFor). */
+  stars: { scores: [1000, 2000, 3000] },
   pads: {
     /** One bud per lotus in the goal (keep these two equal for a lotus goal). */
     buds: 3,

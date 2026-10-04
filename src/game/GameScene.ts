@@ -194,7 +194,7 @@ export class GameScene {
   private status(): GameStatus {
     const { movesLeft, score, goal } = this.level;
     const { moves, stars } = this.deps.level;
-    return { movesLeft, moves, stars: starsFor(movesLeft, moves, stars), score, goals: goal.progress() };
+    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goal.progress() };
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */

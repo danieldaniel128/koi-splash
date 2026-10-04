@@ -48,6 +48,6 @@ export class Hud {
     if (status.score === 0) this.score.reset();
     else this.score.update(status.score);
     this.goal.update(status.goals);
-    this.stars.update(status.movesLeft, status.moves, status.stars);
+    this.stars.update(status.score, status.stars);
   }
 }

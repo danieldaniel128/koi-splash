@@ -13,7 +13,7 @@ export const HUD_MOTION = {
   /** The goal chip pops when its count ticks down, and a star pops as it's lost. */
   goalBump: 1.3,
   goalSettle: 0.4,
-  starLost: 1.5,
+  starEarned: 1.7,
 } as const;
 
 /** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */
