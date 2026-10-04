@@ -16,7 +16,7 @@ import { Fireflies } from './view/Fireflies';
 import { Hud } from './view/Hud';
 import { PadView } from './view/PadView';
 import { ResultOverlay } from './view/ResultOverlay';
-import { SplashFx } from './view/SplashFx';
+import { ScorePopups } from './view/ScorePopups';
 import { KoiLife } from './view/KoiLife';
 import { KoiTextures } from './view/KoiTextures';
 import { PondProps } from './view/water/PondProps';
@@ -39,21 +39,21 @@ async function boot(host: HTMLElement): Promise<void> {
   const hud = new Hud(boardWidth);
   hud.position.set(boardLeft, HUD.top);
   const boardOrigin = { x: boardLeft, y: BOARD_LAYOUT.top };
-  const splashes = createSplashes(hud, pond, boardOrigin);
+  const popups = createScorePopups(hud, boardOrigin);
   const result = new ResultOverlay(STAGE.width, STAGE.height);
   const pads = createPads(app, pond, hud, boardOrigin);
 
-  startGame({ boardView, pond, splashes, hud, pads, result });
+  startGame({ boardView, pond, popups, hud, pads, result });
 
   const stage = new Container();
   putUnderWater(app, boardView, pond);
   stage.addChild(
     pond.bank,
     pond.bottom,
-    pads, // under the koi: falling koi swim over a pad on their way past it
     boardView,
+    pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
-    splashes,
+    popups,
     createScenery(app),
     hud,
     result,
@@ -86,19 +86,19 @@ function keepFitted(app: Application, stage: Container, boardView: BoardView, po
 function startGame(parts: {
   boardView: BoardView;
   pond: PondWater;
-  splashes: SplashFx;
+  popups: ScorePopups;
   hud: Hud;
   pads: PadView;
   result: ResultOverlay;
 }): void {
-  const { boardView, pond, splashes, hud, pads, result } = parts;
+  const { boardView, pond, popups, hud, pads, result } = parts;
   const level = { ...LEVEL, ...SCORE };
   const scene = new GameScene({
     spec: BOARD,
     level,
     rng: new Random(),
     view: boardView,
-    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, splashes, level.pointsPerPiece),
+    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, popups, level.pointsPerPiece),
     status: hud,
     pads,
     result,
@@ -109,19 +109,16 @@ function startGame(parts: {
   new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
 }
 
-/** Match splashes over the board; their points fly to the score in the HUD. */
-function createSplashes(hud: Hud, pond: PondWater, boardOrigin: PointData): SplashFx {
+/** The points each match earns, over the board; they fly to the score in the HUD. */
+function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
   const score = hud.scoreAnchor();
-  const splashes = new SplashFx(
-    { x: hud.x + score.x - boardOrigin.x, y: hud.y + score.y - boardOrigin.y },
-    pond,
-  );
-  splashes.position.set(boardOrigin.x, boardOrigin.y);
-  return splashes;
+  const popups = new ScorePopups({ x: hud.x + score.x - boardOrigin.x, y: hud.y + score.y - boardOrigin.y });
+  popups.position.set(boardOrigin.x, boardOrigin.y);
+  return popups;
 }
 
 /**
- * The lily pads on the board, under the koi layer: they rock on the app's clock, and a bloomed lotus flies
+ * The lily pads on the board, floating over the koi layer: they rock on the app's clock, and a bloomed lotus flies
  * to the goal in the HUD.
  */
 function createPads(app: Application, pond: PondWater, hud: Hud, boardOrigin: PointData): PadView {

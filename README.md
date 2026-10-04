@@ -23,11 +23,12 @@ and reeds are painted on canvases once at startup (`src/art/`) and uploaded as t
 
 The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
 into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks
-its tail, a swap shoves the water apart and a match splashes. The shore, stones and pads soak the waves up. It's
-drawn in an ink and moonlight toon look: the bank around the pond is painted once per screen size, and three passes
-read the waves each frame (the water under the koi, a filter that bends the koi under the waves, and a surface pass
-with shore foam and gold glints). The koi have a dark cartoon outline, and a broken foam line at their waterline
-that follows them and breaks around the fins (drawn each frame from a mask of the koi, `KoiContact`).
+its tail, a swap shoves the water apart, and matched koi dive with a ring in the water while the koi above swim down
+into the gaps, under the lily pads. The shore, stones and pads soak the waves up. It's drawn in an ink and moonlight
+toon look: the bank around the pond is painted once per screen size, and three passes read the waves each frame (the
+water under the koi, a filter that bends the koi under the waves, and a surface pass with shore foam and gold
+glints). The koi have a dark cartoon outline, and a broken foam line at their waterline that follows them and breaks
+around the fins (drawn each frame from a mask of the koi, `KoiContact`).
 
 ## How it's built
 
@@ -49,9 +50,9 @@ The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded
 The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),
 and entering won or lost shows the end card.
 
-Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the match
-effects (`SplashFx`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes (`KoiLife`,
-`KoiWaterline`), outside the turn logic.
+Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the score
+popups (`ScorePopups`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes
+(`KoiLife`, `KoiWaterline`), outside the turn logic.
 
 ## Code standards
 
@@ -78,7 +79,7 @@ Milestones:
 
 1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
 2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece. Done.
-3. Juice: splashes, ripples, squash and stretch, the water shader, sound. Done except sound and screen shake.
+3. Juice: dives, swims, ripples, the water shader, sound. Done except sound and screen shake.
 4. Specials: special koi from bigger matches, and their combos.
 5. Boosters.
 6. Screens and content: title, tutorial, hint, handmade levels, an endless mode.
@@ -98,7 +99,7 @@ I used Claude throughout. AI wrote the code:
 - the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
 - the model and its tests
 - the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
-- the water and the effects (simulation, shaders, splashes, wakes, shadows, ripples, waterline foam)
+- the water and the effects (simulation, shaders, dives and swims, wakes, shadows, ripples, waterline foam)
 
 My part:
 
