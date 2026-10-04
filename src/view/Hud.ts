@@ -19,11 +19,19 @@ export class Hud extends Container {
   constructor(private readonly panelWidth: number) {
     super();
     const radius = HUD.dropRadius;
-    this.moves = label('', { fontFamily: HUD.numberFont, fontSize: 21, fontWeight: '700', fill: HUD.ink }, 0.5);
+    this.moves = label(
+      '',
+      { fontFamily: HUD.numberFont, fontSize: 21, fontWeight: '700', fill: HUD.ink },
+      0.5,
+    );
     this.moves.position.set(radius, HUD.pillHeight / 2 + 1);
     const movesLabel = label('moves', { fontFamily: HUD.labelFont, fontSize: 8, fill: HUD.muted }, 0.5);
     movesLabel.position.set(radius, HUD.pillHeight / 2 + 16);
-    this.score = label('0', { fontFamily: HUD.numberFont, fontSize: 24, fontWeight: '700', fill: HUD.gold }, 0);
+    this.score = label(
+      '0',
+      { fontFamily: HUD.numberFont, fontSize: 24, fontWeight: '700', fill: HUD.gold },
+      0,
+    );
     this.score.position.set(HUD.pillLeft + 16, 20);
     this.target = label('', { fontFamily: HUD.labelFont, fontSize: 12, fill: HUD.muted }, 0);
     this.addChild(drop(radius), pill(panelWidth), this.bar, this.moves, movesLabel, this.score, this.target);
@@ -51,14 +59,19 @@ export class Hud extends Container {
         this.drawScore(this.shown.progress);
       },
     });
-    gsap.fromTo(this.score.scale, { x: HUD.bump, y: HUD.bump }, { x: 1, y: 1, duration: HUD.countUp, ease: 'power2.out' });
+    gsap.fromTo(
+      this.score.scale,
+      { x: HUD.bump, y: HUD.bump },
+      { x: 1, y: 1, duration: HUD.countUp, ease: 'power2.out' },
+    );
   }
 
   private showMoves(movesLeft: number): void {
     const first = this.lastMoves < 0;
     this.lastMoves = movesLeft;
     this.moves.text = `${movesLeft}`;
-    if (!first) gsap.fromTo(this.moves.scale, { x: 1.3, y: 1.3 }, { x: 1, y: 1, duration: 0.3, ease: 'back.out(3)' });
+    if (!first)
+      gsap.fromTo(this.moves.scale, { x: 1.3, y: 1.3 }, { x: 1, y: 1, duration: 0.3, ease: 'back.out(3)' });
   }
 
   private drawScore(progress: number): void {
@@ -85,21 +98,36 @@ function label(text: string, style: TextStyleOptions, anchorX: number): Text {
   return result;
 }
 
+/** Where the drop's glint arc starts and ends (radians, 0 = right). */
+const GLINT_FROM = -0.75;
+const GLINT_TO = 0.2;
+
 /** The moves counter's water drop: pointed on top, round below, with a moonlit rim and a glint on the moon side. */
 function drop(radius: number): Graphics {
   const cx = radius;
   const cy = HUD.pillHeight / 2 + 3;
   const tip = cy - radius * 1.25;
   const belly = cy + radius * 0.15;
-  return new Graphics()
-    .moveTo(cx, tip)
-    .bezierCurveTo(cx + radius * 0.2, tip + radius * 0.45, cx + radius, belly - radius * 0.6, cx + radius, belly)
-    .arc(cx, belly, radius, 0, Math.PI)
-    .bezierCurveTo(cx - radius, belly - radius * 0.6, cx - radius * 0.2, tip + radius * 0.45, cx, tip)
-    .fill({ color: HUD.panel, alpha: HUD.panelAlpha })
-    .stroke({ width: 1.5, color: HUD.rim, alpha: HUD.rimAlpha })
-    .arc(cx, belly, radius * 0.78, -0.75, 0.2)
-    .stroke({ width: 1.5, color: HUD.rim, alpha: 0.45, cap: 'round' });
+  return (
+    new Graphics()
+      .moveTo(cx, tip)
+      .bezierCurveTo(
+        cx + radius * 0.2,
+        tip + radius * 0.45,
+        cx + radius,
+        belly - radius * 0.6,
+        cx + radius,
+        belly,
+      )
+      .arc(cx, belly, radius, 0, Math.PI)
+      .bezierCurveTo(cx - radius, belly - radius * 0.6, cx - radius * 0.2, tip + radius * 0.45, cx, tip)
+      .fill({ color: HUD.panel, alpha: HUD.panelAlpha })
+      .stroke({ width: 1.5, color: HUD.rim, alpha: HUD.rimAlpha })
+      // the glint is its own path: continuing the outline's path drew a stray line from the tip on some phone GPUs
+      .moveTo(cx + Math.cos(GLINT_FROM) * radius * 0.78, belly + Math.sin(GLINT_FROM) * radius * 0.78)
+      .arc(cx, belly, radius * 0.78, GLINT_FROM, GLINT_TO)
+      .stroke({ width: 1.5, color: HUD.rim, alpha: 0.45, cap: 'round' })
+  );
 }
 
 /** The score panel: a rounded pill from the drop to the right edge. */
