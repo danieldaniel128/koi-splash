@@ -169,14 +169,17 @@ function paintGround(
 ): void {
   const ground = frame.height - horizon;
   const rightRoom = frame.width - frame.pond.right;
-  paintStoneLantern(ctx, frame.pond.right + Math.min(rightRoom * 0.35, 150), horizon + ground * 0.62, look);
+  const lantern = { x: frame.pond.right + Math.min(rightRoom * 0.35, 150), y: horizon + ground * 0.62 };
   for (let i = 0; i < 10; i++) {
     const left = i % 2 === 0;
     const x = left
       ? frame.pond.left * (0.15 + random() * 0.7)
       : frame.pond.right + rightRoom * (0.15 + random() * 0.7);
-    paintGrass(ctx, x, horizon + ground * (0.3 + random() * 0.6), look, random);
+    const y = horizon + ground * (0.3 + random() * 0.6);
+    // the grass grows round the lantern, never in front of it
+    if (Math.abs(x - lantern.x) > 36 || y > lantern.y + 4) paintGrass(ctx, x, y, look, random);
   }
+  paintStoneLantern(ctx, lantern.x, lantern.y, look);
 }
 
 function paintSky(ctx: Ctx, width: number, horizon: number, look: BackdropLook): void {
