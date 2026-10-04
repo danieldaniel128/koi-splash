@@ -1,5 +1,5 @@
 // The water surface, drawn above the koi. Kept sparse so the koi always read clearly:
-// - the ripple lines again, but faint, so a ring passes over a koi instead of stopping at it
+// - the bright rim of strong wave fronts again, but faint, so a ring passes over a koi instead of stopping at it
 // - shore foam: a calligraphic stroke just inside the shore (and around every stone and pad) that swells, tapers
 //   and breaks, with a fainter second stroke further out; waves arriving push it out and back
 // - a few flecks of gold leaf glinting on the open water, each fading in and out; never over the board
@@ -11,8 +11,9 @@ out vec4 finalColor;
 // the board rectangle (x, y, width, height)
 uniform vec4 uBoard;
 uniform vec3 uInk;
-uniform vec4 uRipple;
-uniform float uRippleOverKoi;
+uniform vec2 uLightDir;
+// rim on strong fronts: slope where it starts and where it's full, strength over the koi
+uniform vec3 uRim;
 // shore foam width (px), strength, how far waves push it (px per unit of height)
 uniform vec3 uFoam;
 uniform vec3 uGold;
@@ -51,13 +52,12 @@ void main() {
         return;
     }
     vec3 w = waves(p);
-    float lines = rippleLines(w, uRipple.xy, uRipple.z) * uRippleOverKoi;
+    float rim = moonOnWaves(w, uLightDir, uRim.xy).y * uRim.z;
     float foam = shoreFoam(p, edge, w.x);
-    vec2 fromBoard = abs(p - (uBoard.xy + uBoard.zw * 0.5)) - uBoard.zw * 0.5;
-    float open = smoothstep(2.0, 8.0, max(fromBoard.x, fromBoard.y)); // 1 on the open water past the board
+    float open = smoothstep(2.0, 8.0, rectEdge(p, uBoard)); // 1 on the open water past the board
     float gold = goldLeaf(p) * open * uGoldLook.x;
 
-    float white = clamp(max(lines, foam), 0.0, 1.0);
+    float white = clamp(max(rim, foam), 0.0, 1.0);
     float alpha = max(white, gold);
     vec3 color = (uInk * white + uGold * gold * (1.0 - white)) / max(alpha, 1e-4);
     finalColor = vec4(color * alpha, alpha); // premultiplied alpha, as Pixi blends it

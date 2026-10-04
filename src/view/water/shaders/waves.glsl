@@ -41,14 +41,12 @@ vec3 waves(vec2 p) {
     return vec3(h, vec2(hx - h, hy - h) * uWaveScale);
 }
 
-// Thin ink lines on the ripples: one where the water passes its rest level between every crest and trough, so a
-// ring shows as a few stacked thin circles and a wake as stacked arcs, `width` stage px wide whatever the wave's
-// size. `gate`: the slope (height per px) where a line starts to show and where it's at full strength, so calm
-// water draws nothing and a fading ring thins out and disappears.
-float rippleLines(vec3 w, vec2 gate, float width) {
-    float cellPx = uSimArea.z / uSimSize.x;
-    float gradient = length(w.yz) / (uWaveScale * cellPx); // height change per stage px
-    float strength = smoothstep(gate.x, gate.y, gradient);
-    float dist = abs(w.x) / max(gradient, 1e-6); // stage px from the line
-    return lineCover(dist * uPixelRatio, width * mix(0.5, 1.0, strength) * uPixelRatio) * strength;
+// How the moonlight falls on the waves at a point, for the passes that draw them (`w` from waves()):
+// x = light and shade on the slopes (positive on the side facing the moon, negative on the far side)
+// y = the clean bright rim along a strong wave front, on its side facing the moon (0..1); `gate` is where the rim
+//     starts and where it's at full, so small ripples only shade softly and never draw a line
+// A smooth function of the simulated field, so overlapping rings blend into each other instead of crossing as lines.
+vec2 moonOnWaves(vec3 w, vec2 lightDir, vec2 gate) {
+    float lit = -dot(w.yz, lightDir);
+    return vec2(lit, smoothstep(gate.x, gate.y, lit));
 }

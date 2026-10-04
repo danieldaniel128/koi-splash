@@ -43,24 +43,33 @@ export const WATER = {
   lipWidth: 6,
   /** How far the waves shift the water body (px per unit of slope). */
   refraction: 10,
-  /** Light and shade on the slopes of the waves (soft relief, no hard edges). */
-  relief: 0.35,
   /** Direction the moonlight comes from (toward the upper right), for the relief and the shadows. */
   lightDir: [0.6, -0.8],
-  /** The faint net of light loops on the bottom (caustics): colour, strength, loop size (px), line width (px). */
-  lightNet: '#7cc4d6',
-  lightNetStrength: 0.1,
-  lightNetSize: 80,
-  lightNetWidth: 1.1,
 
-  // --- ripples: drawn as thin ink lines between each crest and trough (no filled foam)
+  // --- light on the bottom: soft, wide bands (moonlight focused by the surface), glowing in the shallows
+  glow: '#7fd6dc',
+  /** Strength of the bands, their pattern size (px) and softness (wider and softer when higher). */
+  glowStrength: 0.42,
+  glowSize: 84,
+  glowSoftness: 0.2,
+  /** How far from the shore (px) the light reaches before it fades out, and how much is left under the board. */
+  glowReach: 52,
+  glowUnderBoard: 0,
+
+  // --- the simulated waves, drawn as soft relief (no lines)
+  /** Moonlight colour on the waves. */
   ink: '#e3f0f2',
-  /** Wave slope (height per px) where a ripple line starts to show, and where it's at full strength. */
-  rippleGate: [0.0008, 0.004],
-  /** Line width in stage px, and strength under the koi (between them) and over them (faint, so koi stay clear). */
-  rippleWidth: 1.2,
-  rippleStrength: 0.72,
-  rippleOverKoi: 0.22,
+  /** Light and shade on the slopes of the waves: brightness change per unit of slope. */
+  relief: 1.6,
+  /** Crests catch a little light and troughs darken: the height (water units) where it's at full, and how much. */
+  crestHeight: 0.035,
+  crestLight: 0.14,
+  troughShade: 0.18,
+  /** A clean bright rim along strong fronts only: the slope where it starts and where it's full, its strength
+   * under the koi, and over them (faint, so the koi stay clear). */
+  rimGate: [0.09, 0.2],
+  rimStrength: 0.55,
+  rimOverKoi: 0.2,
 
   // --- surface details (over the water, never over a koi)
   /** Shore foam: a calligraphic stroke inside the shore that swells, tapers and breaks; width (px) and strength. */

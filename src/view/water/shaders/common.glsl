@@ -73,6 +73,13 @@ float waterEdge(vec2 p) {
     return max(pondEdge(p), -propEdge(p));
 }
 
+// Distance (px) to the edge of a rectangle (x, y, width, height): negative inside. Used to keep light and glints
+// off the board, so nothing busy sits behind the koi.
+float rectEdge(vec2 p, vec4 rect) {
+    vec2 d = abs(p - (rect.xy + rect.zw * 0.5)) - rect.zw * 0.5;
+    return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
 // Washi paper: a soft mottle plus long faint fibres, as a brightness factor around 1. Fixed to the stage, like
 // the print itself, so the whole scene reads as one sheet.
 float paper(vec2 p) {

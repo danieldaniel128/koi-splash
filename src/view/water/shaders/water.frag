@@ -1,8 +1,10 @@
 // The pond under the koi, as an ink print by moonlight:
-// - deep indigo-teal water, lighter in the shallows by the shore and shaded right under the bank's lip
-// - a faint, slowly drifting net of light loops on the bottom (caustics), so still water still reads as water
-// - soft light and shade on the slopes of the simulated waves, and the moon's reflection on the open water
-// - thin pale ink lines on the front of every ripple and wake (never filled foam)
+// - deep indigo-teal water, lighter and glowing in the shallows by the shore, shaded right under the bank's lip
+// - soft, wide bands of light drifting on the bottom (moonlight focused by the surface), brightest in the shallows
+//   and fading out toward the board, so the pond feels alive without anything busy behind the koi
+// - the simulated waves as soft relief: slopes facing the moon light up, crests catch a little light, troughs
+//   darken, and only strong fronts get a clean bright rim
+// - the moon's reflection, broken by the water into a loose column of twinkling glints over a soft glow
 // The waves refract all of it. Outside the shore it's transparent (the bank shows through), antialiased.
 // common.glsl and waves.glsl are prepended to this file.
 
@@ -17,48 +19,80 @@ uniform vec2 uDepth;
 // shade under the bank's lip: strength and width (px)
 uniform vec2 uLip;
 uniform float uRefraction;
-uniform float uRelief;
 uniform vec2 uLightDir;
-uniform vec3 uLightNet;
-// light net strength, loop size (px), line width (px)
-uniform vec3 uNetLook;
+// the board rectangle (x, y, width, height): light and glints fade out over it
+uniform vec4 uBoard;
+uniform vec3 uGlow;
+// light bands: strength, pattern size (px), softness, how far from the shore they reach (px)
+uniform vec4 uGlowLook;
+// how much of the light bands and the shallows' glow is left under the board
+uniform float uGlowUnderBoard;
 uniform vec3 uInk;
-// ripple lines: slope where they start and reach full strength, width (px), strength
-uniform vec4 uRipple;
+// relief: light on the slopes, crest height at full light, crest light, trough shade
+uniform vec4 uRelief;
+// rim on strong fronts: slope where it starts and where it's full, strength
+uniform vec3 uRim;
 uniform vec3 uMoon;
 // moon reflection centre (x, y) and radius, stage px
 uniform vec3 uMoonAt;
 
-// A soft line of light along the zero crossings of a noise field: a crisp core `uNetLook.z` px wide and a faint
-// glow around it. Constant width on screen, however the field is stretched.
-float loopLine(float n) {
-    float dist = abs(n) / max(fwidth(n), 1e-5); // device px from the line
-    return lineCover(dist, uNetLook.z * uPixelRatio) * 0.7 + exp(-dist / (3.0 * uPixelRatio)) * 0.3;
+// Soft, wide bands of light on the bottom: two layers of slow noise, slowly warped and drifting, each glowing
+// around where it crosses zero. The glow's width follows the noise (in pattern units, not screen px), so where the
+// field is flat the light spreads into broad patches, and where two bands cross it pools brighter, like caustics.
+float lightBands(vec2 p) {
+    vec2 q = p / uGlowLook.y;
+    q += (vec2(noise(q * 0.7 + vec2(uTime * 0.05, 0.0)), noise(q * 0.7 + vec2(5.0, -uTime * 0.04))) - 0.5) * 0.8;
+    float a = gnoise(q + uTime * 0.03) / uGlowLook.z;
+    float b = gnoise(q * 1.5 + vec2(7.3, -3.6) - uTime * 0.045) / (uGlowLook.z * 0.8);
+    float bandA = exp(-a * a);
+    float bandB = exp(-b * b);
+    return bandA * 0.55 + bandB * 0.35 + bandA * bandB * 0.6;
 }
 
-// The light net: moonlight focused by the gently moving surface into thin, winding loops on the bottom. Two
-// layers of noise, slowly warped and drifting, so the loops re-form and never show a pattern.
-float lightNet(vec2 p) {
-    vec2 q = p / uNetLook.y;
-    q += (vec2(noise(q * 0.7 + vec2(uTime * 0.05, 0.0)), noise(q * 0.7 + vec2(5.0, -uTime * 0.04))) - 0.5) * 0.6;
-    float a = gnoise(q + uTime * 0.025);
-    float b = gnoise(q * 1.6 + vec2(7.3, -3.6) - uTime * 0.04);
-    return max(loopLine(a), loopLine(b) * 0.6);
+// How much light the bottom gets at a point: all of it in the shallows (the shelf is wider in places), less
+// toward the deep, and only a trace under the board. Also brightens the shallows themselves.
+float shallowLight(vec2 p, float fromShore) {
+    float reach = uGlowLook.w * (0.6 + 0.8 * noise(p / 70.0 + 3.0));
+    float shore = 1.0 - smoothstep(0.0, reach, fromShore);
+    float underBoard = smoothstep(-2.0, -26.0, rectEdge(p, uBoard));
+    return shore * shore * mix(1.0, uGlowUnderBoard, underBoard);
 }
 
-// The moon's reflection, as an ink print draws it: a crisp pale disc with a soft halo, its lower part cut by thin
-// dark bands that drift down like small waves, the whole of it shimmering and bent by every ripple that passes.
-vec3 moonReflection(vec3 color, vec2 seen) {
-    seen.x += sin(seen.y * 0.8 + uTime * 1.4) * 0.7;
-    vec2 d = seen - uMoonAt.xy;
-    float r = length(d);
-    float disc = clamp((uMoonAt.z - r) * uPixelRatio + 0.5, 0.0, 1.0);
-    float period = uMoonAt.z / 2.6;
-    float band = abs(fract(d.y / period - uTime * 0.15) - 0.5) * period; // px from the nearest band
-    float gaps = lineCover(band * uPixelRatio, 1.3 * uPixelRatio) * smoothstep(-0.2, 0.5, d.y / uMoonAt.z);
-    float shade = 1.0 - 0.18 * smoothstep(-0.6, 1.0, (d.y - d.x) / uMoonAt.z); // lit from the upper right
-    float halo = exp(-max(r - uMoonAt.z, 0.0) / (uMoonAt.z * 0.8)) * 0.16;
-    return mix(color + uMoon * halo, uMoon * shade, disc * (1.0 - gaps) * 0.88);
+// Glints of moonlight in a grid of `cell` px cells: in each cell maybe one short horizontal dash, longer near the
+// column's middle, that twinkles on its own beat. `density` (0..1) is how many cells show one here.
+float moonGlints(vec2 seen, vec2 cell, float density, float seed) {
+    vec2 g = seen / cell;
+    g.x += sin(floor(g.y) * 1.7 + uTime * 0.8 + seed) * 0.35; // each row sways on its own
+    vec2 id = floor(g) + seed;
+    vec2 f = fract(g) - 0.5 - (vec2(hash(id + 1.3), hash(id + 4.1)) - 0.5) * 0.3;
+    float size = 0.25 + 0.25 * hash(id + 7.7);
+    float dash = 1.0 - smoothstep(size * 0.35, size, length(f * vec2(1.0, 2.6)));
+    float twinkle = 0.35 + 0.65 * smoothstep(-0.2, 1.0, sin(uTime * (1.2 + 2.0 * hash(id + 2.9)) + hash(id) * 6.28));
+    return dash * twinkle * step(hash(id + 9.4), density);
+}
+
+// The moon on the water, broken by the ripples: a soft glow under a loose column of glints, big broken dashes in
+// the middle and small ones further out, all twinkling and swaying. Taller than wide, as moonlight on water runs
+// toward the viewer; no disc and no regular bars.
+vec3 moonlight(vec3 color, vec2 seen, float open) {
+    vec2 d = (seen - uMoonAt.xy) / uMoonAt.z; // in moon radii
+    float column = dot(d / vec2(1.2, 1.9), d / vec2(1.2, 1.9));
+    color += uMoon * (exp(-column * 1.6) * 0.3 + exp(-length(d) * 0.6) * 0.07) * open;
+    if (column > 3.0) return color;
+    float core = exp(-column * 2.2);
+    float big = moonGlints(seen, vec2(15.0, 5.0), core * 1.1, 0.0);
+    float small = moonGlints(seen, vec2(7.0, 3.0), exp(-column * 0.9) * 0.75, 31.0);
+    return mix(color, uMoon, clamp(big + small * 0.8, 0.0, 1.0) * open * 0.92);
+}
+
+// The waves as soft relief: light and shade on the slopes, a little light on the crests, darker troughs, and a
+// clean bright rim only along strong fronts.
+vec3 relief(vec3 color, vec3 w) {
+    vec2 light = moonOnWaves(w, uLightDir, uRim.xy);
+    color *= 1.0 + light.x * uRelief.x;
+    color = mix(color, uInk, smoothstep(0.0, uRelief.y, w.x) * uRelief.z);
+    color *= 1.0 - smoothstep(0.0, uRelief.y, -w.x) * uRelief.w;
+    return mix(color, uInk, light.y * uRim.z);
 }
 
 vec3 water(vec2 p, float edge, vec3 w) {
@@ -68,11 +102,11 @@ vec3 water(vec2 p, float edge, vec3 w) {
     float deep = smoothstep(uDepth.x, uDepth.y, fromShore);
     vec3 color = mix(uShallow, uMid, smoothstep(0.0, shallows, fromShore));
     color = mix(color, uDeep, deep);
+    float light = shallowLight(p, fromShore);
+    color += uGlow * light * (0.1 + lightBands(seen) * uGlowLook.x);
     color *= 1.0 - uLip.x * (1.0 - smoothstep(0.0, uLip.y, fromShore));
-    color += uLightNet * lightNet(seen) * uNetLook.x * (1.0 - 0.45 * deep); // light focuses best in the shallows
-    color *= 1.0 - dot(w.yz, uLightDir) * uRelief;
-    color = moonReflection(color, seen);
-    return mix(color, uInk, rippleLines(w, uRipple.xy, uRipple.z) * uRipple.w);
+    color = relief(color, w);
+    return moonlight(color, seen, smoothstep(0.0, 14.0, rectEdge(p, uBoard)));
 }
 
 void main() {

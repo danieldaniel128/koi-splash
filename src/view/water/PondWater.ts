@@ -52,9 +52,10 @@ interface StateBinding {
  * moonlight in four passes that read the same waves and share the pond's outline:
  * - `bank`: the ground around the pond, over the whole screen. It never changes, so it's drawn once per screen
  *   size into a texture instead of running its shader every frame
- * - `bottom`: the water under the koi (depth, light net, the moon's reflection, ripple lines)
+ * - `bottom`: the water under the koi (depth, soft light bands in the shallows, the waves as soft relief, the
+ *   moon's broken reflection)
  * - `koiFilter`: on the koi layer (the koi bend under the waves and take on a little of the water colour)
- * - `surface`: above the koi (faint ripple lines, shore foam, gold-leaf glints on the open water)
+ * - `surface`: above the koi (a faint rim on strong wave fronts, shore foam, gold-leaf glints on the open water)
  */
 export class PondWater {
   readonly bank = new Container();
@@ -74,7 +75,7 @@ export class PondWater {
     const stage = { x: 0, y: 0, width: layout.stageWidth, height: layout.stageHeight };
     this.bankPainter = this.quad(stage, withCommon(bankFragment), bankLook(layout));
     this.bank.addChild(this.bankPainter);
-    this.bottom = this.quad(water, withWaves(pondBottom), waterLook());
+    this.bottom = this.quad(water, withWaves(pondBottom), waterLook(layout.board));
     this.surface = this.quad(water, withWaves(surface), surfaceLook(layout.board));
     this.koiFilter = this.createKoiFilter();
     this.koiUniforms = (
@@ -214,7 +215,7 @@ function bankLook(layout: PondLayout): UniformDefs {
   };
 }
 
-function waterLook(): UniformDefs {
+function waterLook(board: SimArea): UniformDefs {
   return {
     uShallow: { value: color(WATER.shallow), type: 'vec3<f32>' },
     uMid: { value: color(WATER.mid), type: 'vec3<f32>' },
@@ -222,15 +223,20 @@ function waterLook(): UniformDefs {
     uDepth: { value: [WATER.shallowWidth, WATER.deepFrom], type: 'vec2<f32>' },
     uLip: { value: [WATER.lipShade, WATER.lipWidth], type: 'vec2<f32>' },
     uRefraction: { value: WATER.refraction, type: 'f32' },
-    uRelief: { value: WATER.relief, type: 'f32' },
     uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
-    uLightNet: { value: color(WATER.lightNet), type: 'vec3<f32>' },
-    uNetLook: {
-      value: [WATER.lightNetStrength, WATER.lightNetSize, WATER.lightNetWidth],
-      type: 'vec3<f32>',
+    uBoard: { value: [board.x, board.y, board.width, board.height], type: 'vec4<f32>' },
+    uGlow: { value: color(WATER.glow), type: 'vec3<f32>' },
+    uGlowLook: {
+      value: [WATER.glowStrength, WATER.glowSize, WATER.glowSoftness, WATER.glowReach],
+      type: 'vec4<f32>',
     },
+    uGlowUnderBoard: { value: WATER.glowUnderBoard, type: 'f32' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
-    uRipple: rippleLook(),
+    uRelief: {
+      value: [WATER.relief, WATER.crestHeight, WATER.crestLight, WATER.troughShade],
+      type: 'vec4<f32>',
+    },
+    uRim: { value: [...WATER.rimGate, WATER.rimStrength], type: 'vec3<f32>' },
     uMoon: { value: color(POND.moon), type: 'vec3<f32>' },
     uMoonAt: { value: [...POND.moonAt, POND.moonRadius], type: 'vec3<f32>' },
   };
@@ -240,18 +246,11 @@ function surfaceLook(board: SimArea): UniformDefs {
   return {
     uBoard: { value: [board.x, board.y, board.width, board.height], type: 'vec4<f32>' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
-    uRipple: rippleLook(),
-    uRippleOverKoi: { value: WATER.rippleOverKoi, type: 'f32' },
+    uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
+    uRim: { value: [...WATER.rimGate, WATER.rimOverKoi], type: 'vec3<f32>' },
     uFoam: { value: [WATER.foamWidth, WATER.foamStrength, WATER.foamBreath], type: 'vec3<f32>' },
     uGold: { value: color(WATER.gold), type: 'vec3<f32>' },
     uGoldLook: { value: [WATER.goldStrength, WATER.goldGrid], type: 'vec2<f32>' },
-  };
-}
-
-function rippleLook(): { value: number[]; type: string } {
-  return {
-    value: [...WATER.rippleGate, WATER.rippleWidth, WATER.rippleStrength],
-    type: 'vec4<f32>',
   };
 }
 
