@@ -1,7 +1,7 @@
 import { Texture } from 'pixi.js';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
-import { bakeInkedKoi, bakeKoiContact } from '../art/koiInk';
+import { bakeInkedKoi, bakeKoiContact, bakeKoiRipple } from '../art/koiInk';
 import type { KoiInk } from '../art/koiInk';
 import type { Kind } from '../model/types';
 
@@ -26,18 +26,21 @@ export interface KoiBake {
   readonly contactGap: number;
   readonly contactBlur: number;
   readonly contactResolution: number;
+  /** The ring a tail beat sends out (see bakeKoiRipple), baked at contactResolution. */
+  readonly ripple: Parameters<typeof bakeKoiRipple>[2];
 }
 
 /**
  * Textures per koi kind, painted once at startup and shared by every sprite of that kind: one tail beat of inked
- * poses (the koi swim in place by stepping through them), a soft shadow for the pond bottom and the shape where the
- * koi meets the water (for the foam at the waterline). Painting is expensive canvas work, so it must never happen
- * during play.
+ * poses (the koi swim in place by stepping through them), a soft shadow for the pond bottom, the shape where the
+ * koi meets the water (for the foam at the waterline) and the ring of its ripples. Painting is expensive canvas
+ * work, so it must never happen during play.
  */
 export class KoiTextures {
   private readonly poses: Texture[][];
   private readonly shadows: Texture[];
   private readonly contacts: Texture[][];
+  private readonly ripples: Texture[];
 
   /**
    * O(kinds x frames) canvas paints plus GPU uploads: the heavy part of boot, done once (5 kinds x 12 poses, each
@@ -46,6 +49,10 @@ export class KoiTextures {
   constructor(varietyIds: readonly string[], bake: KoiBake) {
     this.poses = varietyIds.map((id) => bakePoses(id, bake));
     this.contacts = varietyIds.map((id) => bakeContacts(id, bake));
+    this.ripples = varietyIds.map((id) => {
+      const pose = { ...stillPose(bake), resolution: bake.contactResolution };
+      return Texture.from(bakeKoiRipple(getVariety(id), pose, bake.ripple));
+    });
     this.shadows = varietyIds.map((id) => {
       const still = bakeKoi(getVariety(id), stillPose(bake));
       return Texture.from(bakeShadow(still, bake.shadowBlur * bake.resolution));
@@ -72,11 +79,20 @@ export class KoiTextures {
     return shapes;
   }
 
+  /** The soft ring a koi of this kind sends out with each tail beat, at contactResolution. */
+  ripple(kind: Kind): Texture {
+    const texture = this.ripples[kind];
+    if (!texture) throw new RangeError(`no koi ripple for kind ${kind}`);
+    return texture;
+  }
+
   destroy(): void {
-    for (const texture of [...this.poses.flat(), ...this.shadows, ...this.contacts.flat()]) texture.destroy(true);
+    const all = [...this.poses.flat(), ...this.shadows, ...this.contacts.flat(), ...this.ripples];
+    for (const texture of all) texture.destroy(true);
     this.poses.length = 0;
     this.shadows.length = 0;
     this.contacts.length = 0;
+    this.ripples.length = 0;
   }
 }
 

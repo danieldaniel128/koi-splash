@@ -74,6 +74,37 @@ export function bakeKoiContact(variety: KoiVariety, bake: BakeOptions, gap: numb
   return canvas;
 }
 
+/**
+ * A soft ring of light around a koi's whole shape (fins and tail too), for the small ripple each beat of its tail
+ * sends out (the game grows and fades it). The ring is where the koi's silhouette, blurred by `blur` px, falls to
+ * `level`, so it's rounder than the fish, like a real ripple; `width` is how far around that level it spreads (in
+ * blurred cover). Head up, centred on a canvas padded by `pad` px all round.
+ */
+export function bakeKoiRipple(
+  variety: KoiVariety,
+  bake: BakeOptions,
+  ring: { readonly blur: number; readonly level: number; readonly width: number; readonly pad: number },
+): HTMLCanvasElement {
+  const scale = bake.resolution ?? 1;
+  const koi = solid(bakeKoi(variety, { ...bake, tailWag: 0 }), '#ffffff');
+  const pad = Math.ceil(ring.pad * scale);
+  const canvas = blank(koi.width + pad * 2);
+  const ctx = context(canvas);
+  ctx.filter = `blur(${ring.blur * scale}px)`;
+  ctx.drawImage(koi, pad, pad);
+  ctx.filter = 'none';
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = pixels;
+  const floor = Math.exp(-((ring.level / ring.width) ** 2)); // what the bell leaves far out: taken off, so it ends
+  for (let i = 0; i < data.length; i += 4) {
+    const away = ((data[i + 3] ?? 0) / 255 - ring.level) / ring.width;
+    data[i] = data[i + 1] = data[i + 2] = 255;
+    data[i + 3] = Math.round((255 * Math.max(Math.exp(-away * away) - floor, 0)) / (1 - floor));
+  }
+  ctx.putImageData(pixels, 0, 0);
+  return canvas;
+}
+
 /** Draws `source`'s silhouette in `color`, grown by `width` px all round, under whatever is drawn next. */
 function outline(ctx: CanvasRenderingContext2D, source: HTMLCanvasElement, color: string, width: number): void {
   const shape = solid(source, color);

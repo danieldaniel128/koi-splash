@@ -123,6 +123,7 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
     contactGap: WATER.contactGap,
     contactBlur: WATER.contactBlur,
     contactResolution: WATER.contactResolution,
+    ripple: { blur: WATER.rippleBlur, level: WATER.rippleLevel, width: WATER.rippleWidth, pad: WATER.ripplePad },
   });
 }
 

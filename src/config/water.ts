@@ -115,6 +115,24 @@ export const WATER = {
   contactBreaks: 9,
   /** A koi moving this fast (px/s), or lifted while swapping, stirs its foam to the full (wider, brighter). */
   contactStirSpeed: 300,
+  /**
+   * Each beat of a koi's tail sends a small ripple out: a soft ring of moonlight around its shape. The ring is where
+   * the koi's silhouette blurred by `rippleBlur` px falls to `rippleLevel`, spread `rippleWidth` around it, baked
+   * with `ripplePad` px of room around the koi.
+   */
+  rippleBlur: 3,
+  rippleLevel: 0.3,
+  rippleWidth: 0.13,
+  ripplePad: 8,
+  /**
+   * How long a ripple lasts (s), how much it grows over that time (scale), its colour and strength. A new one starts
+   * only once the last is this share of the way through, so fast tail beats don't cut their own rings short.
+   */
+  rippleLife: 1.1,
+  rippleGrow: 1.35,
+  ripple: '#d9eef2',
+  rippleStrength: 0.3,
+  rippleRestart: 0.6,
 
   // --- koi under the surface
   /** How far the waves shift the koi (px per unit of slope). */
