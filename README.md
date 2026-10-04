@@ -42,8 +42,10 @@ painter. The tracer, the field, the ring and the atlas packing are all unit test
 
 Above the pond, the layout leaves an open scene (the pond sits low, like the art over the board in commercial
 match-3s), and a moonlit garden is painted into it once (`src/art/backdrop.ts`): sky, stars and the moon, misty
-hills, a pagoda, a tree line and a maple with a paper lantern. Each element stands on the horizon at a fixed size and
-is left out when there's no room for it, so a tall phone gets the whole garden and a desktop a strip of sky. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
+hills, a pagoda, a tree line and a maple with a paper lantern. On a wide screen the horizon drops and the garden
+stands beside the pond instead, with a stone lantern on the ground (`planBackdrop` decides, tested). The ground
+itself is raked gravel: the bank shader draws rake lines that follow the shore by reading the same distance field
+as the water, so they ring any pond shape, then turn into straight rows like a dry garden. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
 screen's real pixel density, so the whole border is one texture and one draw call.
 
 Changing the look is meant to be config, not surgery:
