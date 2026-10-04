@@ -35,8 +35,9 @@ export interface PadSpec {
   readonly spacing: number;
 }
 
-/** The four cells right next to a pad. */
+/** The pad's own cell (a special's blast passing over it) and the four cells right next to it. */
 const AROUND: readonly Cell[] = [
+  { col: 0, row: 0 },
   { col: 0, row: -1 },
   { col: 0, row: 1 },
   { col: -1, row: 0 },
