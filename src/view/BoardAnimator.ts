@@ -8,19 +8,12 @@ import { scoreRound } from '../model/score';
 import type { CascadeStep, Cell, Piece, Spawn } from '../model/types';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
+import type { WaterSurface } from './water/PondWater';
 
 /** A piece and the cell it sits in when an animation starts. */
 export interface PlacedPiece {
   readonly piece: Piece;
   readonly at: Cell;
-}
-
-/**
- * Something the koi can push at a point in global space (the pond's water): `push` in water-height units (pressed
- * down), over `radius` stage px.
- */
-export interface RippleSurface {
-  ripple(globalPoint: PointData, push: number, radius: number): void;
 }
 
 /** The match effects over the water, in the board's space (one splash per match, points). */
@@ -46,7 +39,7 @@ export class BoardAnimator {
   constructor(
     private readonly view: BoardView,
     private readonly cellSize: number,
-    private readonly water: RippleSurface,
+    private readonly water: WaterSurface,
     private readonly fx: MatchEffects,
   ) {}
 
@@ -64,11 +57,7 @@ export class BoardAnimator {
       this.slide(this.view.spriteOf(second.piece.id), first.at, TIMING.swapSink),
     ]);
     for (const cell of [first.at, second.at]) {
-      this.water.ripple(
-        this.view.toGlobal(this.view.cellToPoint(cell)),
-        WATER.swapSettlePush,
-        WATER.swapRadius,
-      );
+      this.water.push(this.onStage(this.view.cellToPoint(cell)), WATER.swapSettlePush, WATER.swapRadius);
     }
   }
 
@@ -110,7 +99,12 @@ export class BoardAnimator {
   /** The water is shoved apart between two cells (a swap): a push at the midpoint, `strength` times the full one. */
   private stir(from: Cell, to: Cell, strength: number): void {
     const middle = centreOf([this.view.cellToPoint(from), this.view.cellToPoint(to)]);
-    this.water.ripple(this.view.toGlobal(middle), WATER.swapPush * strength, WATER.swapRadius);
+    this.water.push(this.onStage(middle), WATER.swapPush * strength, WATER.swapRadius);
+  }
+
+  /** A point on the board, on the stage (where the water is pushed). */
+  private onStage(boardPoint: PointData): PointData {
+    return { x: this.view.x + boardPoint.x, y: this.view.y + boardPoint.y };
   }
 
   /** Slides to a cell, growing to `peak` times its size halfway (lifted toward the surface) and back. */
@@ -156,7 +150,7 @@ export class BoardAnimator {
   private async dive(id: number, at: Cell): Promise<void> {
     const koi = this.view.spriteOf(id);
     const point = this.view.cellToPoint(at);
-    this.water.ripple(this.view.toGlobal(point), WATER.divePush, WATER.diveRadius);
+    this.water.push(this.onStage(point), WATER.divePush, WATER.diveRadius);
     koi.turnToward(koi.heading + TIMING.diveTurn, 1);
     const rest = koi.restScale;
     const sink = { depth: 0 };
@@ -219,7 +213,7 @@ export class BoardAnimator {
       .to(depth, { amount: 0, duration: TIMING.rise, ease: 'power2.out', onUpdate: show })
       .call(
         () => {
-          this.water.ripple(this.view.toGlobal(point), WATER.surfacePush, WATER.diveRadius);
+          this.water.push(this.onStage(point), WATER.surfacePush, WATER.diveRadius);
         },
         [],
         TIMING.rise * TIMING.riseSurfaceAt,

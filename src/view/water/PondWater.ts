@@ -32,6 +32,12 @@ export interface PondLayout {
   readonly props: readonly PondProp[];
 }
 
+/** Something the koi and the matches push: the pond's water. */
+export interface WaterSurface {
+  /** Presses the surface down by `strength` (water-height units; negative lifts it) over `radius` px at a stage point. */
+  push(at: PointData, strength: number, radius: number): void;
+}
+
 /** How the stage sits on the screen (CSS px) and the renderer's pixel density. */
 export interface ScreenMapping {
   readonly offset: PointData;
@@ -59,7 +65,7 @@ interface StateBinding {
  * - `surface`: above the koi (foam at the waterline around every koi, a faint rim on strong wave fronts, shore
  *   foam, gold-leaf glints on the open water)
  */
-export class PondWater {
+export class PondWater implements WaterSurface {
   readonly bank = new Container();
   readonly bottom: Mesh<Geometry, Shader>;
   readonly surface: Mesh<Geometry, Shader>;
@@ -102,15 +108,9 @@ export class PondWater {
     this.contact.draw(shapes);
   }
 
-  /** Pushes the surface at a stage point (wakes, tail flicks, dives; later jumps). */
-  drop(stageX: number, stageY: number, radius: number, push: number): void {
-    this.sim.drop(stageX, stageY, radius, push);
-  }
-
-  /** Presses the surface down by `push` over `radius` px at a point in global (screen) space: swaps, matches. */
-  ripple(globalPoint: PointData, push: number, radius: number): void {
-    const local = this.bottom.toLocal(globalPoint);
-    this.sim.drop(local.x, local.y, radius, -push);
+  /** Wakes, tail flicks, swaps, dives and landing droplets all push the water here. */
+  push(at: PointData, strength: number, radius: number): void {
+    this.sim.drop(at.x, at.y, radius, -strength);
   }
 
   /**

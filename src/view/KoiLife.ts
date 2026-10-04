@@ -2,11 +2,7 @@ import type { PointData } from 'pixi.js';
 import { KOI_SWIM } from '../config/koi';
 import { WATER } from '../config/water';
 import type { Koi } from './Koi';
-
-/** Pushes the water surface at a stage point (the pond's simulation). */
-export interface WaterSurface {
-  drop(stageX: number, stageY: number, radius: number, push: number): void;
-}
+import type { WaterSurface } from './water/PondWater';
 
 /** Where a koi was last frame, and where it last pushed the water. */
 interface Motion {
@@ -66,8 +62,8 @@ export class KoiLife {
     const strength = Math.min(speed / WATER.wakeFullSpeed, 1);
     this.push(
       { x: koi.x - dx * behind, y: koi.y - dy * behind },
-      WATER.wakeRadius,
       WATER.wakePush * strength,
+      WATER.wakeRadius,
     );
   }
 
@@ -79,11 +75,15 @@ export class KoiLife {
     if (motion && (motion.x !== fish.x || motion.y !== fish.y)) return;
     const side = this.random() < 0.5 ? -1 : 1;
     fish.flick(side * this.between(KOI_SWIM.flickTurn));
-    this.push(fish.tailPoint(), WATER.flickRadius, WATER.flickPush);
+    this.push(fish.tailPoint(), WATER.flickPush, WATER.flickRadius);
   }
 
-  private push(boardPoint: PointData, radius: number, push: number): void {
-    this.water.drop(this.boardOrigin.x + boardPoint.x, this.boardOrigin.y + boardPoint.y, radius, -push);
+  private push(boardPoint: PointData, strength: number, radius: number): void {
+    this.water.push(
+      { x: this.boardOrigin.x + boardPoint.x, y: this.boardOrigin.y + boardPoint.y },
+      strength,
+      radius,
+    );
   }
 
   private track(koi: Koi): Motion {

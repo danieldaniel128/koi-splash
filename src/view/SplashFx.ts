@@ -3,7 +3,7 @@ import { Container, Sprite, Text, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { paintDroplet, paintFoamBurst, paintGlow } from '../art/glow';
 import { POINTS, SPLASH } from '../config/fx';
-import type { RippleSurface } from './BoardAnimator';
+import type { WaterSurface } from './water/PondWater';
 
 /** Pixel size the flash, foam and droplet textures are painted at (then scaled to their stage size). */
 const FLASH_TEXTURE = 128;
@@ -30,7 +30,7 @@ export class SplashFx extends Container {
     /** Where the score is shown, in this layer's space: the points fly there. */
     private readonly scoreAt: PointData,
     /** The pond: landing droplets push it. */
-    private readonly water: RippleSurface,
+    private readonly water: WaterSurface,
     private readonly random: () => number = Math.random,
   ) {
     super();
@@ -171,7 +171,7 @@ export class SplashFx extends Container {
       },
       onComplete: () => {
         drop.destroy();
-        this.water.ripple(this.toGlobal(land), SPLASH.landPush, SPLASH.landRadius);
+        this.water.push({ x: this.x + land.x, y: this.y + land.y }, SPLASH.landPush, SPLASH.landRadius);
       },
     });
   }
