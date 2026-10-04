@@ -1,3 +1,5 @@
+import { drawShadowOnly } from './blur';
+
 /**
  * pondProps.ts - the things around and on the pond, painted once on a canvas like the koi: stones, lily pads (one
  * carrying a lotus) and reed clumps. Ink-print style: dark shapes with a crisp ink outline, a moonlit rim on the
@@ -24,6 +26,8 @@ const TAU = Math.PI * 2;
 /** The shadow falls away from the moon (down and to the left). */
 const SHADOW_OFFSET: Pt = [-3, 5];
 const SHADOW = 'rgba(2, 8, 18, 0.5)';
+/** How soft the shadow is (px): the same on every screen. */
+const SHADOW_BLUR = 1.5;
 
 const STONE = { lit: '#8ea2c2', top: '#56647f', mid: '#2b364d', dark: '#121928', ink: '#060a13' } as const;
 const PAD = { rim: '#86c595', centre: '#4f9a63', edge: '#2a6644', vein: 'rgba(190, 235, 190, 0.35)', ink: '#0b2618' };
@@ -234,13 +238,15 @@ function seedHead(ctx: Ctx, angle: number, distance: number): void {
 
 /** A soft shadow of whatever `shape` traces, cast away from the moon. */
 function paintShadow(ctx: Ctx, shape: () => void): void {
-  ctx.save();
-  ctx.filter = 'blur(3px)';
-  ctx.translate(...SHADOW_OFFSET);
-  shape();
-  ctx.fillStyle = SHADOW;
-  ctx.fill();
-  ctx.restore();
+  drawShadowOnly(
+    ctx,
+    () => {
+      shape();
+      ctx.fillStyle = '#000';
+      ctx.fill();
+    },
+    { blur: SHADOW_BLUR, color: SHADOW, offset: SHADOW_OFFSET },
+  );
 }
 
 /** A pebble-like outline: an ellipse whose radius swells and dips a little, seeded. */

@@ -1,3 +1,4 @@
+import { drawBlurred } from './blur';
 import { bakeKoi } from './koiBank';
 import type { BakeOptions, KoiVariety } from './koiBank';
 
@@ -96,9 +97,7 @@ export function bakeKoiRipple(
   const pad = Math.ceil(ring.pad * scale);
   const canvas = blank(koi.width + pad * 2);
   const ctx = context(canvas);
-  ctx.filter = `blur(${ring.blur * scale}px)`;
-  ctx.drawImage(koi, pad, pad);
-  ctx.filter = 'none';
+  drawBlurred(ctx, koi, [pad, pad], ring.blur * scale, '#ffffff');
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const { data } = pixels;
   const floor = Math.exp(-((ring.level / ring.width) ** 2)); // what the bell leaves far out: taken off, so it ends
@@ -126,10 +125,7 @@ function softSilhouette(source: HTMLCanvasElement, color: string, grow: number, 
   outline(context(grown), source, color, grow);
   context(grown).drawImage(solid(source, color), 0, 0);
   const canvas = blank(source.width);
-  const ctx = context(canvas);
-  ctx.filter = `blur(${blur}px)`;
-  ctx.drawImage(grown, 0, 0);
-  ctx.filter = 'none';
+  drawBlurred(context(canvas), grown, [0, 0], blur, color);
   return canvas;
 }
 

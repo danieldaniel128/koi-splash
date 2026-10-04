@@ -1,4 +1,5 @@
 import { Texture } from 'pixi.js';
+import { drawBlurred } from '../art/blur';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact, bakeKoiRipple } from '../art/koiInk';
@@ -129,11 +130,6 @@ function bakeShadow(koi: HTMLCanvasElement, blurPx: number): HTMLCanvasElement {
   canvas.height = koi.height + pad * 2;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas not available');
-  ctx.filter = `blur(${blurPx}px)`;
-  ctx.drawImage(koi, pad, pad);
-  ctx.filter = 'none';
-  ctx.globalCompositeOperation = 'source-in';
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawBlurred(ctx, koi, [pad, pad], blurPx, '#fff');
   return canvas;
 }
