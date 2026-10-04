@@ -102,6 +102,7 @@ export class BoardAnimator {
   /** One cascade round: matched koi dive while the koi above swim down and new ones rise into the gaps. */
   async playStep(step: CascadeStep): Promise<void> {
     this.score(step);
+    for (const made of step.created) this.view.makeSpecial(made.piece);
     const swimDelay = step.cleared.length > 0 ? TIMING.dive * TIMING.swimStartAt : 0;
     await Promise.all([
       ...step.cleared.map(({ piece, at }) => this.dive(piece.id, at)),

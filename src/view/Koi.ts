@@ -21,7 +21,7 @@ export class Koi extends Sprite {
 
   constructor(
     readonly kind: Kind,
-    private readonly poses: readonly Texture[],
+    private poses: readonly Texture[],
     size: number,
     random: () => number,
   ) {
@@ -59,6 +59,13 @@ export class Koi extends Sprite {
     this.facing += shortestTurn(this.facing, this.heading) * turn;
     const sway = Math.sin(this.time * KOI_SWIM.swaySpeed + this.swayPhase) * KOI_SWIM.sway;
     this.rotation = this.facing + sway;
+  }
+
+  /** Swaps the koi's baked poses (it became a special koi), keeping its place in the tail beat. */
+  setPoses(poses: readonly Texture[]): void {
+    if (poses.length === 0) throw new Error('a koi needs at least one pose');
+    this.poses = poses;
+    this.texture = poses[this.pose] ?? this.texture;
   }
 
   /** A tail flick: turns the koi by `turn` radians and beats the tail hard for a moment. */

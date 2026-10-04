@@ -13,7 +13,7 @@ import { bakeLotusPad } from './art/pondProps';
 import { SHORE_STYLES } from './art/shoreStyles';
 import { BOARD, SHAPE } from './config/board';
 import { INPUT } from './config/input';
-import { KOI_LOOK, KOI_SET } from './config/koi';
+import { KOI_COLORS, KOI_LOOK, KOI_SET } from './config/koi';
 import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
@@ -38,6 +38,8 @@ import { ScorePopups } from './view/ScorePopups';
 import { ShoreRing } from './view/ShoreRing';
 import { KoiLife } from './view/KoiLife';
 import { KoiTextures } from './view/KoiTextures';
+import type { KoiBake } from './view/KoiTextures';
+import { SpecialTextures } from './view/SpecialTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
@@ -62,10 +64,16 @@ async function boot(host: HTMLElement): Promise<void> {
   const hud = new Hud(ui, layout.hud, { goalIcons: goalIcons(app), stars: LEVEL.stars });
   new BoosterBar(ui, layout.bar, BOOSTERS);
 
-  const textures = createTextures(app, board.piece);
+  const bake = koiBake(app, board.piece);
+  const textures = new KoiTextures(KOI_SET, bake); // the koi, baked once at the screen's resolution
+  const specials = new SpecialTextures(KOI_SET, bake, KOI_COLORS); // the special koi, baked when first made
   const pond = createPond(app, layout, shore);
 
-  const boardView = new BoardView(textures, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
+  const boardView = new BoardView(textures, specials, {
+    ...BOARD,
+    cellSize: board.cell,
+    koiSize: board.piece,
+  });
   boardView.position.set(board.x, board.y);
   const popups = createScorePopups(hud, board);
   const result = new ResultCard(host);
@@ -257,9 +265,9 @@ function koiInk(): KoiInk {
   };
 }
 
-/** The koi (one tail beat of poses each) and their shadows, baked once at the screen's resolution. */
-function createTextures(app: Application, koiSize: number): KoiTextures {
-  return new KoiTextures(KOI_SET, {
+/** How the koi are baked: their size, the screen's resolution, their build, tail beat, shadow, ink and waterline. */
+function koiBake(app: Application, koiSize: number): KoiBake {
+  return {
     size: koiSize,
     resolution: app.renderer.resolution * KOI_LOOK.bakeResolution,
     build: KOI_LOOK.build,
@@ -269,7 +277,7 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
     ink: koiInk(),
     contact: { gap: WATER.contactGap, blur: WATER.contactBlur, finClear: WATER.contactFinClear },
     contactResolution: WATER.contactResolution,
-  });
+  };
 }
 
 /**
