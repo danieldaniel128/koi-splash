@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
-import { shoreStones } from '../src/layout/shore';
-import type { ShoreLook, ShoreStone } from '../src/layout/shore';
+import { ringAlongShore } from '../src/layout/shore';
+import type { ShoreLook, ShorePiece } from '../src/layout/shore';
 
 const POND = { x: 8, y: 80, width: 344, height: 440 };
 const LOOK: ShoreLook = {
@@ -21,12 +21,12 @@ function shoreDistance([px, py]: readonly [number, number]): number {
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
 }
 
-const stonesFor = (seed: number): ShoreStone[] => {
+const stonesFor = (seed: number): ShorePiece[] => {
   const rng = new Random(seed);
-  return shoreStones(POND, LOOK, () => rng.next());
+  return ringAlongShore(POND, LOOK, () => rng.next());
 };
 
-describe('shoreStones', () => {
+describe('ringAlongShore', () => {
   it('rings the whole pond, every stone sitting just out from the waterline', () => {
     const stones = stonesFor(5);
     const perimeter = 2 * (POND.width + POND.height) - (8 - 2 * Math.PI) * LOOK.cornerRadius;

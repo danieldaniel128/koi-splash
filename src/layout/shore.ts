@@ -1,23 +1,24 @@
 import type { Rect } from './gameLayout';
 
-/** How the stones line the shore (px). */
+/** How the border's pieces line the shore (px). */
 export interface ShoreLook {
-  /** The pond's corner radius: the stones follow the same rounded outline as the water. */
+  /** The pond's corner radius: the pieces follow the same rounded outline as the water. */
   readonly cornerRadius: number;
-  /** A stone's half length along the shore and half depth across it, each random in [min, max]. */
+  /** A piece's half length along the shore and half depth across it, each random in [min, max]. */
   readonly length: readonly [number, number];
   readonly depth: readonly [number, number];
-  /** Space between neighbouring stones along the shore. */
+  /** Space between neighbouring pieces along the shore. */
   readonly gap: number;
-  /** How far a stone's centre sits out from the waterline, onto the bank. */
+  /** How far a piece's centre sits out from the waterline, onto the bank. */
   readonly outward: number;
-  /** Stones on the rounded corners are this much bigger, like boulders holding the corners. */
+  /** Pieces on the rounded corners are this much bigger, like boulders holding the corners. */
   readonly cornerScale: number;
 }
 
-export interface ShoreStone {
+/** One piece of the border: where it sits and its half size (stage px). */
+export interface ShorePiece {
   readonly at: [number, number];
-  /** Half width and half height: a stone is painted upright, long along the shore. */
+  /** Half width and half height: a piece is painted upright, long along the shore. */
   readonly radius: [number, number];
 }
 
@@ -30,11 +31,11 @@ interface ShorePoint {
 }
 
 /**
- * A ring of stones all the way round the pond, side by side along its rounded outline with no seam: random sizes are
- * drawn until they go round once, then all are scaled to close the ring exactly. Sorted top to bottom, so lower
- * stones are drawn over the ones behind them. O(stones).
+ * A ring of pieces all the way round the pond (whatever the border is made of), side by side along its rounded
+ * outline with no seam: random sizes are drawn until they go round once, then all are scaled to close the ring
+ * exactly. Sorted top to bottom, so lower pieces are drawn over the ones behind them. O(pieces).
  */
-export function shoreStones(pond: Rect, look: ShoreLook, random: () => number): ShoreStone[] {
+export function ringAlongShore(pond: Rect, look: ShoreLook, random: () => number): ShorePiece[] {
   const outline = roundedOutline(pond, look.cornerRadius);
   const lengths: number[] = [];
   let total = 0;
@@ -45,7 +46,7 @@ export function shoreStones(pond: Rect, look: ShoreLook, random: () => number): 
   }
   const fit = outline.length / total;
   let along = 0;
-  const stones = lengths.map((length) => {
+  const pieces = lengths.map((length) => {
     const span = length * fit;
     const point = outline.at(along + span / 2);
     along += span;
@@ -62,7 +63,7 @@ export function shoreStones(pond: Rect, look: ShoreLook, random: () => number): 
       ],
     };
   });
-  return stones.sort((a, b) => a.at[1] - b.at[1]);
+  return pieces.sort((a, b) => a.at[1] - b.at[1]);
 }
 
 function between([min, max]: readonly [number, number], random: () => number): number {

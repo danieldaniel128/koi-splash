@@ -55,8 +55,26 @@ const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)'
 
 /** Paints one prop into a fresh canvas, centred; the canvas is padded for the shadow. */
 export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement {
-  const width = (prop.radius[0] + MARGIN) * 2;
-  const height = (prop.radius[1] + MARGIN) * 2;
+  const rng = new Random(prop.seed); // the same seed always paints the same prop
+  const random = (): number => rng.next();
+  return bakePiece(prop.radius, resolution, (ctx) => {
+    if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
+    else paintPad(ctx, prop.radius[0], random);
+  });
+}
+
+/** The canvas size (px) a piece of this half size needs: its body plus room for the shadow. */
+export function pieceSize([rx, ry]: readonly [number, number]): { width: number; height: number } {
+  return { width: (rx + MARGIN) * 2, height: (ry + MARGIN) * 2 };
+}
+
+/** Runs `paint` centred on a fresh canvas sized for a piece of this half size, at `resolution` pixels per px. */
+export function bakePiece(
+  radius: readonly [number, number],
+  resolution: number,
+  paint: (ctx: CanvasRenderingContext2D) => void,
+): HTMLCanvasElement {
+  const { width, height } = pieceSize(radius);
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(width * resolution);
   canvas.height = Math.ceil(height * resolution);
@@ -66,10 +84,7 @@ export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement
   ctx.translate(width / 2, height / 2);
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  const rng = new Random(prop.seed); // the same seed always paints the same prop
-  const random = (): number => rng.next();
-  if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
-  else paintPad(ctx, prop.radius[0], random);
+  paint(ctx);
   return canvas;
 }
 
@@ -80,7 +95,7 @@ export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement
  * face catches the light, standing on a darker side band, all in one bold outline. Always drawn upright (the light
  * comes from above), so stones along any side of the pond read the same.
  */
-function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random: () => number): void {
+export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random: () => number): void {
   const depth = ry * STONE_DEPTH;
   const face = slab(rx, ry - depth / 2, random);
   const lift = -depth / 2; // the top face sits up, the side shows below it

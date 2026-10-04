@@ -1,4 +1,5 @@
 import type { PropKind } from '../art/pondProps';
+import type { ShoreStyle } from '../art/shoreStyles';
 import type { Anchor } from '../layout/anchor';
 
 /** A thing at the pond's edge or on the water: centre (stage px), half size (px), rotation (radians), paint seed. */
@@ -25,11 +26,13 @@ export const POND = {
   shoreWobble: 3,
   shoreBend: 110,
   /**
-   * The ring of stones along the shore (see shoreStones), px: each stone's half length along the shore and half
-   * depth across it, the gap between neighbours, how far out onto the bank it sits (the rest covers the water's
-   * edge), how much bigger the corner boulders are, and the seed that shapes them.
+   * The border along the shore: its style (a painter in SHORE_STYLES) and how its pieces are laid (see
+   * ringAlongShore), px: each piece's half length along the shore and half depth across it, the gap between
+   * neighbours, how far out onto the bank it sits (the rest covers the water's edge), how much bigger the corner
+   * pieces are, and the seed that shapes them. LAYOUT.shoreWidth keeps room for it on screen.
    */
   shore: {
+    style: 'stones' satisfies ShoreStyle as ShoreStyle,
     length: [11, 17],
     depth: [9, 12],
     gap: 1.5,
