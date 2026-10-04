@@ -80,8 +80,8 @@ export const POND = {
 
 /** The lily pads on the board (between the koi) and how they react: sizes in stage px, times in seconds. */
 export const BOARD_PADS = {
-  /** Pad radius as a share of a cell. The pads float under the koi, so this only sets how much shows between them. */
-  radius: 0.4,
+  /** Pad radius as a share of a cell: a pad fills its own cell, with a little water around it. */
+  radius: 0.44,
   /** Baked opening stages of a bud, from closed to full bloom. */
   stages: 4,
   /** Gentle rocking on the water (radians, radians per second). */

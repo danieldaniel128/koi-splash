@@ -39,9 +39,11 @@ browser.
 
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
 if it's complete, without knowing which goal it is. A level picks a lotus goal or a score goal in config. The lily
-pads (`src/model/pads.ts`) sit on the corners between cells, so they never hide a koi; a round hits a pad when it
-clears any of the four koi around it. Hits to bloom, the number of lotuses and moves are all in
-`src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of 400 boards.
+pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
+and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
+its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
+moves are all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of
+400 boards.
 
 The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded transitions and enter/exit hooks.
 The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),
@@ -83,10 +85,10 @@ Milestones:
 
 ## Tests
 
-29 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
+32 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
 new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole. The rest
-cover scoring, the lily pads and goals, the state machine's guards and hooks, and how a swipe picks its cell. They run in CI on every push, so
-when I work on the feel I find out right away if I broke the rules.
+cover scoring, the lily pads and goals, the state machine's guards and hooks, and how a swipe picks its cell. They
+run in CI on every push, so when I work on the feel I find out right away if I broke the rules.
 
 ## AI usage
 

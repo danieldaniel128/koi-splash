@@ -1,3 +1,5 @@
+import type { PadEvent } from './pads';
+
 /** A board position. Column 0 is the left edge, row 0 is the top row. */
 export interface Cell {
   readonly col: number;
@@ -44,6 +46,8 @@ export interface Spawn {
 export interface CascadeStep {
   readonly matches: readonly Match[];
   readonly cleared: readonly Cleared[];
+  /** What the round did to the lily pads; a bloomed or drifted pad's cell is open again before the koi fall. */
+  readonly padEvents: readonly PadEvent[];
   readonly falls: readonly Fall[];
   readonly spawns: readonly Spawn[];
 }

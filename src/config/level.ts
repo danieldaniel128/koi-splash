@@ -20,6 +20,8 @@ export const LEVEL = {
     /** Matches touching a bud before it blooms, and touching an empty pad before it drifts away. */
     hitsToBloom: 2,
     hitsToDrift: 1,
+    /** Pads are at least this many cells apart, so they never cluster. */
+    spacing: 2,
   } satisfies PadSpec,
 } as const;
 

@@ -1,5 +1,6 @@
 import type { Random } from '../core/Random';
 import { Board } from './Board';
+import type { PadEvent, PadField } from './pads';
 import type { CascadeStep, Cell, Cleared, Fall, Kind, Match, Piece, Spawn, SwapResult } from './types';
 import { isAdjacent } from './types';
 
@@ -77,10 +78,19 @@ export function hasAnyMove(board: Board): boolean {
 
 /**
  * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then clears, drops and refills
- * until nothing matches, and returns every round as data so the view can animate it step by step.
+ * until nothing matches, and returns every round as data so the view can animate it step by step. With `pads`,
+ * each round also hits the pads next to the cleared koi; a pad that blooms or drifts away opens its cell, and the
+ * koi above fall into it in that same round.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
-export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Random): SwapResult {
+export function trySwap(
+  board: Board,
+  a: Cell,
+  b: Cell,
+  spec: BoardSpec,
+  rng: Random,
+  pads?: PadField,
+): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
   if (!swapMakesMatch(board, a, b)) return { valid: false, reason: 'no-match' };
 
@@ -89,9 +99,10 @@ export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Ra
   for (let matches = findMatches(board); matches.length > 0; matches = findMatches(board)) {
     if (steps.length >= MAX_CASCADE) throw new Error('cascade did not settle');
     const cleared = clearMatches(board, matches);
+    const padEvents = hitPads(board, pads, cleared);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
-    steps.push({ matches, cleared, falls, spawns });
+    steps.push({ matches, cleared, padEvents, falls, spawns });
   }
 
   const reshuffled = !hasAnyMove(board);
@@ -173,6 +184,14 @@ function runThrough(board: Board, cell: Cell): boolean {
     return n;
   };
   return reach(-1, 0) + reach(1, 0) + 1 >= MIN_RUN || reach(0, -1) + reach(0, 1) + 1 >= MIN_RUN;
+}
+
+/** Hits the pads next to the cleared koi and opens the cells of those that bloomed or drifted away. */
+function hitPads(board: Board, pads: PadField | undefined, cleared: readonly Cleared[]): PadEvent[] {
+  if (!pads) return [];
+  const events = pads.hit(cleared.map((c) => c.at));
+  for (const event of events) if (event.type !== 'hit') board.setBlocked(event.pad.at, false);
+  return events;
 }
 
 // clearMatches, applyGravity and refill are each O(N).

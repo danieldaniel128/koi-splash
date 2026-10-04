@@ -82,8 +82,9 @@ export class GameScene {
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
-    this.board = createBoard(deps.spec, deps.rng);
+    // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
+    this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
     this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoal(deps.level.goal) };
     this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
       won: {
@@ -111,8 +112,8 @@ export class GameScene {
   /** Starts the level over with a fresh board. Only allowed once the level has ended. */
   restart(): void {
     if (!this.turn.is('won') && !this.turn.is('lost')) return;
-    resetBoard(this.board, this.deps.spec, this.deps.rng);
     this.pads = PadField.scatter(this.deps.level.pads, this.deps.spec, this.deps.rng);
+    resetBoard(this.board, this.deps.spec, this.deps.rng, this.pads.cells);
     this.level.movesLeft = this.deps.level.moves;
     this.level.score = 0;
     this.level.goal.reset();
@@ -139,7 +140,7 @@ export class GameScene {
 
   private async resolveSwap([first, second]: readonly [PlacedPiece, PlacedPiece]): Promise<void> {
     const { spec, rng, view, animator } = this.deps;
-    const result = trySwap(this.board, first.at, second.at, spec, rng);
+    const result = trySwap(this.board, first.at, second.at, spec, rng, this.pads);
     if (!result.valid) {
       await animator.invalidSwap(first, second);
       this.turn.transition('idle');
@@ -155,15 +156,16 @@ export class GameScene {
     this.turn.next();
   }
 
-  /** One cascade round: the koi clear and fall, the pads next to the cleared koi react, the goal counts it. */
+  /**
+   * One cascade round: the pads next to the cleared koi react while the koi clear and fall (into a bloomed pad's
+   * cell too), and the goal counts it.
+   */
   private async playRound(step: CascadeStep, round: number): Promise<void> {
-    await this.deps.animator.playStep(step);
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
-    const padEvents = this.pads.hit(step.cleared.map((cleared) => cleared.at));
     this.level.score += points;
-    this.level.goal.record({ points, padEvents });
+    this.level.goal.record({ points, padEvents: step.padEvents });
+    await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
-    await this.deps.pads.play(padEvents);
   }
 
   private status(): GameStatus {

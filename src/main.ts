@@ -50,7 +50,7 @@ async function boot(host: HTMLElement): Promise<void> {
   stage.addChild(
     pond.bank,
     pond.bottom,
-    pads, // under the koi: they swim over the pads, so a pad never hides a piece
+    pads, // under the koi: falling koi swim over a pad on their way past it
     boardView,
     pond.surface,
     splashes,
@@ -121,7 +121,7 @@ function createSplashes(hud: Hud, pond: PondWater, boardOrigin: PointData): Spla
 }
 
 /**
- * The lily pads floating between the koi, under them: they rock on the app's clock, and a bloomed lotus flies
+ * The lily pads on the board, under the koi layer: they rock on the app's clock, and a bloomed lotus flies
  * to the goal in the HUD.
  */
 function createPads(app: Application, pond: PondWater, hud: Hud, boardOrigin: PointData): PadView {
