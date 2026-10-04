@@ -6,7 +6,11 @@ import type { PadSpec } from '../model/pads';
  * Only valid swaps spend a move.
  */
 export const LEVEL = {
-  moves: 20,
+  /**
+   * Tuned by simulation (400 boards each): a player who aims at the buds blooms 3 lotuses in a median of 6 moves and
+   * wins about 70% within 15; a player who ignores them wins about 10% even with 20.
+   */
+  moves: 15,
   /** The lotus goal: bloom every bud. Swap for { type: 'score', target: 1500 } to play for points instead. */
   goal: { type: 'lotus', count: 3 } as GoalDef,
   pads: {
