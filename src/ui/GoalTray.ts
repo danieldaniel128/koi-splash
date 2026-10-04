@@ -7,6 +7,8 @@ import { bump, el } from './UiLayer';
 export interface GoalIcons {
   readonly lotus: string;
   readonly koi: readonly string[];
+  /** The points a met goal pays: the chip shows them rising out of it. */
+  readonly bonus: number;
 }
 
 /**
@@ -38,7 +40,7 @@ export class GoalTray {
 
   private build(goals: readonly GoalProgress[], shape: string): void {
     this.shape = shape;
-    this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal)));
+    this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal), this.icons.bonus));
     this.row.replaceChildren(...this.chips.map((chip) => chip.element));
   }
 
@@ -57,7 +59,11 @@ class GoalChip {
   private readonly count = el('span', 'number chip__count');
   private left = -1;
 
-  constructor(goal: GoalProgress, image: string | null) {
+  constructor(
+    goal: GoalProgress,
+    image: string | null,
+    private readonly bonus: number,
+  ) {
     this.kind = goal.kind;
     if (image) {
       const picture = el('img', `chip__image chip__image--${goal.kind}`);
@@ -77,6 +83,25 @@ class GoalChip {
     this.element.classList.toggle('chip--done', done);
     if (done) setIcon(this.count, CHECK);
     else this.count.textContent = `${left}`;
-    if (!first) bump(this.element, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
+    if (first) return;
+    bump(this.element, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
+    if (done && this.bonus > 0) this.showBonus();
+  }
+
+  /** The goal's bonus rises out of the chip in gold and fades. */
+  private showBonus(): void {
+    const label = el('span', 'number chip__bonus', `+${this.bonus}`);
+    this.element.append(label);
+    const rise = label.animate(
+      [
+        { transform: 'translate(-50%, 0) scale(0.6)', opacity: 0 },
+        { transform: 'translate(-50%, -18px) scale(1.15)', opacity: 1, offset: 0.25 },
+        { transform: 'translate(-50%, -34px) scale(1)', opacity: 0 },
+      ],
+      { duration: HUD_MOTION.bonusRise * 1000, easing: 'ease-out' },
+    );
+    rise.onfinish = () => {
+      label.remove();
+    };
   }
 }

@@ -35,6 +35,11 @@ export type GoalDef =
   | { readonly type: 'score'; readonly target: number }
   | { readonly type: 'koi'; readonly kind: Kind; readonly count: number };
 
+/** How many of these goals are met. O(goals). */
+export function goalsMet(goals: readonly GoalProgress[]): number {
+  return goals.filter((goal) => goal.done >= goal.target).length;
+}
+
 /** All of a level's goals as one: won when every one of them is. */
 export function createGoals(defs: readonly GoalDef[]): Goal {
   return new AllGoals(defs.map((def) => createGoal(def)));

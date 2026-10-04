@@ -103,9 +103,9 @@ its shape on any phone, tablet or desktop. Phones play upright; turned sideways 
 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
 I modelled the HUD on the casual match-3s I studied: moves big in a glass orb (it warns when they run low), the
-score, a goal chip that ticks down to a check, and a star bar. The stars are the prototype's rating (one for the
-goal, two or three for moves left over, `starsFor`); the bar is a meter where each star owns a third
-(`starMeter`), so they sit evenly however the rule is tuned. Under the pond, the booster bar uses the prototype's
+score, a chip per goal that ticks down to a check, and a star bar that fills with the score and unlocks a star at
+each of three scores (`starsFor`). A met goal pays a 500-point bonus, and the level plays to its last move, so
+meeting the goals early leaves moves to chase the stars. Under the pond, the booster bar uses the prototype's
 icons with count badges. It's all small components on a little CSS kit (glass panel, orb, chip, badge, track, button)
 that only reads theme tokens (`src/theme`), with the same tokens used by the Pixi side, so a new look is a change of
 tokens, not of components. The rounded font (Nunito) is bundled, so it's the same on every phone.

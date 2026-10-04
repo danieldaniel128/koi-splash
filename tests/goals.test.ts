@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGoal, createGoals } from '../src/model/goals';
+import { createGoal, createGoals, goalsMet } from '../src/model/goals';
 import type { RoundOutcome } from '../src/model/goals';
 import type { PadEvent } from '../src/model/pads';
 
@@ -50,6 +50,16 @@ describe('goals', () => {
     goal.record(round({ cleared: [3, 3, 3] }));
     expect(goal.isComplete()).toBe(true);
     expect(goal.progress().map((p) => p.kind)).toEqual(['lotus', 'koi']);
+  });
+
+  it('counts the goals met, for their bonus', () => {
+    const goal = createGoals([
+      { type: 'lotus', count: 1 },
+      { type: 'koi', kind: 0, count: 2 },
+    ]);
+    expect(goalsMet(goal.progress())).toBe(0);
+    goal.record(round({ padEvents: [bloom], cleared: [0] }));
+    expect(goalsMet(goal.progress())).toBe(1);
   });
 
   it('reset starts every goal over', () => {

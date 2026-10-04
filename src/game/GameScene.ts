@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoals } from '../model/goals';
+import { createGoals, goalsMet } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
@@ -25,12 +25,15 @@ interface LevelState {
   readonly goal: Goal;
 }
 
-/** Table order is the priority: 'won' is checked before 'lost', so reaching the goal on the last move wins. */
+/**
+ * The level plays to its last move: met goals early and the player keeps scoring toward the stars. It ends when the
+ * moves run out, won if every goal is met by then. Table order is the priority: 'won' is checked before 'lost'.
+ */
 const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'idle', to: 'swapping', when: (level) => level.movesLeft > 0 },
   { from: 'swapping', to: 'resolving' },
   { from: 'swapping', to: 'idle' }, // the swap made no match and went back
-  { from: 'resolving', to: 'won', when: (level) => level.goal.isComplete() },
+  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goal.isComplete() },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
   { from: 'won', to: 'idle' }, // play again
@@ -59,6 +62,8 @@ export interface ResultDisplay {
 export interface LevelRules {
   readonly moves: number;
   readonly pointsPerPiece: number;
+  /** Points paid for each goal as it is met. */
+  readonly goalBonus: number;
   /** The level's goals: it's won when every one is reached. */
   readonly goals: readonly GoalDef[];
   readonly pads: PadSpec;
@@ -79,7 +84,7 @@ export interface GameSceneDeps {
 /**
  * The presenter: takes swipes from the view, asks the model for the result and plays it back through the animator.
  * The turn state machine keeps one turn at a time and decides, at the end of each turn, whether the level is won,
- * lost or goes on.
+ * lost or goes on (it goes on until the last move).
  */
 export class GameScene {
   private readonly board: Board;
@@ -186,7 +191,10 @@ export class GameScene {
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
     this.level.score += points;
     const cleared = step.cleared.map(({ piece }) => piece.kind);
+    const metBefore = goalsMet(this.level.goal.progress());
     this.level.goal.record({ points, padEvents: step.padEvents, cleared });
+    // a goal met this round pays its bonus
+    this.level.score += (goalsMet(this.level.goal.progress()) - metBefore) * this.deps.level.goalBonus;
     await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
   }
@@ -194,7 +202,7 @@ export class GameScene {
   private status(): GameStatus {
     const { movesLeft, score, goal } = this.level;
     const { moves, stars } = this.deps.level;
-    return { movesLeft, moves, stars: starsFor(movesLeft, moves, stars), score, goals: goal.progress() };
+    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goal.progress() };
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */
