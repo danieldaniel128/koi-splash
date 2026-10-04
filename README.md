@@ -50,6 +50,18 @@ The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded
 The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),
 and entering won or lost shows the end card.
 
+The layout is worked out from the screen, not fixed (`src/layout/gameLayout.ts`, values in `src/config/layout.ts`):
+the stage is at least 360 x 640 and grows to cover the whole screen with no letterboxing, then the HUD goes at the
+top, the specials bar at the bottom (inside the phone's notch and home bar), and the board takes the biggest cell
+that fits between them. Paddings, gaps, the space between koi and the water around the board are all config. The
+stones and the moon are pinned to the pond's corners, so the scene keeps its shape on any phone, tablet or desktop.
+Phones play upright; turned sideways they get a notice.
+
+The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
+It's built from small components (moves, score, goal, specials bar, end card) and a little CSS kit (panel, number,
+label, track, button) that only reads theme tokens (`src/ui/theme.ts`). The same tokens are used by the Pixi side,
+so a new look is a change of tokens, not of components.
+
 Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the score
 popups (`ScorePopups`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes
 (`KoiLife`, `KoiWaterline`), outside the turn logic.
@@ -116,9 +128,8 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 
 ## Next steps
 
-- A new UI built on a reusable style library (one set of colour, type and spacing tokens), adaptive to any screen,
-  with the grid's spacing and the pond's size driven by config; the same preset approach for the effects.
-- Specials from bigger matches, and boosters.
+- The same preset approach as the UI theme for the effects.
+- Specials from bigger matches (the bar already has their slots), and boosters.
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 - Have the scene pass each round's points to the animator, so the score popups can't drift from the score.
