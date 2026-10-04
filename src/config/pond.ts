@@ -44,8 +44,8 @@ export const POND = {
 
   /**
    * Stones, lily pads and reeds at the corners and on the open water, never over the board. Stones and pads also
-   * shape the water: ripples stop at them and the foam outlines them. At most 8 stones and pads (MAX_PROPS). Reeds
-   * fan out toward their `turn` (0 = up).
+   * shape the water: ripples stop at them and the foam outlines them. Together with the lily pads on the board they
+   * share MAX_PROPS (16) slots in the water shaders. Reeds fan out toward their `turn` (0 = up).
    */
   props: [
     { kind: 'stone', at: [-4, 108], radius: [40, 26], turn: -0.25, seed: 11 },

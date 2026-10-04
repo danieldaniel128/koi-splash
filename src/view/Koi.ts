@@ -18,7 +18,6 @@ export class Koi extends Sprite {
   private readonly swayPhase: number;
   private burst = 0;
   private time = 0;
-  private beatCount = 0;
 
   constructor(
     readonly kind: Kind,
@@ -39,11 +38,6 @@ export class Koi extends Sprite {
     this.rotation = this.facing;
   }
 
-  /** How many tail beats the koi has made: each one sends a small ripple out (see KoiWaterline). */
-  get beats(): number {
-    return this.beatCount;
-  }
-
   /** Which of the baked poses the koi shows now (its place in the tail beat). */
   get pose(): number {
     return Math.floor(this.tailPhase * this.poses.length) % this.poses.length;
@@ -58,7 +52,6 @@ export class Koi extends Sprite {
       KOI_SWIM.maxBeat,
     );
     const phase = this.tailPhase + beat * deltaSeconds;
-    this.beatCount += Math.floor(phase);
     this.tailPhase = phase % 1;
     this.texture = this.poses[this.pose] ?? this.texture;
 
