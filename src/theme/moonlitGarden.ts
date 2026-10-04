@@ -2,7 +2,7 @@ import type { BackdropLook } from '../art/backdrop';
 
 /**
  * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every colour, font, size
- * and timing the UI uses, and the look of the scene around the pond (the raked ground, the moon, the fireflies).
+ * and timing the UI uses, and the look of the scene around the pond (the mossy ground, the moon, the fireflies).
  * Sizes are in stage px (the UI layer is scaled with the stage).
  */
 export const MOONLIT_GARDEN = {
@@ -49,14 +49,14 @@ export const MOONLIT_GARDEN = {
   /** The scene around the pond: the ground it is dug into, the moon over it and the fireflies. */
   scene: {
     /**
-     * The ground: a dry garden of raked gravel by moonlight, its base colour, the lit ridges and the grooves; the rake
-     * draws a line every `period` px, follows the shore for `rings` lines, then runs in straight rows, wobbling by up
-     * to `wobble` px like a hand-held rake.
+     * The ground: a soft moss lawn by moonlight, in the UI's indigo, low in contrast so it never competes with the
+     * board. Its base and its lighter patches; the pond's light spilling onto it (colour, strength, how far in px);
+     * and a few fallen petals (lotus pink, lantern gold): the share of spots that get one, their size and opacity.
      */
-    bank: '#16243d',
-    ridge: '#2b4166',
-    groove: '#0d1830',
-    rake: { period: 7, rings: 5, wobble: 1.4 },
+    bank: '#0f2038',
+    moss: '#163252',
+    spill: { color: '#4fb6d0', strength: 0.22, reach: 26 },
+    petals: { petal: '#e89ab4', leaf: '#d9a54a', share: 0.22, size: 4.2, opacity: 0.55 },
     /**
      * The bank darkens toward the screen edges: an oval of half the stage stretched by `stretch` (x, y), darkening
      * by up to `strength` from `from` to `to` (distance from the centre, in those half sizes).
