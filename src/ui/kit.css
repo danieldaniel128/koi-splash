@@ -29,7 +29,7 @@
 /* Numbers: the print-like serif with lining, even-width figures, so a counting score doesn't jitter. */
 .number {
   font-family: var(--font-number);
-  font-weight: 700;
+  font-weight: 900;
   font-variant-numeric: lining-nums tabular-nums;
   line-height: 1;
 }

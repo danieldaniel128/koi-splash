@@ -52,7 +52,7 @@ function createLabel(): Text {
     style: {
       fill: POINTS.fill,
       fontSize: POINTS.fontSize,
-      fontWeight: '800',
+      fontWeight: POINTS.fontWeight,
       fontFamily: POINTS.font,
       stroke: { color: POINTS.stroke, width: 4, join: 'round' },
     },

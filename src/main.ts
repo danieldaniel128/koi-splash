@@ -1,4 +1,6 @@
 import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
+import '@fontsource/nunito/latin-700.css';
+import '@fontsource/nunito/latin-900.css';
 import './ui/kit.css';
 import './ui/hud.css';
 import './ui/bar.css';
@@ -46,6 +48,7 @@ import { UiLayer } from './ui/UiLayer';
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
 async function boot(host: HTMLElement): Promise<void> {
   applyTheme(document.documentElement);
+  await loadFonts(); // the Pixi labels are drawn once with whatever font is ready, so make sure it's Nunito
   await new RotateNotice(document.body).upright(); // lay out for the phone held upright
   const app = await createApp(host);
   const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
@@ -314,6 +317,11 @@ function fitStage(
   const scale = Math.min(screen.width / size.width, screen.height / size.height);
   stage.scale.set(scale);
   stage.position.set((screen.width - size.width * scale) / 2, (screen.height - size.height * scale) / 2);
+}
+
+/** Waits for the bundled font's weights the game draws with (a missing one just falls back, it never throws). */
+async function loadFonts(): Promise<void> {
+  await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
 }
 
 function showBootError(host: HTMLElement, error: unknown): void {

@@ -21,9 +21,12 @@ export const MOONLIT_GARDEN = {
     outline: '#0a1a2e',
   },
   font: {
-    /** A print-like serif with lining figures (Georgia's old-style figures make a 0 look like an o). */
-    number: '"Palatino Linotype", Palatino, "Book Antiqua", "Noto Serif", serif',
-    label: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+    /**
+     * Chunky rounded figures and titles, like the HUDs of casual mobile games: Nunito, bundled with the game (see
+     * main.ts) so it looks the same on every device, then the system's own rounded faces.
+     */
+    number: 'Nunito, ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif',
+    label: 'Nunito, system-ui, -apple-system, "Segoe UI", sans-serif',
   },
   /** Type scale (px). */
   text: { xs: 8, sm: 11, md: 14, lg: 21, xl: 26, title: 30 },

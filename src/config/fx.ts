@@ -6,6 +6,7 @@ export const POINTS = {
   fill: THEME.color.gold,
   stroke: '#0a1a2e',
   fontSize: 24,
+  fontWeight: '900',
   font: THEME.font.number,
   /** Pop in, rise a little and hold (s, px), then fly to the score and shrink into it (s, scale). */
   pop: 0.18,
