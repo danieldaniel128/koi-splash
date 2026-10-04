@@ -135,6 +135,7 @@ export class WaterSim {
           uSimSize: { value: [cols, rows], type: 'vec2<f32>' },
           uSimArea: { value: [x, y, width, height], type: 'vec4<f32>' },
           uDamping: { value: WATER.damping, type: 'f32' },
+          uViscosity: { value: WATER.viscosity, type: 'f32' },
           uShore: { value: [WATER.shoreDamping, WATER.shoreBand], type: 'vec2<f32>' },
           uDrops: { value: this.drops, type: 'vec4<f32>', size: WATER.maxDrops },
         },

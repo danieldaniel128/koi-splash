@@ -2,6 +2,7 @@
 // - deep indigo-teal water, lighter and glowing in the shallows by the shore, shaded right under the bank's lip
 // - soft, wide bands of light drifting on the bottom (moonlight focused by the surface), brightest in the shallows
 //   and fading out toward the board, so the pond feels alive without anything busy behind the koi
+// - a faint moonlit sheen: broad, slow patches of light on the open water, so even the deep middle isn't flat
 // - the simulated waves as soft relief: slopes facing the moon light up, crests catch a little light, troughs
 //   darken, and only strong fronts get a clean bright rim
 // - the moon's reflection, broken by the water into a loose column of twinkling glints over a soft glow
@@ -27,6 +28,7 @@ uniform vec3 uGlow;
 uniform vec4 uGlowLook;
 // how much of the light bands and the shallows' glow is left under the board
 uniform float uGlowUnderBoard;
+uniform float uSheen;
 uniform vec3 uInk;
 // relief: light and shade on the slopes, crest height at full light, crest light
 uniform vec4 uRelief;
@@ -106,7 +108,9 @@ vec3 water(vec2 p, float edge, vec3 w) {
     vec3 color = mix(uShallow, uMid, smoothstep(0.0, shallows, fromShore));
     color = mix(color, uDeep, deep);
     float light = shallowLight(p, fromShore);
-    color += uGlow * light * (0.08 + lightBands(seen) * uGlowLook.x);
+    if (light > 0.002) color += uGlow * light * (0.08 + lightBands(seen) * uGlowLook.x); // most of the pond skips it
+    float sheen = noise(seen / 170.0 + vec2(uTime * 0.012, uTime * 0.008));
+    color += uInk * smoothstep(0.3, 0.95, sheen) * uSheen;
     color *= 1.0 - uLip.x * (1.0 - smoothstep(0.0, uLip.y, fromShore));
     color = relief(color, w);
     return moonlight(color, seen, smoothstep(0.0, 14.0, rectEdge(p, uBoard)));

@@ -8,6 +8,11 @@ export const WATER = {
   maxStepsPerFrame: 3,
   /** Share of the wave motion kept each step: lower = water calms down sooner (0.978: a ring is gone in ~1 s). */
   damping: 0.978,
+  /**
+   * How much the height is smoothed toward its neighbours each step: calms the tiny ripples left where many pushes
+   * overlap, while the wide rings keep going (0 = none; 0.05 starts to soften the rings too).
+   */
+  viscosity: 0.025,
   /** Near the shore the waves are soaked up instead of bouncing back: motion kept per step there, band width (px). */
   shoreDamping: 0.86,
   shoreBand: 18,
@@ -59,6 +64,8 @@ export const WATER = {
   /** How far from the shore (px) the light reaches before it fades out, and how much is left under the board. */
   glowReach: 52,
   glowUnderBoard: 0,
+  /** A faint moonlit sheen drifting over the whole pond in broad patches (added light at its brightest). */
+  sheen: 0.045,
 
   // --- the simulated waves, drawn as soft relief (no lines)
   /** Moonlight colour on the waves. */

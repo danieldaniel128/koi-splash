@@ -231,6 +231,7 @@ function waterLook(board: SimArea): UniformDefs {
       type: 'vec4<f32>',
     },
     uGlowUnderBoard: { value: WATER.glowUnderBoard, type: 'f32' },
+    uSheen: { value: WATER.sheen, type: 'f32' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
     uRelief: {
       value: [WATER.slopeLight, WATER.slopeShade, WATER.crestHeight, WATER.crestLight],
