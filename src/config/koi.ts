@@ -5,11 +5,6 @@
 export const KOI_SET = ['m3-red', 'm3-gold', 'dream-rose-gold', 'dream-jade', 'dream-amethyst'] as const;
 
 export const KOI_LOOK = {
-  /**
-   * Size of the square a koi is painted in, as a share of the cell. The fish fits a circle of ~0.43 of it, so 0.98
-   * leaves about a sixth of a cell of water between neighbours however they turn. Lower = more space.
-   */
-  scale: 0.98,
   /** Body width (0.12 slim .. 0.28 chubby): chubby enough that the colour fills the cell. */
   build: 0.245,
   /** Bake textures at this multiple of the screen resolution, so they stay sharp when the stage is scaled up. */

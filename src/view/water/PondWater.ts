@@ -23,13 +23,17 @@ import { MAX_PROPS, waterShapes } from './PondProps';
 import { WaterSim, withCommon, withWaves } from './WaterSim';
 import type { SimArea } from './WaterSim';
 
-/** Where the board sits on the stage, so the pond can be laid out around it. */
+/** Where the board and the pond sit on the stage (see layoutGame), and what is in the water. Stage px. */
 export interface PondLayout {
   readonly stageWidth: number;
   readonly stageHeight: number;
   readonly board: SimArea;
+  /** The pond's base rectangle: the board plus the water around it. The shore bends in and out of it. */
+  readonly pond: SimArea;
   /** Stones and pads in the water: the waves stop at them and the foam outlines them. */
   readonly props: readonly PondProp[];
+  /** The centre of the moon's reflection. */
+  readonly moonAt: readonly [number, number];
 }
 
 /** Something the koi and the matches push: the pond's water. */
@@ -87,7 +91,7 @@ export class PondWater implements WaterSurface {
   private readonly koiUniforms: { uAreaOrigin: number[]; uStageTransform: number[] };
 
   constructor(renderer: Renderer, layout: PondLayout) {
-    const water = waterArea(layout.board);
+    const water = waterArea(layout.pond);
     this.shape = pondShape(layout);
     this.fixedProps = waterShapes(layout.props).count;
     this.sim = new WaterSim(renderer, water, this.shape);
@@ -95,7 +99,7 @@ export class PondWater implements WaterSurface {
     const stage = { x: 0, y: 0, width: layout.stageWidth, height: layout.stageHeight };
     this.bankPainter = this.quad(stage, withCommon(bankFragment), bankLook(layout));
     this.bank.addChild(this.bankPainter);
-    this.bottom = this.quad(water, withWaves(pondBottom), waterLook(layout.board));
+    this.bottom = this.quad(water, withWaves(pondBottom), waterLook(layout));
     const koiMask = this.contact.texture;
     this.surface = this.quad(
       water,
@@ -229,17 +233,6 @@ export class PondWater implements WaterSurface {
   }
 }
 
-/** The pond's base rectangle: the board plus the margins. */
-function pondRect(board: SimArea): SimArea {
-  const { left, right, top, bottom } = POND.margin;
-  return {
-    x: board.x - left,
-    y: board.y - top,
-    width: board.width + left + right,
-    height: board.height + top + bottom,
-  };
-}
-
 /** Where the koi can be: the board plus room for koi that sway or lift past their cell. */
 function koiArea(board: SimArea): SimArea {
   const reach = WATER.koiReach;
@@ -252,8 +245,7 @@ function koiArea(board: SimArea): SimArea {
 }
 
 /** Everywhere the water can reach: the pond rectangle plus room for the shore's bends. */
-function waterArea(board: SimArea): SimArea {
-  const pond = pondRect(board);
+function waterArea(pond: SimArea): SimArea {
   const pad = POND.shoreWobble + 2;
   return { x: pond.x - pad, y: pond.y - pad, width: pond.width + pad * 2, height: pond.height + pad * 2 };
 }
@@ -270,7 +262,7 @@ function quadGeometry({ x, y, width, height }: SimArea): Geometry {
  * and the stones and pads in it. Shared by the simulation and every pass, so they all agree on the shore.
  */
 function pondShape(layout: PondLayout): UniformGroup {
-  const pond = pondRect(layout.board);
+  const { pond } = layout;
   const { shapes, axes } = waterShapes(layout.props);
   return new UniformGroup({
     uPond: { value: [pond.x, pond.y, pond.width, pond.height], type: 'vec4<f32>' },
@@ -297,7 +289,7 @@ function bankLook(layout: PondLayout): UniformDefs {
   };
 }
 
-function waterLook(board: SimArea): UniformDefs {
+function waterLook({ board, moonAt }: PondLayout): UniformDefs {
   return {
     uShallow: { value: color(WATER.shallow), type: 'vec3<f32>' },
     uMid: { value: color(WATER.mid), type: 'vec3<f32>' },
@@ -322,7 +314,7 @@ function waterLook(board: SimArea): UniformDefs {
     uTroughShade: { value: WATER.troughShade, type: 'f32' },
     uRim: { value: [...WATER.rimGate, WATER.rimStrength], type: 'vec3<f32>' },
     uMoon: { value: color(POND.moon), type: 'vec3<f32>' },
-    uMoonAt: { value: [...POND.moonAt, POND.moonRadius], type: 'vec3<f32>' },
+    uMoonAt: { value: [...moonAt, POND.moonRadius], type: 'vec3<f32>' },
   };
 }
 
