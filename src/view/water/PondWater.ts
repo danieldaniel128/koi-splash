@@ -146,7 +146,8 @@ export class PondWater {
     const old = this.bankPainter.geometry;
     this.bankPainter.geometry = quadGeometry(visible);
     old.destroy();
-    this.bank.cacheAsTexture({ resolution: pixelRatio });
+    // no antialias: it's one full-screen quad, and Pixi would otherwise give it a multisampled buffer per screen size
+    this.bank.cacheAsTexture({ resolution: pixelRatio, antialias: false });
     this.bank.updateCacheTexture();
   }
 
@@ -175,7 +176,6 @@ export class PondWater {
       glProgram: GlProgram.from({ vertex: defaultFilterVert, fragment: withWaves(koiRefraction) }),
       // the koi are baked sharp: render the filter at the screen's resolution, not Pixi's default of 1
       resolution: 'inherit',
-      antialias: 'inherit',
       resources: {
         sim: this.sim.uniforms,
         pond: this.shape,
