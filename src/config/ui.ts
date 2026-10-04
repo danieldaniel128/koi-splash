@@ -35,6 +35,10 @@ export const BOOSTERS = [
 export const RESULT_CARD = {
   fadeIn: 0.3,
   popIn: 0.45,
+  /** The stars earned land one by one: the first this long after the card, then one every `starStep` (s). */
+  firstStar: 0.4,
+  starStep: 0.35,
+  starPop: 0.4,
 } as const;
 
 /** Phones play upright: this media query is a phone (touch, short) held sideways. */
