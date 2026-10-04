@@ -1,21 +1,29 @@
 /**
- * One splash per match, drawn over the water: a bright flash where the koi break the surface, a broken crown of foam
- * thrown out, and droplets of different sizes thrown up in arcs that land with small rings of their own. Stage px,
- * seconds. The flash and crown stretch along the match: their size is this many px plus the match's length.
+ * One splash per match, drawn over the water: a bright flash over the match, a burst of foam where each koi goes
+ * under, and droplets of different sizes thrown up in arcs that land with small rings of their own. Stage px, seconds.
  */
 export const SPLASH = {
   /** Moonlit white for the droplets, and the pale water-light of the flash. */
   ink: '#eef8f8',
   flash: '#bdeaf0',
-  /** The flash: size (px), how long it lasts, peak strength, and the share of it that's a solid white core. */
-  flashSize: 70,
+  /**
+   * The flash: size (px) plus this share of the match's length (so a line gets a long flash along it), how long it
+   * lasts, peak strength, and the share of it that's a solid white core.
+   */
+  flashSize: 76,
+  flashStretch: 0.7,
   flashLife: 0.34,
   flashAlpha: 1,
   flashCore: 0.3,
-  /** The crown of foam: size (px), how long it lasts, strength. */
-  crownSize: 60,
-  crownLife: 0.42,
-  crownAlpha: 0.9,
+  /**
+   * The foam burst at each koi: soft blobs in one, size (px, random in range), how long it lasts, strength, and up
+   * to how late it starts (s), so the bursts of one match don't pop in step.
+   */
+  foamBlobs: 22,
+  foamSize: [48, 66],
+  foamLife: 0.4,
+  foamAlpha: 0.85,
+  foamStagger: 0.06,
   /** Droplets for a match of three, and how many more for each koi past three. */
   droplets: 10,
   dropletsPerExtraKoi: 3,

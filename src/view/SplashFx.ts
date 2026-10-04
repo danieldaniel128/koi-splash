@@ -1,28 +1,22 @@
 import { gsap } from 'gsap';
 import { Container, Sprite, Text, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
-import { paintCrown, paintDroplet, paintGlow } from '../art/glow';
+import { paintDroplet, paintFoamBurst, paintGlow } from '../art/glow';
 import { POINTS, SPLASH } from '../config/fx';
 import type { RippleSurface } from './BoardAnimator';
 
-/** Pixel size the flash, crown and droplet textures are painted at (then scaled to their stage size). */
+/** Pixel size the flash, foam and droplet textures are painted at (then scaled to their stage size). */
 const FLASH_TEXTURE = 128;
-const CROWN_TEXTURE = 192;
+const FOAM_TEXTURE = 160;
 const DROPLET_TEXTURE = 32;
-
-/** The area a match covers: its centre, and how far it reaches (px) along x and y. */
-interface Spread {
-  readonly x: number;
-  readonly y: number;
-  readonly width: number;
-  readonly height: number;
-}
+/** Different foam bursts painted at startup; each dive picks one, turned any way, so no two splashes match. */
+const FOAM_VARIANTS = 4;
 
 /**
- * Effects drawn over the water where a match dives: one splash per match (a bright flash, a broken crown of foam
- * thrown out, and droplets of different sizes thrown up in arcs, each landing with a small ring of its own) and the
- * points the match earned, which fly up to the score. Everything is short-lived, so the board is readable again at
- * once.
+ * Effects drawn over the water where a match dives: one splash per match (a bright flash over the whole match, a burst
+ * of foam where each koi goes under, and droplets of different sizes thrown up in arcs, each landing with a small ring
+ * of its own) and the points the match earned, which fly up to the score. Everything is short-lived, so the board is
+ * readable again at once.
  * Positions are in the board's space: this layer sits exactly on the board.
  */
 export class SplashFx extends Container {
@@ -30,7 +24,7 @@ export class SplashFx extends Container {
   private readonly spareLabels: Text[] = [];
   private readonly flashTexture = Texture.from(paintGlow(SPLASH.flash, FLASH_TEXTURE, SPLASH.flashCore));
   private readonly dropletTexture = Texture.from(paintDroplet(SPLASH.ink, DROPLET_TEXTURE));
-  private readonly crownTexture: Texture;
+  private readonly foamTextures: Texture[] = [];
 
   constructor(
     /** Where the score is shown, in this layer's space: the points fly there. */
@@ -40,20 +34,19 @@ export class SplashFx extends Container {
     private readonly random: () => number = Math.random,
   ) {
     super();
-    this.crownTexture = Texture.from(paintCrown(SPLASH.ink, CROWN_TEXTURE, random));
+    for (let i = 0; i < FOAM_VARIANTS; i++) {
+      this.foamTextures.push(Texture.from(paintFoamBurst(SPLASH.ink, FOAM_TEXTURE, SPLASH.foamBlobs, random)));
+    }
   }
 
   /**
-   * A match dives at these points: one flash and one crown of foam stretched over all of them, and droplets thrown
+   * A match dives at these points: one flash stretched over all of them, a burst of foam at each, and droplets thrown
    * up from each. O(droplets).
    */
   splash(points: readonly PointData[]): void {
     if (points.length === 0) return;
-    const spread = spreadOf(points);
-    this.bloom(this.flashTexture, spread, SPLASH.flashSize, SPLASH.flashLife, SPLASH.flashAlpha).blendMode = 'add';
-    // half turns only, so a crown stretched along a line of koi stays along it
-    this.bloom(this.crownTexture, spread, SPLASH.crownSize, SPLASH.crownLife, SPLASH.crownAlpha).rotation =
-      Math.round(this.random()) * Math.PI;
+    this.flash(points);
+    for (const point of points) this.foam(point);
     const extra = Math.max(0, points.length - 3) * SPLASH.dropletsPerExtraKoi;
     for (let i = 0; i < SPLASH.droplets + extra; i++) {
       const from = points[Math.floor(this.random() * points.length)] ?? points[0];
@@ -84,28 +77,53 @@ export class SplashFx extends Container {
       .to(label, { alpha: 0, duration: 0.1 }, flyAt + POINTS.flight - 0.1);
   }
 
-  /**
-   * A sprite over the whole match that blooms out from a third of its size and fades: `size` px across plus the
-   * match's own length, so a line of koi gets a long splash along it.
-   */
-  private bloom(texture: Texture, spread: Spread, size: number, life: number, alpha: number): Sprite {
+  /** A soft flash over the whole match, stretched along it, that blooms and fades. */
+  private flash(points: readonly PointData[]): void {
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    const [left, right, top, bottom] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const width = SPLASH.flashSize + (right - left) * SPLASH.flashStretch;
+    const height = SPLASH.flashSize + (bottom - top) * SPLASH.flashStretch;
+    const flash = this.bloom(this.flashTexture, { x: (left + right) / 2, y: (top + bottom) / 2 }, width, height);
+    flash.blendMode = 'add';
+    this.fade(flash, SPLASH.flashLife, SPLASH.flashAlpha, 0);
+  }
+
+  /** A burst of foam where one koi goes under: one of the painted bursts, any size in range, turned any way. */
+  private foam(at: PointData): void {
+    const texture = this.foamTextures[Math.floor(this.random() * this.foamTextures.length)];
+    if (!texture) return;
+    const size = this.between(SPLASH.foamSize);
+    const foam = this.bloom(texture, at, size, size);
+    foam.rotation = this.random() * Math.PI * 2;
+    this.fade(foam, SPLASH.foamLife, SPLASH.foamAlpha, this.random() * SPLASH.foamStagger);
+  }
+
+  /** A sprite centred at `at`, `width` x `height` px when fully bloomed (see fade). */
+  private bloom(texture: Texture, at: PointData, width: number, height: number): Sprite {
     const sprite = new Sprite(texture);
     sprite.anchor.set(0.5);
-    sprite.position.set(spread.x, spread.y);
-    const scaleX = (size + spread.width) / texture.width;
-    const scaleY = (size + spread.height) / texture.height;
-    sprite.scale.set(scaleX * 0.35, scaleY * 0.35);
-    sprite.alpha = alpha;
+    sprite.position.copyFrom(at);
+    sprite.width = width;
+    sprite.height = height;
     this.addChild(sprite);
+    return sprite;
+  }
+
+  /** Blooms a sprite out from a third of its size to its full size while it fades from `alpha`, then removes it. */
+  private fade(sprite: Sprite, life: number, alpha: number, delay: number): void {
+    const { x, y } = sprite.scale;
+    sprite.scale.set(x * 0.35, y * 0.35);
+    sprite.alpha = alpha;
     gsap
       .timeline({
+        delay,
         onComplete: () => {
           sprite.destroy();
         },
       })
-      .to(sprite.scale, { x: scaleX, y: scaleY, duration: life, ease: 'power3.out' }, 0)
+      .to(sprite.scale, { x, y, duration: life, ease: 'power3.out' }, 0)
       .to(sprite, { alpha: 0, duration: life, ease: 'power1.in' }, 0);
-    return sprite;
   }
 
   /**
@@ -144,14 +162,6 @@ export class SplashFx extends Container {
   private between([min, max]: readonly [number, number]): number {
     return min + this.random() * (max - min);
   }
-}
-
-/** The centre of some points and how far they reach along x and y. */
-function spreadOf(points: readonly PointData[]): Spread {
-  const xs = points.map((point) => point.x);
-  const ys = points.map((point) => point.y);
-  const [left, right, top, bottom] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-  return { x: (left + right) / 2, y: (top + bottom) / 2, width: right - left, height: bottom - top };
 }
 
 function createLabel(): Text {

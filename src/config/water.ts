@@ -68,7 +68,7 @@ export const WATER = {
    * (added, so it shows on the dark water too), and shade on the far slopes (a share of the colour).
    */
   slopeLight: 1.1,
-  slopeShade: 2.2,
+  slopeShade: 1.6,
   /** Crests catch a little light and troughs darken: the height (water units) where it's at full, and how much. */
   crestHeight: 0.02,
   crestLight: 0.1,

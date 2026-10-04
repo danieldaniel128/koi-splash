@@ -50,13 +50,15 @@ float lightBands(vec2 p) {
     return bandA * 0.55 + bandB * 0.35 + bandA * bandB * 0.6;
 }
 
-// How much light the bottom gets at a point: all of it in the shallows (the shelf is wider in places), less
-// toward the deep, and only a trace under the board. Also brightens the shallows themselves.
+// How much light the bottom gets at a point: most in the shallows (the shelf is wider in places), less toward the
+// deep, and only a trace under the board. Brighter and dimmer stretches drift slowly along the shore, so the
+// shallows glow in patches instead of as an even frame around the board.
 float shallowLight(vec2 p, float fromShore) {
     float reach = uGlowLook.w * (0.6 + 0.8 * noise(p / 70.0 + 3.0));
     float shore = 1.0 - smoothstep(0.0, reach, fromShore);
     float underBoard = smoothstep(-2.0, -26.0, rectEdge(p, uBoard));
-    return shore * shore * mix(1.0, uGlowUnderBoard, underBoard);
+    float patches = 0.35 + 0.9 * noise(p / 120.0 + vec2(uTime * 0.03, -uTime * 0.02));
+    return shore * shore * patches * mix(1.0, uGlowUnderBoard, underBoard);
 }
 
 // Glints of moonlight in a grid of `cell` px cells: in each cell maybe one short horizontal dash, longer near the
@@ -78,7 +80,7 @@ float moonGlints(vec2 seen, vec2 cell, float density, float seed) {
 vec3 moonlight(vec3 color, vec2 seen, float open) {
     vec2 d = (seen - uMoonAt.xy) / uMoonAt.z; // in moon radii
     float column = dot(d / vec2(1.2, 1.9), d / vec2(1.2, 1.9));
-    color += uMoon * (exp(-column * 1.6) * 0.3 + exp(-length(d) * 0.6) * 0.07) * open;
+    color += uMoon * (exp(-column * 1.6) * 0.38 + exp(-length(d) * 0.6) * 0.08) * open;
     if (column > 3.0) return color;
     float core = exp(-column * 2.2);
     float big = moonGlints(seen, vec2(15.0, 5.0), core * 1.1, 0.0);
@@ -91,7 +93,7 @@ vec3 moonlight(vec3 color, vec2 seen, float open) {
 vec3 relief(vec3 color, vec3 w) {
     vec2 light = moonOnWaves(w, uLightDir, uRim.xy);
     color += uInk * (max(light.x, 0.0) * uRelief.x + smoothstep(0.0, uRelief.z, w.x) * uRelief.w);
-    float shade = min(max(-light.x, 0.0) * uRelief.y, 0.5) + smoothstep(0.0, uRelief.z, -w.x) * uTroughShade;
+    float shade = min(max(-light.x, 0.0) * uRelief.y, 0.4) + smoothstep(0.0, uRelief.z, -w.x) * uTroughShade;
     color *= 1.0 - shade;
     return mix(color, uInk, light.y * uRim.z);
 }
@@ -104,7 +106,7 @@ vec3 water(vec2 p, float edge, vec3 w) {
     vec3 color = mix(uShallow, uMid, smoothstep(0.0, shallows, fromShore));
     color = mix(color, uDeep, deep);
     float light = shallowLight(p, fromShore);
-    color += uGlow * light * (0.1 + lightBands(seen) * uGlowLook.x);
+    color += uGlow * light * (0.08 + lightBands(seen) * uGlowLook.x);
     color *= 1.0 - uLip.x * (1.0 - smoothstep(0.0, uLip.y, fromShore));
     color = relief(color, w);
     return moonlight(color, seen, smoothstep(0.0, 14.0, rectEdge(p, uBoard)));
