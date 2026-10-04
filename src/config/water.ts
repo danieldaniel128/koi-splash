@@ -103,6 +103,8 @@ export const WATER = {
   /** How far outside the koi's body the foam line sits (px, past the ink outline), and how soft its mask is (px). */
   contactGap: 2.7,
   contactBlur: 2.2,
+  /** How far around the fins (px past their silhouette) the foam line breaks off, so it never covers them. */
+  contactFinClear: 3.5,
   /** Pixels per stage px of the mask the foam is drawn from (it's soft, so it can be coarse). */
   contactResolution: 2,
   /**

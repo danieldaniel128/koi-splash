@@ -2,7 +2,7 @@ import { Texture } from 'pixi.js';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact, bakeKoiRipple } from '../art/koiInk';
-import type { KoiInk } from '../art/koiInk';
+import type { KoiContactShape, KoiInk } from '../art/koiInk';
 import type { Kind } from '../model/types';
 
 /** How the koi textures are baked. */
@@ -20,11 +20,10 @@ export interface KoiBake {
   /** The cartoon outline and how the fins and tail sit under the water. */
   readonly ink: KoiInk;
   /**
-   * Where the koi meets the water: how far out from the body the foam sits, how soft its mask is (stage px), and
-   * the mask's pixel density (it's soft, so it's baked coarser than the koi).
+   * Where the koi meets the water, for the foam at the waterline (see bakeKoiContact), and the pixel density of that
+   * mask (it's soft, so it's baked coarser than the koi).
    */
-  readonly contactGap: number;
-  readonly contactBlur: number;
+  readonly contact: KoiContactShape;
   readonly contactResolution: number;
   /** The ring a tail beat sends out (see bakeKoiRipple), baked at contactResolution. */
   readonly ripple: Parameters<typeof bakeKoiRipple>[2];
@@ -109,7 +108,7 @@ function bakeContacts(varietyId: string, bake: KoiBake): Texture[] {
   const variety = getVariety(varietyId);
   const pose = { ...stillPose(bake), resolution: bake.contactResolution };
   return Array.from({ length: bake.frames }, (_, i) =>
-    Texture.from(bakeKoiContact(variety, { ...pose, tailWag: tailWag(i, bake) }, bake.contactGap, bake.contactBlur)),
+    Texture.from(bakeKoiContact(variety, { ...pose, tailWag: tailWag(i, bake) }, bake.contact)),
   );
 }
 

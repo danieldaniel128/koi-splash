@@ -47,30 +47,36 @@ export function bakeInkedKoi(variety: KoiVariety, bake: BakeOptions, ink: KoiInk
   return canvas;
 }
 
+/** Where a koi meets the water, in the bake's own units (stage px). */
+export interface KoiContactShape {
+  /** How far out from the body the foam line sits (past the ink outline), and how soft the mask is. */
+  readonly gap: number;
+  readonly blur: number;
+  /** How far around the fins (past their silhouette) the foam keeps clear. */
+  readonly finClear: number;
+}
+
 /**
  * The part of a koi that breaks the surface (its body, no fins or tail), grown by `gap` px and blurred by `blur` px,
- * as a mask for the water: where the foam hugs the koi. Alpha is the cover; the green channel fades from the head
- * (1) to the tail (0), so the foam is strongest where the koi's back breaks the surface. Red and blue are left at
- * full for the game to scale per koi. Head up, on a square canvas like bakeKoi.
+ * as a mask for the water: where the foam hugs the koi. Alpha is the cover; the green channel says where the foam
+ * shows: it fades from the head (1) to the tail (0), so the foam is strongest where the koi's back breaks the
+ * surface, and drops to 0 over the fins so the line breaks around them instead of covering them. Red and blue are
+ * left at full for the game to scale per koi. Head up, on a square canvas like bakeKoi.
  */
-export function bakeKoiContact(variety: KoiVariety, bake: BakeOptions, gap: number, blur: number): HTMLCanvasElement {
+export function bakeKoiContact(variety: KoiVariety, bake: BakeOptions, shape: KoiContactShape): HTMLCanvasElement {
   const scale = bake.resolution ?? 1;
   const body = bakeKoi(variety, { ...bake, parts: 'body' });
-  const grown = blank(body.width);
-  outline(context(grown), body, '#ffffff', gap * scale);
-  context(grown).drawImage(solid(body, '#ffffff'), 0, 0);
-
-  const canvas = blank(body.width);
+  const fins = bakeKoi(variety, { ...bake, parts: 'fins' });
+  const canvas = softSilhouette(body, '#ffffff', shape.gap * scale, shape.blur * scale);
   const ctx = context(canvas);
-  ctx.filter = `blur(${blur * scale}px)`;
-  ctx.drawImage(grown, 0, 0);
-  ctx.filter = 'none';
+  // only recolour from here on: the cover (alpha) must stay as it is, or the waterline would move to trace the fins
   ctx.globalCompositeOperation = 'source-atop';
   const fade = ctx.createLinearGradient(0, body.height * 0.4, 0, body.height * 0.72);
   fade.addColorStop(0, '#ffffff');
   fade.addColorStop(1, '#ff00ff');
   ctx.fillStyle = fade;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(softSilhouette(fins, '#ff00ff', shape.finClear * scale, shape.blur * scale), 0, 0);
   return canvas;
 }
 
@@ -112,6 +118,19 @@ function outline(ctx: CanvasRenderingContext2D, source: HTMLCanvasElement, color
     const angle = (i / OUTLINE_STEPS) * Math.PI * 2;
     ctx.drawImage(shape, Math.cos(angle) * width, Math.sin(angle) * width);
   }
+}
+
+/** `source`'s silhouette in `color`, grown by `grow` px all round and blurred by `blur` px. */
+function softSilhouette(source: HTMLCanvasElement, color: string, grow: number, blur: number): HTMLCanvasElement {
+  const grown = blank(source.width);
+  outline(context(grown), source, color, grow);
+  context(grown).drawImage(solid(source, color), 0, 0);
+  const canvas = blank(source.width);
+  const ctx = context(canvas);
+  ctx.filter = `blur(${blur}px)`;
+  ctx.drawImage(grown, 0, 0);
+  ctx.filter = 'none';
+  return canvas;
 }
 
 /** `source`'s silhouette, nearly opaque even where it's translucent, filled with one colour. */
