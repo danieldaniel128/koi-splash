@@ -1,4 +1,4 @@
-/** How the HUD moves (s, scale). Its look is in ui/theme.ts. */
+/** How the HUD moves (s, scale). Its look is in the theme (src/theme). */
 export const HUD_MOTION = {
   /** The score counts up to a new value in this long, and swells while it does. */
   countUp: 0.35,

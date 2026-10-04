@@ -30,6 +30,11 @@ export interface LayoutConfig {
   };
   /** Water between neighbouring cells: koi and pads are drawn inside cell - gap. */
   readonly cellGap: number;
+  /**
+   * Where the pond sits in the height left over (0 top, 0.5 centred, 1 bottom). Low leaves an open scene above it,
+   * like the art over the board in commercial match-3s.
+   */
+  readonly pondAlign: number;
   /** Bounds for a cell's size, so a tablet doesn't get giant koi and a small phone tiny ones. */
   readonly minCell: number;
   readonly maxCell: number;
@@ -48,6 +53,8 @@ export interface GameLayout {
   /** The board: where the grid starts, its size, the distance between cell centres and the size of a piece. */
   readonly board: Rect & { readonly cell: number; readonly piece: number };
   readonly pond: Rect;
+  /** The open ground above the pond and its shore, from the top of the screen (behind the HUD too): the backdrop. */
+  readonly scene: Rect;
   readonly bar: Rect;
 }
 
@@ -75,6 +82,7 @@ export function layoutGame(
     hud: { x: panelX, y: top, width: panelWidth, height: config.hudHeight },
     board,
     pond,
+    scene: { x: 0, y: 0, width: stage.width, height: pond.y - config.shoreWidth },
     bar: { x: panelX, y: bottom - config.barHeight, width: panelWidth, height: config.barHeight },
   };
 }
@@ -96,7 +104,7 @@ function placePond(
   const height = cell * config.rows;
   const board = {
     x: (stageWidth - width - margin.left - margin.right) / 2 + margin.left,
-    y: bandTop + (bandBottom - bandTop - height) / 2,
+    y: bandTop + (bandBottom - bandTop - height) * config.pondAlign,
     width,
     height,
     cell,

@@ -24,6 +24,7 @@ export const LAYOUT = {
    * they turn. Higher = more space.
    */
   cellGap: 1,
+  pondAlign: 0.8,
   minCell: 36,
   maxCell: 60,
 } as const satisfies LayoutConfig;

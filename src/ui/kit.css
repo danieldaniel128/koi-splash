@@ -1,5 +1,5 @@
 /*
- * The UI kit: small reusable pieces every component is built from. Every value comes from the theme (ui/theme.ts,
+ * The UI kit: small reusable pieces every component is built from. Every value comes from the theme (src/theme,
  * written onto the page as CSS variables), so a new look is a change of tokens, not of components.
  */
 

@@ -41,23 +41,11 @@ export const POND = {
     seed: 5,
   },
 
-  // --- bank: indigo with a faint seigaiha (overlapping waves) pattern, darker and wet right at the water
-  bank: '#0b1830',
-  bankPattern: '#1a335c',
-  /** Width of one seigaiha circle in px. */
-  patternSize: 34,
-  /** Width (px) of the dark wet band on the bank along the water. */
+  /** Width (px) of the dark wet band on the bank along the water (the bank's colours are in the theme). */
   wetBand: 16,
-  /**
-   * The bank darkens toward the screen edges: an oval of half the stage stretched by `stretch` (x, y), darkening by
-   * up to `strength` from `from` to `to` (distance from the centre, in those half sizes).
-   */
-  vignette: { stretch: [1.2, 1.1], strength: 0.4, from: 0.7, to: 1.5 },
 
-  // --- the moon's reflection on the water, under the koi: centre (from the pond's corner) and radius (px)
+  /** Where the moon's reflection sits on the water, under the koi (from the pond's corner). */
   moonSpot: { corner: 'bottom-right', offset: [-100, -40] } satisfies Anchor as Anchor,
-  moonRadius: 19,
-  moon: '#f7ecc8',
 
   /**
    * Stones standing in the water, never over the board (none in this pond: the shore stones frame it). They shape
@@ -78,10 +66,9 @@ export const POND = {
       { corner: 'bottom-left', offset: [91, 88] },
     ] satisfies readonly Anchor[] as readonly Anchor[],
   },
-  /** How far a firefly wanders from its spot (px), and its glow's size (px) and colour. */
+  /** How far a firefly wanders from its spot (px), and its glow's size (px). Its colour is in the theme. */
   fireflyRoam: 22,
   fireflySize: 26,
-  firefly: '#f3f7b0',
 } as const;
 
 /** The lily pads on the board (between the koi) and how they react: sizes in stage px, times in seconds. */
