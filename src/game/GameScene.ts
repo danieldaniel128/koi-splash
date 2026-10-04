@@ -44,6 +44,8 @@ export interface StatusDisplay {
 export interface PadDisplay {
   reset(pads: readonly Pad[]): void;
   play(events: readonly PadEvent[]): Promise<void>;
+  /** A koi bumped into the pad on this cell: it rocks on the water. */
+  nudge(cell: Cell): Promise<void>;
 }
 
 /** The end-of-level card. Implemented by the result overlay view. */
@@ -125,17 +127,33 @@ export class GameScene {
   }
 
   private async playTurn(from: Cell, to: Cell): Promise<void> {
+    const koi = this.board.get(from);
+    if (koi && this.board.isBlocked(to)) {
+      await this.runTurn(() => this.bumpPad({ piece: koi, at: from }, to));
+      return;
+    }
     const pair = this.placedPair(from, to);
     if (!pair) return; // swiped off the edge of the board
+    await this.runTurn(() => this.resolveSwap(pair));
+  }
+
+  /** Runs one turn's animations, keeping the game playable if one fails. */
+  private async runTurn(play: () => Promise<void>): Promise<void> {
     this.turn.transition('swapping');
     try {
-      await this.resolveSwap(pair);
+      await play();
     } catch (error) {
       // an animation failed mid-turn: snap the view back to the model so the game stays playable
       console.error(error);
       this.deps.view.render(this.board);
       if (this.turn.can('idle')) this.turn.transition('idle');
     }
+  }
+
+  /** A koi swiped into a lily pad: it bumps its nose and swims back, the pad rocks. No move is spent. */
+  private async bumpPad(koi: PlacedPiece, padCell: Cell): Promise<void> {
+    await Promise.all([this.deps.animator.bumpPad(koi, padCell), this.deps.pads.nudge(padCell)]);
+    this.turn.transition('idle');
   }
 
   private async resolveSwap([first, second]: readonly [PlacedPiece, PlacedPiece]): Promise<void> {

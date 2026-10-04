@@ -98,6 +98,9 @@ export const BOARD_PADS = {
   /** An empty pad drifts this far away (px) while it fades. */
   driftDistance: 36,
   driftTime: 0.9,
+  /** A koi bumps into the pad: it rocks this far (radians) and settles in this long. */
+  nudgeTurn: 0.22,
+  nudgeTime: 0.6,
   /** How hard each event pushes the water (see WaterSurface.push), and the ring's radius (px). */
   hitPush: 0.6,
   bloomPush: 1.4,

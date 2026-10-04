@@ -72,6 +72,34 @@ export class BoardAnimator {
     await Promise.all([this.lean(first, second.at, TIMING.swapLift), this.lean(second, first.at, 1)]);
   }
 
+  /**
+   * A koi swiped into a lily pad: it darts toward the pad, squashes against it with a small splash, and swims back
+   * to its place.
+   */
+  async bumpPad(koi: PlacedPiece, padCell: Cell): Promise<void> {
+    const sprite = this.view.spriteOf(koi.piece.id);
+    const home = { x: sprite.x, y: sprite.y };
+    const reach = TIMING.bumpReach * this.cellSize;
+    const dx = Math.sign(padCell.col - koi.at.col) * reach;
+    const dy = Math.sign(padCell.row - koi.at.row) * reach;
+    const { restScale } = sprite;
+    this.view.bringToFront(sprite);
+    await gsap
+      .timeline()
+      .to(sprite, { x: home.x + dx, y: home.y + dy, duration: TIMING.bumpIn, ease: 'power2.in' })
+      .call(() => {
+        this.water.push(this.onStage({ x: home.x + dx, y: home.y + dy }), WATER.bumpPush, WATER.swapRadius);
+      })
+      .to(sprite.scale, {
+        x: restScale * TIMING.bumpSquash,
+        y: restScale * TIMING.bumpSquash,
+        duration: TIMING.bumpIn * 0.6,
+        yoyo: true,
+        repeat: 1,
+      })
+      .to(sprite, { x: home.x, y: home.y, duration: TIMING.bumpOut, ease: 'back.out(2)' }, '<');
+  }
+
   /** One cascade round: matched koi dive while the koi above glide down and new ones rise into the gaps. */
   async playStep(step: CascadeStep): Promise<void> {
     this.celebrate(step);

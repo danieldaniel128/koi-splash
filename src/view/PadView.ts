@@ -4,6 +4,7 @@ import type { PointData } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
 import type { Pad, PadEvent } from '../model/pads';
+import type { Cell } from '../model/types';
 import type { WaterSurface } from './water/PondWater';
 
 /** Where the view sits and where a bloomed lotus flies to, in the view's own space. */
@@ -60,6 +61,21 @@ export class PadView extends Container {
   /** Plays one cascade round's pad events together; resolves when the last one has finished. */
   async play(events: readonly PadEvent[]): Promise<void> {
     await Promise.all(events.map((event) => this.playEvent(event)));
+  }
+
+  /** A koi bumped into the pad on this cell: it rocks and settles. */
+  async nudge(cell: Cell): Promise<void> {
+    const sprite = this.spriteAt(cell);
+    if (!sprite) return;
+    const rest = sprite.rotation;
+    await gsap
+      .timeline()
+      .to(sprite, {
+        rotation: rest + BOARD_PADS.nudgeTurn,
+        duration: BOARD_PADS.nudgeTime * 0.2,
+        ease: 'power2.out',
+      })
+      .to(sprite, { rotation: rest, duration: BOARD_PADS.nudgeTime * 0.8, ease: 'elastic.out(1, 0.4)' });
   }
 
   /** The pads rock gently on the water. Call once per frame. O(P), P = pads. */
@@ -128,6 +144,15 @@ export class PadView extends Container {
       ease: 'sine.out',
     });
     sprite.destroy();
+  }
+
+  private spriteAt(cell: Cell): Sprite | undefined {
+    const { cellSize } = this.layout;
+    for (const sprite of this.sprites.values()) {
+      if (Math.floor(sprite.x / cellSize) === cell.col && Math.floor(sprite.y / cellSize) === cell.row)
+        return sprite;
+    }
+    return undefined;
   }
 
   /** The baked stage that matches how far a bud has opened (hits taken / hits needed). */

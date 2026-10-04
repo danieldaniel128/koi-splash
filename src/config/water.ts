@@ -41,6 +41,8 @@ export const WATER = {
   swapSettlePush: 0.1,
   /** A swap that makes no match shoves the water this share of swapPush. */
   invalidSwapPush: 0.6,
+  /** The small splash where a koi bumps into a lily pad. */
+  bumpPush: 0.35,
 
   // --- water body (under the koi): indigo-teal, lighter in the shallows by the shore, darkest in the middle
   shallow: '#195669',
