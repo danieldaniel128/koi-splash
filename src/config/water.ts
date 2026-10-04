@@ -99,6 +99,23 @@ export const WATER = {
   goldStrength: 0.95,
   goldGrid: 34,
 
+  // --- where the koi meet the water: a broken foam line hugging each koi's head and back, at the waterline
+  /** How far outside the koi's body the foam line sits (px, past the ink outline), and how soft its mask is (px). */
+  contactGap: 2.7,
+  contactBlur: 2.2,
+  /** Pixels per stage px of the mask the foam is drawn from (it's soft, so it can be coarse). */
+  contactResolution: 2,
+  /**
+   * The foam line: width (px), strength, how far a rising wave pushes it out (mask level per unit of height) and
+   * the size of its breaks (px).
+   */
+  contactWidth: 1.5,
+  contactStrength: 0.9,
+  contactBreath: 0.8,
+  contactBreaks: 9,
+  /** A koi moving this fast (px/s), or lifted while swapping, stirs its foam to the full (wider, brighter). */
+  contactStirSpeed: 300,
+
   // --- koi under the surface
   /** How far the waves shift the koi (px per unit of slope). */
   koiRefraction: 2.5,

@@ -1,4 +1,4 @@
-import { Application, Container, Rectangle } from 'pixi.js';
+import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
@@ -112,6 +112,17 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
     frames: KOI_LOOK.swimFrames,
     tailSwing: KOI_LOOK.tailSwing,
     shadowBlur: WATER.shadowBlur,
+    ink: {
+      outline: KOI_LOOK.outline,
+      outlineWidth: KOI_LOOK.outlineWidth,
+      finOutlineAlpha: KOI_LOOK.finOutlineAlpha,
+      water: KOI_LOOK.underwater,
+      finsUnder: KOI_LOOK.finsUnder,
+      tailUnder: KOI_LOOK.tailUnder,
+    },
+    contactGap: WATER.contactGap,
+    contactBlur: WATER.contactBlur,
+    contactResolution: WATER.contactResolution,
   });
 }
 
@@ -136,13 +147,23 @@ function createPond(app: Application, boardLeft: number): PondWater {
 
 /**
  * Puts the koi in the water: the pond's filter bends the whole board layer through the waves, and every frame the
- * koi swim and push the water back (wakes when they move, tail flicks when they rest).
+ * koi swim and push the water back (wakes when they move, tail flicks when they rest). Once everything has moved
+ * this frame, the shadows follow the koi and the pond marks where they touch the water, for the foam around them.
  */
 function putUnderWater(app: Application, boardView: BoardView, pond: PondWater): void {
   const life = new KoiLife(pond, boardView.position);
   app.ticker.add((ticker) => {
     life.update([...boardView.koi()], ticker.deltaMS / 1000);
   });
+  const afterMotion = UPDATE_PRIORITY.NORMAL - 1; // after every normal update, before the frame is drawn (LOW)
+  app.ticker.add(
+    (ticker) => {
+      boardView.follow(ticker.deltaMS / 1000);
+      pond.touch(boardView.contacts);
+    },
+    undefined,
+    afterMotion,
+  );
   const margin = WATER.koiReach;
   boardView.filters = [pond.koiFilter];
   boardView.filterArea = new Rectangle(

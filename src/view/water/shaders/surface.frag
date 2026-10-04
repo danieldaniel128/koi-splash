@@ -1,4 +1,6 @@
 // The water surface, drawn above the koi. Kept sparse so the koi always read clearly:
+// - the waterline around every koi: a thin broken foam line hugging its head and back where they break the surface,
+//   moved by the waves with the koi, pushed out by rising water and swelling where the water is stirred
 // - the bright rim of strong wave fronts again, but faint, so a ring passes over a koi instead of stopping at it
 // - shore foam: a calligraphic stroke just inside the shore (and around every stone and pad) that swells, tapers
 //   and breaks, with a fainter second stroke further out; waves arriving push it out and back
@@ -19,6 +21,14 @@ uniform vec3 uFoam;
 uniform vec3 uGold;
 // gold strength, grid size (px)
 uniform vec2 uGoldLook;
+// where the koi touch the water (KoiContact): cover in alpha; per koi in red (at the surface), green (head and back,
+// where the foam goes) and blue (stirring the water), all premultiplied. uMaskArea is the stage rectangle it covers.
+uniform sampler2D uKoiMask;
+uniform vec4 uMaskArea;
+// koi foam: line width (px), strength, how far a rising wave pushes it out, size of its breaks (px)
+uniform vec4 uContact;
+// how far the waves shift the koi (px per unit of slope): the foam moves with them
+uniform float uKoiShift;
 
 float shoreFoam(vec2 p, float edge, float height) {
     float push = clamp(height * uFoam.z, -3.0, 3.0);
@@ -29,6 +39,22 @@ float shoreFoam(vec2 p, float edge, float height) {
     float main = lineCover(abs(edge + 3.5 + push) * uPixelRatio, width1 * uPixelRatio);
     float outer = lineCover(abs(edge + 8.5 + push * 1.5) * uPixelRatio, width2 * uPixelRatio) * 0.5;
     return max(main, outer) * uFoam.y;
+}
+
+// The waterline around the koi: the line where the koi mask crosses one half (just outside the koi's ink outline),
+// a constant width on screen. It breaks into strokes that drift along it, tapers off toward the tail (which is under
+// the water), rides out on rising water and swells where the koi or a passing wave stirs the water.
+float koiFoam(vec2 p, vec3 w) {
+    vec4 k = texture(uKoiMask, (p + w.yz * uKoiShift - uMaskArea.xy) / uMaskArea.zw);
+    float cover = max(k.a, 0.02);
+    float level = 0.5 - clamp(w.x * uContact.z, -0.06, 0.06); // small, or the line folds into several
+    float dist = abs(k.a - level) / max(fwidth(k.a), 1e-4); // device px from the waterline
+    float stir = min(k.b / cover + length(w.yz) * 4.0, 1.0);
+    float breaks = smoothstep(0.32, 0.6, noise(p / uContact.w + vec2(uTime * 0.35, -uTime * 0.25)) + stir * 0.25);
+    float width = uContact.x * (0.5 + 0.7 * breaks) * (1.0 + stir * 0.7) * uPixelRatio;
+    float atSurface = clamp(k.r / cover, 0.0, 1.0);
+    float head = clamp(k.g / cover, 0.0, 1.0);
+    return lineCover(dist, width) * breaks * head * atSurface * uContact.y;
 }
 
 // A fleck of gold leaf in some cells of a grid: a thin pointed sliver that fades in, glints and fades out.
@@ -53,7 +79,7 @@ void main() {
     }
     vec3 w = waves(p);
     float rim = moonOnWaves(w, uLightDir, uRim.xy).y * uRim.z;
-    float foam = shoreFoam(p, edge, w.x);
+    float foam = max(shoreFoam(p, edge, w.x), koiFoam(p, w));
     float open = smoothstep(2.0, 8.0, rectEdge(p, uBoard)); // 1 on the open water past the board
     float gold = goldLeaf(p) * open * uGoldLook.x;
 

@@ -9,7 +9,7 @@ import {
   Shader,
   UniformGroup,
 } from 'pixi.js';
-import type { PointData, Renderer, TextureSource } from 'pixi.js';
+import type { Container as Layer, PointData, Renderer, TextureSource } from 'pixi.js';
 import { POND } from '../../config/pond';
 import type { PondProp } from '../../config/pond';
 import { WATER } from '../../config/water';
@@ -18,6 +18,7 @@ import koiRefraction from './shaders/koiRefraction.frag?raw';
 import surface from './shaders/surface.frag?raw';
 import pondBottom from './shaders/water.frag?raw';
 import vertex from './shaders/water.vert?raw';
+import { KoiContact } from './KoiContact';
 import { MAX_PROPS, waterShapes } from './PondProps';
 import { WaterSim, withCommon, withWaves } from './WaterSim';
 import type { SimArea } from './WaterSim';
@@ -55,7 +56,8 @@ interface StateBinding {
  * - `bottom`: the water under the koi (depth, soft light bands in the shallows, the waves as soft relief, the
  *   moon's broken reflection)
  * - `koiFilter`: on the koi layer (the koi bend under the waves and take on a little of the water colour)
- * - `surface`: above the koi (a faint rim on strong wave fronts, shore foam, gold-leaf glints on the open water)
+ * - `surface`: above the koi (foam at the waterline around every koi, a faint rim on strong wave fronts, shore
+ *   foam, gold-leaf glints on the open water)
  */
 export class PondWater {
   readonly bank = new Container();
@@ -63,6 +65,7 @@ export class PondWater {
   readonly surface: Mesh<Geometry, Shader>;
   readonly koiFilter: Filter;
   private readonly sim: WaterSim;
+  private readonly contact: KoiContact;
   private readonly bankPainter: Mesh<Geometry, Shader>;
   private readonly shape: UniformGroup;
   private readonly bindings: StateBinding[] = [];
@@ -72,11 +75,13 @@ export class PondWater {
     const water = waterArea(layout.board);
     this.shape = pondShape(layout);
     this.sim = new WaterSim(renderer, water, this.shape);
+    this.contact = new KoiContact(renderer, koiArea(layout.board), layout.board, WATER.contactResolution);
     const stage = { x: 0, y: 0, width: layout.stageWidth, height: layout.stageHeight };
     this.bankPainter = this.quad(stage, withCommon(bankFragment), bankLook(layout));
     this.bank.addChild(this.bankPainter);
     this.bottom = this.quad(water, withWaves(pondBottom), waterLook(layout.board));
-    this.surface = this.quad(water, withWaves(surface), surfaceLook(layout.board));
+    const koiMask = this.contact.texture;
+    this.surface = this.quad(water, withWaves(surface), surfaceLook(layout.board, this.contact.area), koiMask);
     this.koiFilter = this.createKoiFilter();
     this.koiUniforms = (
       this.koiFilter.resources as { koiUniforms: { uniforms: PondWater['koiUniforms'] } }
@@ -87,6 +92,14 @@ export class PondWater {
   tick(deltaSeconds: number): void {
     this.sim.update(deltaSeconds);
     for (const binding of this.bindings) binding.uState = this.sim.texture;
+  }
+
+  /**
+   * Marks where the koi touch the water this frame, for the foam at the waterline: `shapes` holds every koi's
+   * contact shape in the board's space. Call once per frame after the koi have moved, before the frame is drawn.
+   */
+  touch(shapes: Layer): void {
+    this.contact.draw(shapes);
   }
 
   /** Pushes the surface at a stage point (wakes, tail flicks, dives; later jumps). */
@@ -128,12 +141,21 @@ export class PondWater {
     this.bank.updateCacheTexture();
   }
 
-  /** A quad over a stage rectangle, drawn by one of the pond's fragment shaders. */
-  private quad(area: SimArea, fragment: string, look: UniformDefs): Mesh<Geometry, Shader> {
+  /**
+   * A quad over a stage rectangle, drawn by one of the pond's fragment shaders with its own uniforms (`look`) and,
+   * for the passes that draw around the koi, the koi contact mask (uKoiMask).
+   */
+  private quad(area: SimArea, fragment: string, look: UniformDefs, uKoiMask?: TextureSource): Mesh<Geometry, Shader> {
     const geometry = quadGeometry(area);
     const shader = Shader.from({
       gl: { vertex, fragment },
-      resources: { sim: this.sim.uniforms, pond: this.shape, uState: this.sim.texture, look },
+      resources: {
+        sim: this.sim.uniforms,
+        pond: this.shape,
+        uState: this.sim.texture,
+        look,
+        ...(uKoiMask ? { uKoiMask } : {}),
+      },
     });
     this.bindings.push(shader.resources as StateBinding);
     return new Mesh({ geometry, shader });
@@ -172,6 +194,12 @@ function pondRect(board: SimArea): SimArea {
     width: board.width + left + right,
     height: board.height + top + bottom,
   };
+}
+
+/** Where the koi can be: the board plus room for koi that sway or lift past their cell. */
+function koiArea(board: SimArea): SimArea {
+  const reach = WATER.koiReach;
+  return { x: board.x - reach, y: board.y - reach, width: board.width + reach * 2, height: board.height + reach * 2 };
 }
 
 /** Everywhere the water can reach: the pond rectangle plus room for the shore's bends. */
@@ -244,9 +272,15 @@ function waterLook(board: SimArea): UniformDefs {
   };
 }
 
-function surfaceLook(board: SimArea): UniformDefs {
+function surfaceLook(board: SimArea, koiMask: SimArea): UniformDefs {
   return {
     uBoard: { value: [board.x, board.y, board.width, board.height], type: 'vec4<f32>' },
+    uMaskArea: { value: [koiMask.x, koiMask.y, koiMask.width, koiMask.height], type: 'vec4<f32>' },
+    uContact: {
+      value: [WATER.contactWidth, WATER.contactStrength, WATER.contactBreath, WATER.contactBreaks],
+      type: 'vec4<f32>',
+    },
+    uKoiShift: { value: WATER.koiRefraction, type: 'f32' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
     uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
     uRim: { value: [...WATER.rimGate, WATER.rimOverKoi], type: 'vec3<f32>' },
