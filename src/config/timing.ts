@@ -9,29 +9,27 @@ export const TIMING = {
   invalidSwap: 0.34,
   /** How far the koi travel toward each other before bouncing back, as a share of a cell. */
   invalidReach: 0.35,
-  /** A koi swiped into a lily pad: how far it darts (share of a cell), how fast, how long the swim back takes and how
-   * much it squashes on the bump. */
+  /**
+   * A koi swiped into a lily pad: how far it darts (share of a cell), how fast, how long the swim back takes and how
+   * much it squashes on the bump.
+   */
   bumpReach: 0.3,
   bumpIn: 0.09,
   bumpOut: 0.3,
   bumpSquash: 0.86,
-  /** Matched koi dive: a quick squash as they kick, then they sink away into the deep, turning a little. */
-  diveKick: 0.07,
-  diveSink: 0.34,
-  /** The kick's squash: width and length of the koi, as shares of its size. */
-  diveSquash: [1.18, 0.84],
-  /** How small a diving koi gets before it's gone, and how far it turns (radians). */
+  /**
+   * Matched koi dive: they swim forward and down into the deep (s), gliding this far ahead (share of a cell) and
+   * shrinking to this size as they go, tinted toward the pale water.
+   */
+  dive: 0.5,
+  diveGlide: 0.35,
   diveScale: 0.45,
-  diveTurn: 0.9,
-  /** The pale water-blue a diving koi cools toward as it sinks (it fades out as it goes, so it melts into the blue). */
   diveTint: '#a9cfe0',
-  /** Falling starts at this share of the dive, so there is no dead pause between them. */
-  fallStartAt: 0.55,
-  /** Koi glide down into the gaps: base time plus time per row. */
-  fallBase: 0.16,
-  fallPerRow: 0.075,
-  /** How far a gliding koi turns its head down (0 = keeps its heading, 1 = straight down). */
-  fallTurn: 0.5,
+  /** The koi above start swimming down at this share of the dive, so there is no dead pause between them. */
+  swimStartAt: 0.45,
+  /** Swimming down into a gap: a base time plus a time per row (s), at swimming pace. */
+  swimBase: 0.22,
+  swimPerRow: 0.11,
   /** New koi rise from the deep into the empty cells, the lowest first. */
   rise: 0.42,
   riseStagger: 0.06,
