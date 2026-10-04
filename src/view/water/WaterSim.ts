@@ -1,6 +1,7 @@
 import { Container, Geometry, Mesh, RenderTexture, Shader, UniformGroup } from 'pixi.js';
 import type { Renderer, TextureSource } from 'pixi.js';
 import { WATER } from '../../config/water';
+import common from './shaders/common.glsl?raw';
 import simFragment from './shaders/sim.frag?raw';
 import vertex from './shaders/water.vert?raw';
 import waves from './shaders/waves.glsl?raw';
@@ -40,6 +41,8 @@ export class WaterSim {
   constructor(
     private readonly renderer: Renderer,
     private readonly area: SimArea,
+    /** The pond's outline (uPond, uPondShape in common.glsl): where the water ends. */
+    private readonly pondShape: UniformGroup,
   ) {
     this.cols = Math.round(area.width / WATER.cellSize);
     this.rows = Math.round(area.height / WATER.cellSize);
@@ -54,9 +57,18 @@ export class WaterSim {
       uSimSize: { value: [this.cols, this.rows], type: 'vec2<f32>' },
       uWaveScale: { value: WATER.waveScale, type: 'f32' },
       uTime: { value: 0, type: 'f32' },
+      uPixelRatio: { value: 1, type: 'f32' },
     });
+    this.reset();
+  }
+
+  /**
+   * Calms the water: both state textures back to flat. Called at start, and after a lost WebGL context is restored
+   * (the textures come back as zeros, which unpack to a deep trough all over the pond).
+   */
+  reset(): void {
     for (const target of [this.front, this.back]) {
-      renderer.render({ container: new Container(), target, clear: true, clearColor: FLAT_WATER }); // start calm
+      this.renderer.render({ container: new Container(), target, clear: true, clearColor: FLAT_WATER });
     }
   }
 
@@ -79,7 +91,7 @@ export class WaterSim {
 
   /**
    * Advances the water at a fixed rate (WATER.stepsPerSecond), whatever the frame rate. Then read `texture`.
-   * Each step is one GPU pass over the cols x rows cells (about 120 x 150), cheap even on phones.
+   * Each step is one GPU pass over the cols x rows cells (about 140 x 175), cheap even on phones.
    */
   update(deltaSeconds: number): void {
     this.time += deltaSeconds;
@@ -121,14 +133,18 @@ export class WaterSim {
 
   private createStepShader(): Shader {
     const { cols, rows } = this;
+    const { x, y, width, height } = this.area;
     return Shader.from({
-      gl: { vertex, fragment: `precision highp float;\n${simFragment}` },
+      gl: { vertex, fragment: withCommon(simFragment) },
       resources: {
         uState: this.front.source,
+        pond: this.pondShape,
         simUniforms: {
           uSimSize: { value: [cols, rows], type: 'vec2<f32>' },
-          uRadius: { value: WATER.pondRadius / WATER.cellSize, type: 'f32' },
+          uSimArea: { value: [x, y, width, height], type: 'vec4<f32>' },
           uDamping: { value: WATER.damping, type: 'f32' },
+          uViscosity: { value: WATER.viscosity, type: 'f32' },
+          uShore: { value: [WATER.shoreDamping, WATER.shoreBand], type: 'vec2<f32>' },
           uDrops: { value: this.drops, type: 'vec4<f32>', size: WATER.maxDrops },
         },
       },
@@ -136,7 +152,15 @@ export class WaterSim {
   }
 }
 
-/** A fragment shader with the shared wave-reading code in front of it. High precision for the unpacking maths. */
+/**
+ * A fragment shader with the shared helpers (noise, the pond's outline, lines) in front of it. Marked GLSL ES 3:
+ * Pixi compiles anything else as WebGL 1 shaders, which lack fwidth (constant-width lines).
+ */
+export function withCommon(fragment: string): string {
+  return `#version 300 es\nprecision highp float;\n${common}\n${fragment}`;
+}
+
+/** A fragment shader with the shared helpers and the wave-reading code in front of it (high precision for unpacking). */
 export function withWaves(fragment: string): string {
-  return `precision highp float;\n${waves}\n${fragment}`;
+  return withCommon(`${waves}\n${fragment}`);
 }

@@ -1,10 +1,10 @@
 # Koi Splash
 
-A calm but juicy match-3 on a moonlit koi pond. Built for the mini-game home assignment.
+A calm match-3 on a moonlit koi pond, built for the mini-game home assignment. Swipe a koi into its neighbour's
+cell to line up three or more of a colour; reach 1500 points in 20 moves.
 
-Play it here: https://danieldaniel128.github.io/koi-splash/
-
-The build is hosted on GitHub Pages and always shows the last finished milestone (see Workflow below).
+Play it here: https://danieldaniel128.github.io/koi-splash/ (GitHub Pages, deployed by GitHub Actions from `main`
+only, so it always shows the last finished milestone).
 
 ## Running it
 
@@ -17,119 +17,94 @@ npm run build    # static web build in dist/
 
 ## Stack & assets
 
-- TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
-- The water is a real wave simulation on the GPU, drawn in a toon style (`src/view/water/`). I wanted the middle
-  ground between the two: water that behaves for real, so the fish actually disturb it, but drawn with clean shapes
-  and a small palette that read well on a phone and keep the pieces easy to scan.
-  - **simulation** (`WaterSim`, `sim.frag`): a height field stepped 60 times a second with the wave equation. Each
-    cell's height and speed are packed into two 8-bit channels, so it runs on any phone GPU without float textures.
-    Waves spread, bounce off the shore and calm down.
-  - **the fish push the water** (`FishWake`): a moving koi leaves a wake, a resting koi flicks its tail now and then,
-    and swaps and matches splash. Later, dives and jumps are just bigger pushes.
-  - **drawing**, three passes that read the same waves: the water body under the koi (saturated blue, lighter by
-    the shore, light gathered under the crests), the surface over the koi (white foam lines on wave crests, short
-    glint dashes, shore foam, sparkles) and a filter on the koi layer (the koi bend under the waves and get a broken
-    white foam outline, like objects in toon water).
-  - Around the pond, an indigo bank with a faint seigaiha (overlapping waves) pattern, a nod to Japanese koi ponds.
-  - Koi cast blurred shadows on the bottom, baked once at startup.
+TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. There are no image files: the koi, stones, lily pads
+and reeds are painted on canvases once at startup (`src/art/`) and uploaded as textures.
+
+The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
+into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks
+its tail, a swap shoves the water apart and a match splashes. The shore, stones and pads soak the waves up. It's
+drawn in an ink and moonlight toon look: the bank around the pond is painted once per screen size, and three passes
+read the waves each frame (the water under the koi, a filter that bends the koi under the waves, and a surface pass
+with shore foam and gold glints). The koi have a dark cartoon outline, and a broken foam line at their waterline
+that follows them and breaks around the fins (drawn each frame from a mask of the koi, `KoiContact`).
 
 ## How it's built
 
-I went with MVP, with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. When you swipe,
-the model works out the whole cascade at once and hands it back as a list of steps (what matched, what fell, what
-spawned). The presenter then plays those steps through the view one at a time.
+MVP with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. On a swipe it works out the
+whole cascade at once and returns it as data: a list of steps, each with what matched, what cleared, what fell and
+what spawned. The presenter (`GameScene`) plays those steps through the animator one at a time. The view never
+decides anything, so the board on screen can't drift from the real one, and the rules can be tested without a
+browser.
 
-I wanted it this way for two reasons. First, the rules can be tested without a browser. Second, the board on screen
-can't drift away from the real board, because the view never decides anything; it only animates what it's told.
-Effects and sound will listen on an event bus, so I can add juice without touching the game logic.
+The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded transitions and enter/exit hooks.
+The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),
+and entering won or lost shows the end card.
 
-The turn itself runs on a small state machine with guarded transitions: the end of a turn picks won, lost or idle
-from a table (won is listed before lost, so winning on the last move counts), instead of an if/else chain.
+Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the match
+effects (`SplashFx`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes (`KoiLife`,
+`KoiWaterline`), outside the turn logic.
 
 ## Code standards
 
-I'd rather have the linter enforce the rules than rely on remembering them, so most of these fail the build:
+ESLint enforces them, so I don't have to remember them:
 
-- **Naming:** camelCase for variables and functions, PascalCase for types and classes, UPPER_CASE only for top-level
-  constants.
-- **Layout:** the public API sits at the top of a file, private helpers below it. In classes: fields, constructor,
-  public methods, then private ones.
-- **Size:** functions over 40 lines, nesting deeper than 3 and high complexity are flagged, so long functions get
-  split into named steps.
-- **Module boundaries:** `src/model` and `src/core` can't import Pixi, GSAP or any presentation folder. It works
-  like an assembly definition: the rules stay engine-free and testable.
-- **No singletons:** objects get what they need through their constructor, and `main.ts` is the one place that
-  wires everything together.
-- **Errors:** try/catch only at the edges where things can really fail (boot and asset loading, reading the save,
-  audio), not around everything.
-- **Assets:** the koi are baked into textures once at startup and reused, never rebuilt mid-game.
-- **Patterns only where they pay off:** each one used here is explained below or in the code where it lives.
+- Strict type-checked TypeScript rules, type-only imports, `===`.
+- Naming: camelCase values and functions, PascalCase types, UPPER_CASE only for top-level constants.
+- Class layout: fields, constructor, public methods, then private ones.
+- `src/model` and `src/core` can't import Pixi, GSAP or any presentation folder, like an assembly definition.
+- Warnings for functions over 40 lines, nesting deeper than 3 and complexity over 10.
+
+Beyond lint: no singletons (`main.ts` is the one place that creates objects and hands each one what it needs), tuning
+numbers live in `src/config`, and try/catch only at the edges (boot, and a failed turn animation). The one file lint
+skips is `src/art/koiBank.ts`, the AI-written koi painter.
 
 ## Workflow
 
-I split the work the way I'd run it on a team:
+Feature branches go into `develop` through pull requests, and `develop` goes into `main` when a milestone is done.
+`ci.yml` runs the typecheck, lint, tests and build on every push to a working branch and on every pull request.
+`deploy.yml` runs the same checks on `main` and publishes to GitHub Pages. A pre-commit hook runs ESLint and
+Prettier on the staged files.
 
-```
-feature/<task>  ->  develop  ->  main
-```
+Milestones:
 
-- **feature branches:** one per task (`feature/animation`, `feature/game-scene`...). Small commits, one idea each.
-- **develop:** where finished tasks come together. A task gets merged through a pull request with a short note on
-  what changed and how I checked it.
-- **main:** only finished milestones. Merging into `main` is what deploys the playable build, so the public link
-  never shows half-done work.
+1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
+2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece.
+3. Juice: splashes, ripples, squash and stretch, the water shader, sound. Done except sound and screen shake.
+4. Specials: special koi from bigger matches, and their combos.
+5. Boosters.
+6. Screens and content: title, tutorial, hint, handmade levels, an endless mode.
 
-Two GitHub Actions workflows back this up: `ci.yml` runs the typecheck, lint, tests and a build on every working
-branch and every pull request, and `deploy.yml` runs the same checks and publishes to GitHub Pages, only from `main`.
+## Tests
 
-The milestones, in order:
-
-1. **Playable core:** board, swipe, swap/clear/fall animations, turn flow, moves and win/lose
-2. **Goal system:** lily pads and lotus buds that bloom, with the goal as a swappable piece
-3. **Juice:** splashes, ripples, squash and stretch, shake, the water shader, sound
-4. **Specials:** the special koi made by bigger matches, and their combos
-5. **Boosters**
-6. **Screens and content:** title, tutorial, hint, handmade levels and an endless mode
-
-## Tests and why I have them
-
-`tests/rules.test.ts` was written by AI. I asked for it because the match-3 rules are the one part where a bug is
-easy to miss by playing: a board that starts with a ready-made match, a swap that should be refused, a cascade that
-leaves a hole. Those are hard to spot by eye and easy to break later when I add specials. So the tests check:
-
-- a new board has no matches and at least one move
-- the same seed gives the same board
-- rows, columns and T shapes are found
-- invalid swaps (no match, diagonal, too far) are refused and change nothing
-- a cascade always settles with a full board and pieces only fall down
-
-They run on every commit and on every push, so if I break the rules while working on the feel, I find out right away
-instead of in the middle of a playtest.
+21 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
+new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole. The rest
+cover scoring, the state machine's guards and hooks, and how a swipe picks its cell. They run in CI on every push, so
+when I work on the feel I find out right away if I broke the rules.
 
 ## AI usage
 
-I used Claude (AI) as a helper during the project. So far:
+I used Claude throughout. AI wrote the code:
 
-- Prototype: before starting this repo I had AI build a quick throwaway prototype to test the idea and the feel
-  (koi on water, splashes, the lotus goal). This repo is a clean rebuild with a proper structure.
+- the project setup and tooling (Vite, TypeScript, ESLint, Prettier, the CI and deploy workflows)
+- the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
+- the model and its tests
+- the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
+- the water and the effects (simulation, shaders, splashes, wakes, shadows, ripples, waterline foam)
 
-- Project setup and tooling config (Vite, TypeScript, ESLint/Prettier, the CI and deploy workflows): AI-written.
-- `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
-- `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
-- `tests/`: AI-written.
-- The water (`src/view/water/`: simulation, fish wakes, toon drawing) and koi shadows: AI-written. I set the
-  direction (water that reacts to the fish, toon look from a reference picture, readable for a match-3, room for
-  koi to dive and jump later) and judged each round against screenshots.
-- `src/view/` (board rendering, swipe input, animations, HUD, end card), `src/game/` (the game scene) and
-  `src/config/`: AI-written, step by step from my plan,
-  reviewed and tested by me on desktop and phone.
-- `src/core/StateMachine.ts`: the guarded-transition design with enter/exit hooks is mine; AI wrote the code and
-  its tests.
-- Run-time notes in `src/model/rules.ts`: I used AI as a second opinion on performance, to go over each method's
-  cost and decide where a note is worth having (the non-obvious ones, not every getter).
-- Lint rules for the code standards above: I decided the standards, AI helped me turn them into ESLint config.
-- This README: I used AI to help me write it.
+My part:
+
+- I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
+  standards into ESLint config.
+- I designed the state machine: guarded transitions in a table, with enter/exit hooks.
+- I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
+  for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
+- I reviewed the code and play-tested it on desktop and on my phone.
+
+AI also built a throwaway prototype before this repo, and helped me write this README.
 
 ## Next steps
 
-(to fill in at the end)
+- Milestone 2, the lily pad and lotus goal; then specials from bigger matches, and boosters.
+- A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
+- A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
+- Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

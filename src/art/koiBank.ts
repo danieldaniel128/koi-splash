@@ -134,6 +134,11 @@ export interface PaintOptions {
   shadow?: boolean;
   /** Body width override (0.12 slim .. 0.28 chubby); default: the variety's own build, else DEFAULT_BUILD. */
   build?: number;
+  /**
+   * Which parts to paint: the whole fish (default), only the fins and tail, or only the body (with the dorsal fin
+   * and the head). Painting them apart lets a game outline each part or tint the fins as if under water.
+   */
+  parts?: 'all' | 'fins' | 'body';
 }
 
 export interface BakeOptions extends PaintOptions {
@@ -1370,12 +1375,17 @@ export function paintKoi(ctx: Ctx, variety: KoiVariety, opts: PaintOptions): voi
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  if (opts.shadow !== false) paintDropShadow(ctx, body);
-  paintFins(ctx, look.fins, body, wag);
-  paintTail(ctx, look.fins, body, wag);
-  paintBody(ctx, look, body, plan);
-  paintDorsalFin(ctx, look.fins, body);
-  paintHeadDetails(ctx, look, body);
+  const parts = opts.parts ?? 'all';
+  if (opts.shadow !== false && parts === 'all') paintDropShadow(ctx, body);
+  if (parts !== 'body') {
+    paintFins(ctx, look.fins, body, wag);
+    paintTail(ctx, look.fins, body, wag);
+  }
+  if (parts !== 'fins') {
+    paintBody(ctx, look, body, plan);
+    paintDorsalFin(ctx, look.fins, body);
+    paintHeadDetails(ctx, look, body);
+  }
 
   ctx.restore();
 }
