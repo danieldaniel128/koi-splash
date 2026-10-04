@@ -1,4 +1,5 @@
 import {
+  BufferImageSource,
   Color,
   Container,
   defaultFilterVert,
@@ -12,6 +13,9 @@ import {
 import type { Container as Layer, PointData, Renderer, TextureSource } from 'pixi.js';
 import { POND } from '../../config/pond';
 import type { PondProp } from '../../config/pond';
+import { bakeDistanceField } from '../../art/distanceField';
+import { toPolygon } from '../../layout/outline';
+import type { Outline } from '../../layout/outline';
 import { WATER } from '../../config/water';
 import bankFragment from './shaders/bank.frag?raw';
 import koiRefraction from './shaders/koiRefraction.frag?raw';
@@ -21,6 +25,7 @@ import vertex from './shaders/water.vert?raw';
 import { KoiContact } from './KoiContact';
 import { MAX_PROPS, waterShapes } from './PondProps';
 import { WaterSim, withCommon, withWaves } from './WaterSim';
+import type { PondShapeResources } from './WaterSim';
 import type { SimArea } from './WaterSim';
 
 /** Where the board and the pond sit on the stage (see layoutGame), and what is in the water. Stage px. */
@@ -28,8 +33,10 @@ export interface PondLayout {
   readonly stageWidth: number;
   readonly stageHeight: number;
   readonly board: SimArea;
-  /** The pond's base rectangle: the board plus the water around it. The shore bends in and out of it. */
+  /** The pond's bounding rectangle: the board plus the water around it. */
   readonly pond: SimArea;
+  /** The shore, traced from the board's shape (see traceShore): where the water ends. */
+  readonly shore: readonly Outline[];
   /** Stones and pads in the water: the waves stop at them and the foam outlines them. */
   readonly props: readonly PondProp[];
   /** The centre of the moon's reflection. */
@@ -84,7 +91,7 @@ export class PondWater implements WaterSurface {
   private readonly sim: WaterSim;
   private readonly contact: KoiContact;
   private readonly bankPainter: Mesh<Geometry, Shader>;
-  private readonly shape: UniformGroup;
+  private readonly shape: PondShapeResources;
   /** How many prop slots the pond's own stones and pads take; the board's pads go after them. */
   private readonly fixedProps: number;
   private readonly bindings: StateBinding[] = [];
@@ -133,8 +140,8 @@ export class PondWater implements WaterSurface {
    * O(MAX_PROPS).
    */
   float(circles: readonly Circle[]): void {
-    const shapes = this.shape.uniforms.uProps as Float32Array;
-    const axes = this.shape.uniforms.uPropAxes as Float32Array;
+    const shapes = this.shape.pond.uniforms.uProps as Float32Array;
+    const axes = this.shape.pond.uniforms.uPropAxes as Float32Array;
     for (let slot = this.fixedProps; slot < MAX_PROPS; slot++) {
       const circle = circles[slot - this.fixedProps];
       shapes.set(circle ? [circle.x, circle.y, circle.radius, circle.radius] : [0, 0, 0, 0], slot * 4);
@@ -200,7 +207,7 @@ export class PondWater implements WaterSurface {
       gl: { vertex, fragment },
       resources: {
         sim: this.sim.uniforms,
-        pond: this.shape,
+        ...this.shape,
         uState: this.sim.texture,
         look,
         ...(uKoiMask ? { uKoiMask } : {}),
@@ -217,7 +224,7 @@ export class PondWater implements WaterSurface {
       resolution: 'inherit',
       resources: {
         sim: this.sim.uniforms,
-        pond: this.shape,
+        ...this.shape,
         uState: this.sim.texture,
         koiUniforms: {
           uAreaOrigin: { value: [0, 0], type: 'vec2<f32>' },
@@ -258,19 +265,44 @@ function quadGeometry({ x, y, width, height }: SimArea): Geometry {
 }
 
 /**
- * Where the water is, for the shaders (uPond, uPondShape, uProps, uPropAxes in common.glsl): the pond's outline
- * and the stones and pads in it. Shared by the simulation and every pass, so they all agree on the shore.
+ * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend, uProps, uPropAxes in common.glsl): the
+ * shore as a distance field baked once from its traced loops, and the stones and pads in the water. Shared by the
+ * simulation and every pass, so they all agree on the shore. The field reaches past the water far enough for the
+ * wet band on the bank.
  */
-function pondShape(layout: PondLayout): UniformGroup {
+function pondShape(layout: PondLayout): PondShapeResources {
+  const reach = POND.wetBand + POND.shoreWobble + FIELD_MARGIN;
   const { pond } = layout;
-  const { shapes, axes } = waterShapes(layout.props);
-  return new UniformGroup({
-    uPond: { value: [pond.x, pond.y, pond.width, pond.height], type: 'vec4<f32>' },
-    uPondShape: { value: [POND.cornerRadius, POND.shoreWobble, POND.shoreBend], type: 'vec3<f32>' },
-    uProps: { value: shapes, type: 'vec4<f32>', size: MAX_PROPS },
-    uPropAxes: { value: axes, type: 'vec2<f32>', size: MAX_PROPS },
+  const area = {
+    x: pond.x - reach,
+    y: pond.y - reach,
+    width: pond.width + reach * 2,
+    height: pond.height + reach * 2,
+  };
+  const field = bakeDistanceField(layout.shore.map(toPolygon), area, FIELD_TEXEL);
+  const source = new BufferImageSource({
+    resource: field.data,
+    width: field.width,
+    height: field.height,
+    format: 'rgba8unorm',
+    scaleMode: 'linear', // the distance is smooth: blending neighbours gives the distance in between
   });
+  const { shapes, axes } = waterShapes(layout.props);
+  const { x, y, width, height } = field.area;
+  return {
+    uShoreField: source,
+    pond: new UniformGroup({
+      uShoreArea: { value: [x, y, width, height], type: 'vec4<f32>' },
+      uShoreBend: { value: [POND.shoreWobble, POND.shoreBend], type: 'vec2<f32>' },
+      uProps: { value: shapes, type: 'vec4<f32>', size: MAX_PROPS },
+      uPropAxes: { value: axes, type: 'vec2<f32>', size: MAX_PROPS },
+    }),
+  };
 }
+
+/** The distance field: one texel every this many px, and how far past the bank's wet band it reaches (px). */
+const FIELD_TEXEL = 2;
+const FIELD_MARGIN = 8;
 
 function bankLook(layout: PondLayout): UniformDefs {
   const halfWidth = layout.stageWidth / 2;

@@ -1,10 +1,13 @@
 // Small helpers shared by every pond shader: hashing, smooth noise, the pond's outline and constant-width lines.
 // Positions are stage pixels.
 
-// the pond's base rectangle (x, y, width, height) and its shape: corner radius, how far the shore wanders in and
-// out (px) and how long one bend of the shore is (px)
-uniform vec4 uPond;
-uniform vec3 uPondShape;
+// the pond's shape, as a distance field baked once from its traced shore (see bakeDistanceField): red holds the
+// distance out to 128 px in 1 px steps, green out to 16 px in 1/8 px steps (FIELD_REACH). uShoreArea is where the
+// field lies on the stage (x, y, width, height); uShoreBend is how far the shore wanders in and out (px) and how
+// long one bend of it is (px)
+uniform sampler2D uShoreField;
+uniform vec4 uShoreArea;
+uniform vec2 uShoreBend;
 
 // stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and the cosine and sine of
 // the rotation. Unused slots have a zero size.
@@ -40,18 +43,18 @@ float gnoise(vec2 p) {
     return mix(mix(va, vb, u.x), mix(vc, vd, u.x), u.y);
 }
 
-// Signed distance to a rounded rectangle centred on the origin: negative inside.
-float roundedBox(vec2 p, vec2 halfSize, float radius) {
-    vec2 q = abs(p) - halfSize + radius;
-    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
-}
-
-// Distance (px) to the shore: negative in the water. A rounded rectangle whose edge wanders in long, slow bends,
-// so the pond reads as dug ground, not a tray. The simulation and every drawing pass share it.
+// Distance (px) to the shore: negative in the water. Read from the baked field (fine near the shore, coarse
+// further out, and growing on past the field's edge), with the edge wandering in long, slow bends so the pond
+// reads as dug ground. Any board shape, one texture read. The simulation and every drawing pass share it.
 float pondEdge(vec2 p) {
-    float box = roundedBox(p - (uPond.xy + uPond.zw * 0.5), uPond.zw * 0.5, uPondShape.x);
-    float bend = noise(p / uPondShape.z) * 0.7 + noise(p / (uPondShape.z * 0.35) + 17.0) * 0.3;
-    return box + (bend - 0.5) * 2.0 * uPondShape.y;
+    vec2 field = texture(uShoreField, (p - uShoreArea.xy) / uShoreArea.zw).rg;
+    float coarse = (field.r * 2.0 - 1.0) * 128.0;
+    float fine = (field.g * 2.0 - 1.0) * 16.0;
+    float d = mix(fine, coarse, smoothstep(12.0, 15.0, abs(coarse)));
+    vec2 beyond = max(abs(p - (uShoreArea.xy + uShoreArea.zw * 0.5)) - uShoreArea.zw * 0.5, 0.0);
+    d += length(beyond);
+    float bend = noise(p / uShoreBend.y) * 0.7 + noise(p / (uShoreBend.y * 0.35) + 17.0) * 0.3;
+    return d + (bend - 0.5) * 2.0 * uShoreBend.x;
 }
 
 // Distance (px) to the nearest stone or lily pad: negative inside one.

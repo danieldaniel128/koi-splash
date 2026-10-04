@@ -55,7 +55,7 @@ async function boot(host: HTMLElement): Promise<void> {
   placePowerBar(ui, layout.bar, POWER_BAR.slots);
 
   const textures = createTextures(app, board.piece);
-  const pond = createPond(app, layout);
+  const pond = createPond(app, layout, shore);
 
   const boardView = new BoardView(textures, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
   boardView.position.set(board.x, board.y);
@@ -236,12 +236,13 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
  * The bank, the water below and above the board, animated by the app's clock and repainted after a lost WebGL
  * context comes back.
  */
-function createPond(app: Application, layout: GameLayout): PondWater {
+function createPond(app: Application, layout: GameLayout, shore: readonly Outline[]): PondWater {
   const pond = new PondWater(app.renderer, {
     stageWidth: layout.stage.width,
     stageHeight: layout.stage.height,
     board: layout.board,
     pond: layout.pond,
+    shore,
     props: placeProps(layout.pond),
     moonAt: placeOn(layout.pond, POND.moonSpot),
   });
