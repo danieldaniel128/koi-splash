@@ -15,7 +15,7 @@ export interface PadViewLayout {
 }
 
 /**
- * The lily pads floating between the koi (pads sit on the corners between cells). Plays what the model reports:
+ * The lily pads on the board, each centred on the cell it takes (no koi can be there). Plays what the model reports:
  * a hit opens a bud one stage, a bloom lifts the lotus and flies it to the goal, an empty pad drifts away.
  */
 export class PadView extends Container {
@@ -49,7 +49,8 @@ export class PadView extends Container {
       const sprite = new Sprite(pad.kind === 'bud' ? this.stageFor(pad) : this.emptyPad);
       sprite.anchor.set(0.5);
       sprite.scale.set(this.scaleOf);
-      sprite.position.set(pad.at.col * this.layout.cellSize, pad.at.row * this.layout.cellSize);
+      const { cellSize } = this.layout;
+      sprite.position.set((pad.at.col + 0.5) * cellSize, (pad.at.row + 0.5) * cellSize); // centred on its cell
       sprite.rotation = Math.random() * Math.PI * 2;
       this.sprites.set(pad.id, sprite);
       this.addChild(sprite);

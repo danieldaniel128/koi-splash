@@ -161,3 +161,38 @@ describe('trySwap', () => {
     ]);
   });
 });
+
+describe('blocked cells (lily pads)', () => {
+  const pads = [
+    { col: 2, row: 3 },
+    { col: 5, row: 6 },
+  ];
+
+  it('places the pads first: no koi on a pad, every other cell filled', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const board = createBoard(SPEC, new Random(seed), pads);
+      for (const cell of board.cells()) {
+        if (pads.some((p) => p.col === cell.col && p.row === cell.row)) expect(board.get(cell)).toBeNull();
+        else expect(board.get(cell)).not.toBeNull();
+      }
+      expect(findMatches(board)).toEqual([]);
+    }
+  });
+
+  it('keeps cascades off the pads: koi fall past them and never land on them', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const rng = new Random(seed);
+      const board = createBoard(SPEC, rng, pads);
+      const move = findMove(board);
+      if (!move) throw new Error('no move');
+      const result = trySwap(board, move[0], move[1], SPEC, rng);
+      if (!result.valid) throw new Error('a found move was refused');
+      for (const pad of pads) expect(board.get(pad)).toBeNull();
+      for (const step of result.steps) {
+        for (const move of [...step.falls, ...step.spawns]) {
+          expect(pads.some((p) => p.col === move.to.col && p.row === move.to.row)).toBe(false);
+        }
+      }
+    }
+  });
+});

@@ -3,8 +3,8 @@ import type { BoardSpec } from './rules';
 import type { Cell } from './types';
 
 /**
- * A lily pad on the board. Pads are not pieces and sit on the CORNERS between cells, so a pad never hides a koi:
- * `at` names the corner at the top-left of cell `at` (cols 1..cols-1, rows 1..rows-1, never on the board's edge).
+ * A lily pad on the board. A pad takes a whole cell: no koi can be in it, and koi fall past it. Matches right next
+ * to it (up, down, left, right) hit it.
  */
 export interface Pad {
   readonly id: number;
@@ -31,19 +31,21 @@ export interface PadSpec {
   readonly hitsToBloom: number;
   /** Matches next to an empty pad before it drifts away. */
   readonly hitsToDrift: number;
+  /** Pads are at least this many cells apart (in any direction), so they never cluster. */
+  readonly spacing: number;
 }
 
-/** The four cells that meet at a corner, relative to the corner's `at`. */
-const AROUND_CORNER: readonly Cell[] = [
-  { col: -1, row: -1 },
+/** The four cells right next to a pad. */
+const AROUND: readonly Cell[] = [
   { col: 0, row: -1 },
+  { col: 0, row: 1 },
   { col: -1, row: 0 },
-  { col: 0, row: 0 },
+  { col: 1, row: 0 },
 ];
 
 /**
- * The lily pads on the board. A cascade round "hits" a pad when it clears any of the four koi around the pad's
- * corner; a pad takes at most one hit per round, however many of them cleared.
+ * The lily pads on the board. A cascade round "hits" a pad when it clears a koi right next to it; a pad takes at
+ * most one hit per round, however many of its neighbours cleared. A bloomed or drifted pad frees its cell.
  */
 export class PadField {
   private readonly field = new Map<number, Pad>();
@@ -53,19 +55,24 @@ export class PadField {
   }
 
   /**
-   * Scatters the buds and empty pads over distinct random inner corners. O(cols * rows) for the shuffle.
-   * Throws when the board has fewer inner corners than pads.
+   * Scatters the buds and empty pads over random cells at least `spacing` apart. O(N * P) for N cells, P pads.
+   * Throws when they don't fit.
    */
   static scatter(spec: PadSpec, board: BoardSpec, rng: Random): PadField {
     const total = spec.buds + spec.emptyPads;
-    const corners = shuffledCorners(board, rng);
-    if (total > corners.length) throw new RangeError(`${total} pads do not fit on the board`);
-    const pads = corners.slice(0, total).map((at, i): Pad => {
+    const cells = spacedCells(shuffledCells(board, rng), spec.spacing, total);
+    if (cells.length < total) throw new RangeError(`${total} pads do not fit ${spec.spacing} cells apart`);
+    const pads = cells.map((at, i): Pad => {
       const kind = i < spec.buds ? 'bud' : 'empty';
       const hitsNeeded = kind === 'bud' ? spec.hitsToBloom : spec.hitsToDrift;
       return { id: i + 1, at, kind, hitsLeft: hitsNeeded, hitsNeeded };
     });
     return new PadField(pads);
+  }
+
+  /** The cells the pads take, to block on the board. */
+  get cells(): Cell[] {
+    return this.pads.map((pad) => pad.at);
   }
 
   /** The pads still on the board. */
@@ -75,13 +82,13 @@ export class PadField {
 
   /**
    * Applies one cascade round's cleared cells to the pads and returns what happened, in pad order.
-   * Bloomed buds and drifted pads leave the board. O(P * 4) set lookups, P = pads.
+   * Bloomed buds and drifted pads leave the field (the caller frees their cells). O(P * 4) lookups, P = pads.
    */
   hit(cleared: readonly Cell[]): PadEvent[] {
     const hitCells = new Set(cleared.map(key));
     const events: PadEvent[] = [];
     for (const pad of this.field.values()) {
-      const touched = AROUND_CORNER.some((d) =>
+      const touched = AROUND.some((d) =>
         hitCells.has(key({ col: pad.at.col + d.col, row: pad.at.row + d.row })),
       );
       if (touched) events.push(this.applyHit(pad));
@@ -104,11 +111,24 @@ function key(cell: Cell): string {
   return `${cell.col},${cell.row}`;
 }
 
-/** Every inner corner of the board (where four cells meet) in random order (Fisher-Yates). */
-function shuffledCorners(board: BoardSpec, rng: Random): Cell[] {
+/** Picks cells in order, skipping any closer than `spacing` (in either direction) to one already picked. */
+function spacedCells(cells: readonly Cell[], spacing: number, count: number): Cell[] {
+  const picked: Cell[] = [];
+  for (const cell of cells) {
+    if (picked.length === count) break;
+    const clear = picked.every(
+      (p) => Math.max(Math.abs(p.col - cell.col), Math.abs(p.row - cell.row)) >= spacing,
+    );
+    if (clear) picked.push(cell);
+  }
+  return picked;
+}
+
+/** Every cell of the board in random order (Fisher-Yates). */
+function shuffledCells(board: BoardSpec, rng: Random): Cell[] {
   const cells: Cell[] = [];
-  for (let row = 1; row < board.rows; row++) {
-    for (let col = 1; col < board.cols; col++) cells.push({ col, row });
+  for (let row = 0; row < board.rows; row++) {
+    for (let col = 0; col < board.cols; col++) cells.push({ col, row });
   }
   for (let i = cells.length - 1; i > 0; i--) {
     const j = rng.int(0, i);
