@@ -269,3 +269,31 @@ function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, 
   ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   ctx.globalAlpha = 1;
 }
+
+/**
+ * A beam of light, `width` x `height` px: brightest along its middle (white at the core, the tint's colour out to the
+ * edges) and fading at both ends. Tint the sprite with the special's colour and stretch it along the line.
+ */
+export function paintBeam(width: number, height: number): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = context(canvas);
+  const across = ctx.createLinearGradient(0, 0, 0, height);
+  across.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  across.addColorStop(0.32, 'rgba(255, 255, 255, 0.6)');
+  across.addColorStop(0.5, '#ffffff');
+  across.addColorStop(0.68, 'rgba(255, 255, 255, 0.6)');
+  across.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = across;
+  ctx.fillRect(0, 0, width, height);
+  const along = ctx.createLinearGradient(0, 0, width, 0);
+  along.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  along.addColorStop(0.18, '#000');
+  along.addColorStop(0.82, '#000');
+  along.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = along;
+  ctx.fillRect(0, 0, width, height);
+  return canvas;
+}

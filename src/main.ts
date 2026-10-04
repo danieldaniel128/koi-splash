@@ -39,6 +39,8 @@ import { ShoreRing } from './view/ShoreRing';
 import { KoiLife } from './view/KoiLife';
 import { KoiTextures } from './view/KoiTextures';
 import type { KoiBake } from './view/KoiTextures';
+import { SpecialFx } from './view/SpecialFx';
+import { SpecialMotions } from './view/SpecialMotions';
 import { SpecialTextures } from './view/SpecialTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
@@ -69,17 +71,13 @@ async function boot(host: HTMLElement): Promise<void> {
   const specials = new SpecialTextures(KOI_SET, bake, KOI_COLORS); // the special koi, baked when first made
   const pond = createPond(app, layout, shore);
 
-  const boardView = new BoardView(textures, specials, {
-    ...BOARD,
-    cellSize: board.cell,
-    koiSize: board.piece,
-  });
-  boardView.position.set(board.x, board.y);
+  const boardView = createBoardView(textures, specials, board);
   const popups = createScorePopups(hud, board);
   const result = new ResultCard(host);
   const pads = createPads(app, pond, hud, board);
 
-  startGame({ boardView, pond, popups, hud, pads, result }, board.cell);
+  const effects = createSpecialEffects(boardView, specials, pond, board);
+  startGame({ boardView, pond, popups, hud, pads, result, specials: effects }, board.cell);
 
   const stage = new Container();
   putUnderWater(app, boardView, pond, board);
@@ -90,6 +88,7 @@ async function boot(host: HTMLElement): Promise<void> {
     boardView,
     pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
+    effects.fx, // the specials' light, over the water
     popups,
     createScenery(app, layout, shore),
   );
@@ -134,17 +133,18 @@ function startGame(
     hud: Hud;
     pads: PadView;
     result: ResultCard;
+    specials: { fx: SpecialFx; motions: SpecialMotions };
   },
   cell: number,
 ): void {
-  const { boardView, pond, popups, hud, pads, result } = parts;
+  const { boardView, pond, popups, hud, pads, result, specials } = parts;
   const level = { ...LEVEL, ...SCORE };
   const scene = new GameScene({
     spec: BOARD,
     level,
     rng: new Random(),
     view: boardView,
-    animator: new BoardAnimator(boardView, cell, pond, popups, level.pointsPerPiece),
+    animator: new BoardAnimator(boardView, cell, pond, popups, level.pointsPerPiece, specials),
     status: hud,
     pads,
     result,
@@ -153,6 +153,29 @@ function startGame(
     scene.restart();
   });
   new SwipeInput(boardView, cell * INPUT.swipeThreshold, scene.handleSwipe);
+}
+
+/** The koi on the board, placed on the layout's board. */
+function createBoardView(
+  textures: KoiTextures,
+  specials: SpecialTextures,
+  board: GameLayout['board'],
+): BoardView {
+  const view = new BoardView(textures, specials, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
+  view.position.set(board.x, board.y);
+  return view;
+}
+
+/** The specials' light over the board, and the ways the koi leave around them. */
+function createSpecialEffects(
+  boardView: BoardView,
+  textures: SpecialTextures,
+  pond: PondWater,
+  board: GameLayout['board'],
+): { fx: SpecialFx; motions: SpecialMotions } {
+  const fx = new SpecialFx(boardView, textures, pond, board.cell, Math.max(board.width, board.height));
+  fx.position.set(board.x, board.y);
+  return { fx, motions: new SpecialMotions() };
 }
 
 /** The points each match earns, over the board; they fly to the score in the HUD. */

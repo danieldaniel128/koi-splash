@@ -4,9 +4,13 @@ import type { PointData } from 'pixi.js';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
 import { scoreRound } from '../model/score';
-import type { CascadeStep, Cell, Piece, Spawn } from '../model/types';
+import type { CascadeStep, Cell, Cleared, Created, Piece, Spawn } from '../model/types';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
+import { planRound } from './specialTiming';
+import type { ClearPlan } from './specialTiming';
+import type { SpecialFx } from './SpecialFx';
+import type { SpecialMotions } from './SpecialMotions';
 import type { WaterSurface } from './water/PondWater';
 
 /** A piece and the cell it sits in when an animation starts. */
@@ -44,6 +48,8 @@ export class BoardAnimator {
     private readonly fx: MatchEffects,
     /** The level's points per piece, the same value the scene scores with. */
     private readonly pointsPerPiece: number,
+    /** The specials' effects and the ways koi leave around them. */
+    private readonly specials: { readonly fx: SpecialFx; readonly motions: SpecialMotions },
   ) {}
 
   /**
@@ -99,13 +105,20 @@ export class BoardAnimator {
       .to(sprite, { x: home.x, y: home.y, duration: TIMING.bumpOut, ease: 'back.out(2)' }, '<');
   }
 
-  /** One cascade round: matched koi dive while the koi above swim down and new ones rise into the gaps. */
+  /**
+   * One cascade round, timed by planRound: matched koi dive (a special's shape spirals into it), specials fire and
+   * their blasts take their koi in their own rhythm, then the koi above swim down and new ones rise into the gaps.
+   */
   async playStep(step: CascadeStep): Promise<void> {
+    const plan = planRound(step, TIMING.specials);
     this.score(step);
-    for (const made of step.created) this.view.makeSpecial(made.piece);
-    const swimDelay = step.cleared.length > 0 ? TIMING.dive * TIMING.swimStartAt : 0;
+    for (const blast of plan.blasts) this.specials.fx.fire(blast);
+    // the koi above start swimming down while the last ones are still going
+    const swimDelay =
+      step.cleared.length > 0 ? Math.max(0, plan.end - TIMING.dive * (1 - TIMING.swimStartAt)) : 0;
     await Promise.all([
-      ...step.cleared.map(({ piece, at }) => this.dive(piece.id, at)),
+      ...step.created.map((made) => this.birth(made)),
+      ...step.cleared.map((cleared) => this.leave(cleared, plan.clears.get(cleared.piece.id))),
       ...step.falls.map((fall) =>
         this.swim(this.view.spriteOf(fall.piece.id), fall.to, fall.to.row - fall.from.row, swimDelay),
       ),
@@ -114,7 +127,45 @@ export class BoardAnimator {
     this.round++;
   }
 
-  /** Each match's points pop up over it; a cell shared by two matches counts once. */
+  /** A special is born once its shape has spiralled into it: it takes its look, with a flash and a ring. */
+  private async birth(made: Created): Promise<void> {
+    const merge = made.from.length > 0 ? TIMING.specials.merge : 0;
+    this.specials.fx.birth(made.at, made.piece.kind, merge);
+    await gsap.to({}, { duration: merge });
+    this.view.makeSpecial(made.piece);
+  }
+
+  /** A koi leaves the board the way its round's plan says, then its sprite goes. */
+  private async leave({ piece, at }: Cleared, plan: ClearPlan | undefined): Promise<void> {
+    const special = plan ? this.specialExit(piece, plan) : null;
+    if (!special) {
+      await this.dive(piece.id, at, plan?.delay ?? 0); // a plain dive, which removes the koi itself
+      return;
+    }
+    await special;
+    this.view.removePiece(piece.id);
+  }
+
+  /** The way a koi leaves around the specials (see SpecialMotions), or null when it simply dives. */
+  private specialExit(piece: Piece, plan: ClearPlan): Promise<void> | null {
+    const koi = this.view.spriteOf(piece.id);
+    const { motions } = this.specials;
+    const toward = plan.toward ? this.view.cellToPoint(plan.toward) : null;
+    switch (plan.how) {
+      case 'merge':
+        return toward ? motions.merge(koi, toward, plan.delay, plan.lasts) : null;
+      case 'drain':
+        return toward ? motions.drain(koi, toward, plan.delay, plan.lasts) : null;
+      case 'zap':
+        return motions.zap(koi, plan.delay);
+      case 'fire':
+        return piece.special ? motions.exit(koi, piece.special, plan.delay, plan.lasts) : null;
+      case 'dive':
+        return null;
+    }
+  }
+
+  /** Each match's points pop up over it (a cell shared by two matches counts once), and each blast's over its special. */
   private score(step: CascadeStep): void {
     const perPiece = scoreRound(step, this.round, this.pointsPerPiece) / Math.max(step.cleared.length, 1);
     const counted = new Set<string>();
@@ -125,6 +176,11 @@ export class BoardAnimator {
       const points = match.cells.map((cell) => this.view.cellToPoint(cell));
       this.fx.points(centreOf(points), Math.round(fresh.length * perPiece));
     }
+    // each special's blast pops its points over the special
+    step.fired.forEach((fired, blast) => {
+      const taken = step.cleared.filter((cleared) => cleared.blast === blast).length;
+      if (taken > 0) this.fx.points(this.view.cellToPoint(fired.at), Math.round(taken * perPiece));
+    });
   }
 
   /** The water is shoved apart between two cells (a swap): a push at the midpoint, `strength` times the full one. */
@@ -178,14 +234,16 @@ export class BoardAnimator {
    * A matched koi dives: it tips forward and swims down into the deep along its heading, shrinking and taking on the
    * water's colour until it's gone, and the water closes over it with a ring. No flash, no squash: it swims away.
    */
-  private async dive(id: number, at: Cell): Promise<void> {
+  private async dive(id: number, at: Cell, delay = 0): Promise<void> {
     const koi = this.view.spriteOf(id);
-    this.water.push(this.onStage(this.view.cellToPoint(at)), WATER.divePush, WATER.diveRadius);
+    gsap.delayedCall(delay, () => {
+      this.water.push(this.onStage(this.view.cellToPoint(at)), WATER.divePush, WATER.diveRadius);
+    });
     const ahead = TIMING.diveGlide * this.cellSize;
     const deep = koi.restScale * TIMING.diveScale;
     const sink = { depth: 0 };
     await gsap
-      .timeline()
+      .timeline({ delay })
       .to(
         koi,
         {
