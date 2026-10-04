@@ -17,7 +17,7 @@ export function createBackdrop(
   resolution: number,
   seed: number,
 ): Sprite {
-  const { height } = planBackdrop(frame, look);
+  const { height } = planBackdrop(frame);
   const scale = Math.min(resolution, MAX_SIZE / frame.width, MAX_SIZE / Math.max(height, 1));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.ceil(frame.width * scale));
