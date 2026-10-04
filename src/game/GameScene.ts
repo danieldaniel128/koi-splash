@@ -9,6 +9,8 @@ import type { Pad, PadEvent, PadSpec } from '../model/pads';
 import { createBoard, resetBoard, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
+import { starsFor } from '../model/stars';
+import type { StarRule } from '../model/stars';
 import type { CascadeStep, Cell } from '../model/types';
 import type { BoardAnimator, PlacedPiece } from '../view/BoardAnimator';
 import type { BoardView } from '../view/BoardView';
@@ -59,6 +61,7 @@ export interface LevelRules {
   readonly pointsPerPiece: number;
   readonly goal: GoalDef;
   readonly pads: PadSpec;
+  readonly stars: StarRule;
 }
 
 export interface GameSceneDeps {
@@ -187,7 +190,9 @@ export class GameScene {
   }
 
   private status(): GameStatus {
-    return { movesLeft: this.level.movesLeft, score: this.level.score, goal: this.level.goal.progress() };
+    const { movesLeft, score, goal } = this.level;
+    const { moves, stars } = this.deps.level;
+    return { movesLeft, moves, stars: starsFor(movesLeft, moves, stars), score, goal: goal.progress() };
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */
