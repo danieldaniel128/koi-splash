@@ -2,10 +2,12 @@ import type { CascadeStep } from './types';
 
 /**
  * Points for one cascade round: the pieces it cleared, multiplied by the round number (0-based `round`), so a chain
- * reaction is worth more than the same pieces cleared at once.
+ * reaction is worth more than the same pieces cleared at once; plus, as in the prototype, three pieces' worth for every
+ * koi a special's shape had past three (a striped koi from a 4 adds 3, a rainbow koi from a 5 adds 6).
  */
 export function scoreRound(step: CascadeStep, round: number, pointsPerPiece: number): number {
-  return step.cleared.length * pointsPerPiece * (round + 1);
+  const shapes = step.created.reduce((total, made) => total + Math.max(0, made.from.length + 1 - 3) * 3, 0);
+  return (step.cleared.length + shapes) * pointsPerPiece * (round + 1);
 }
 
 /** Points for a whole swap: the sum of its cascade rounds. */

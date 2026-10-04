@@ -81,11 +81,18 @@ export class KoiTextures {
   }
 }
 
-/** One full tail beat: pose i swings the tail by sin(2 PI i / frames), so the poses loop smoothly. */
-function bakePoses(varietyId: string, bake: KoiBake): Texture[] {
+/**
+ * One full tail beat: pose i swings the tail by sin(2 PI i / frames), so the poses loop smoothly. `dress` gives a
+ * special koi its look (see specialKoi).
+ */
+export function bakePoses(
+  varietyId: string,
+  bake: KoiBake,
+  dress?: (part: HTMLCanvasElement) => void,
+): Texture[] {
   const variety = getVariety(varietyId);
   return Array.from({ length: bake.frames }, (_, i) =>
-    Texture.from(bakeInkedKoi(variety, { ...stillPose(bake), tailWag: tailWag(i, bake) }, bake.ink)),
+    Texture.from(bakeInkedKoi(variety, { ...stillPose(bake), tailWag: tailWag(i, bake) }, bake.ink, dress)),
   );
 }
 
@@ -103,7 +110,7 @@ function tailWag(pose: number, bake: KoiBake): number {
 }
 
 /** The straight pose, with no shadow: the shadow is its own sprite on the pond bottom. */
-function stillPose(bake: KoiBake): BakeOptions {
+export function stillPose(bake: KoiBake): BakeOptions {
   return { size: bake.size, resolution: bake.resolution, build: bake.build, shadow: false };
 }
 

@@ -61,8 +61,10 @@ export class Board {
     this.slots[this.index(cell)] = piece;
   }
 
+  /** The colour a piece matches as: null for an empty cell, and for a rainbow koi (it matches nothing). */
   kindAt(cell: Cell): Kind | null {
-    return this.get(cell)?.kind ?? null;
+    const piece = this.get(cell);
+    return piece && piece.special?.type !== 'rainbow' ? piece.kind : null;
   }
 
   swap(a: Cell, b: Cell): void {

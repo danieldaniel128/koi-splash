@@ -38,4 +38,21 @@ export const TIMING = {
   riseStagger: 0.035,
   /** Where in the rise the new koi breaks the surface (a small ring). */
   riseSurfaceAt: 0.55,
+  /**
+   * The specials, after the prototype (see SpecialTiming): a shape spirals into its special; a striped koi's sweep
+   * takes a cell every `sweep`; a whirlpool spins up, then drains its neighbours (corners a little later); a rainbow
+   * koi rises, then its beams leave one by one and land; a caught special fires a beat after the blast reaches it.
+   */
+  specials: {
+    merge: 0.36,
+    sweep: 0.024,
+    whirlSpin: 0.32,
+    whirlPull: 0.34,
+    whirlCorner: 0.03,
+    rainbowRise: 0.3,
+    rainbowStep: 0.05,
+    rainbowTravel: 0.14,
+    chain: 0.1,
+    dive: 0.32,
+  },
 } as const;

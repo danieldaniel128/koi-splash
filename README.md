@@ -64,6 +64,18 @@ Changing the look is meant to be config, not surgery:
 - **UI and background:** colours, type, spacing, motion, the bank and the garden above the pond are one theme in
   `src/theme`, read by the CSS and by Pixi. A new look is a new theme file.
 
+The special koi come from the prototype, rebuilt in layers. Their art is painted from the board's own koi
+(`src/art/specialKoi.ts`): the koi painter takes a dressing that repaints the body and fins before they're inked, so
+a striped koi gets bands of its colour and white and a rainbow koi gets its scales recoloured with the spectrum (the
+'color' blend keeps their light and shade), under the same outline as every other koi. A whirlpool is a painted eddy
+with the koi curled into its eye. They're baked the first time a game makes one (`SpecialTextures`), so boot pays
+nothing for them. At rest each has its own look (`SpecialLooks`, one class per special): a striped koi faces along
+its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (a colour-matrix filter) over a
+prism glow with orbiting sparkles, a whirlpool's eddy turns. When they fire, `planRound` works out from the model's
+data when every koi goes and how (dive, spiral into the special that was made, drain into a whirlpool, zapped by a
+prism beam), the animator plays that plan, `SpecialFx` draws the light (beam, vortex, prism arcs, a flash at birth),
+and every effect also moves the water. The timings and sizes are in `TIMING.specials` and `SPECIAL_FX`.
+
 ## How it's built
 
 MVP with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. On a swipe it works out the
@@ -75,7 +87,14 @@ browser.
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
 if it's complete, without knowing which goal it is. A goal can be lotuses to bloom, points to score or koi of one
 colour to clear, and a level lists as many as it likes: `createGoals` plays them as one (Composite), won when all are
-reached. This level asks for 3 lotuses and 10 red koi, and the HUD shows a chip per goal. The lily
+reached. This level asks for 3 lotuses and 10 red koi, and the HUD shows a chip per goal.
+
+The specials (`src/model/specials.ts`) are made from shapes: the matched runs are joined into groups first
+(`groupMatches`), so an L or a T is one shape. A run of 4 makes a striped koi, an L or T a whirlpool, a run of 5 a
+rainbow koi, where the player swapped. A special fires when it's matched, swapped (even without a match) or caught in
+another's blast; what each one reaches is one entry in a Strategy map, and a queue fires the specials each blast
+catches, so chains just happen. Each round reports what was made, what fired and which blast took each koi, which is
+all the view needs to time it. The lily
 pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
 and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
 its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
@@ -177,7 +196,9 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 ## Next steps
 
 - The same preset approach as the UI theme for the effects.
-- Specials from bigger matches, and the boosters themselves (the bar, icons and counts are in place).
+- The prototype's combos (two specials swapped together: cross, giant current, rainbow wave, maelstrom). Swapping
+  two specials already fires both.
+- The boosters themselves (the bar, icons and counts are in place).
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 - Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

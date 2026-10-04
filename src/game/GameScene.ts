@@ -190,7 +190,10 @@ export class GameScene {
   private async playRound(step: CascadeStep, round: number): Promise<void> {
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
     this.level.score += points;
-    const cleared = step.cleared.map(({ piece }) => piece.kind);
+    // a rainbow koi has no colour of its own: it counts toward no colour goal
+    const cleared = step.cleared
+      .filter(({ piece }) => piece.special?.type !== 'rainbow')
+      .map(({ piece }) => piece.kind);
     const metBefore = goalsMet(this.level.goal.progress());
     this.level.goal.record({ points, padEvents: step.padEvents, cleared });
     // a goal met this round pays its bonus

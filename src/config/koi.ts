@@ -4,6 +4,18 @@
  */
 export const KOI_SET = ['m3-red', 'm3-gold', 'dream-rose-gold', 'dream-jade', 'dream-amethyst'] as const;
 
+/**
+ * Each kind's colours as a special koi, in KOI_SET order: its glow (under a striped koi, a whirlpool's arms, beams)
+ * and the band of a striped koi (the other bands are white).
+ */
+export const KOI_COLORS = [
+  { glow: '#ff7b6b', band: '#e3443a' },
+  { glow: '#ffd86b', band: '#f0a92e' },
+  { glow: '#ffa6c9', band: '#ec7fa8' },
+  { glow: '#7ff0b0', band: '#3fbf74' },
+  { glow: '#c39bff', band: '#9a62e6' },
+] as const satisfies readonly { glow: string; band: string }[];
+
 export const KOI_LOOK = {
   /** Body width (0.12 slim .. 0.28 chubby): chubby enough that the colour fills the cell. */
   build: 0.245,

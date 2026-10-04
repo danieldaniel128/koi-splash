@@ -1,8 +1,10 @@
 import type { Random } from '../core/Random';
 import { Board } from './Board';
 import type { PadEvent, PadField } from './pads';
-import type { CascadeStep, Cell, Cleared, Fall, Kind, Match, Piece, Spawn, SwapResult } from './types';
-import { isAdjacent } from './types';
+import type { CascadeStep, Cell, Fall, Kind, Match, Piece, Spawn, SwapResult } from './types';
+import { isAdjacent, sameCell } from './types';
+import { resolveRound, swapTriggers } from './specials';
+import type { Trigger } from './specials';
 
 export interface BoardSpec {
   readonly cols: number;
@@ -74,7 +76,9 @@ export function findMove(board: Board): [Cell, Cell] | null {
   return null;
 }
 
+/** True when the player can move: a swap makes a match, or a special is on the board (swapping it fires it). */
 export function hasAnyMove(board: Board): boolean {
+  for (const cell of board.cells()) if (board.get(cell)?.special) return true;
   return findMove(board) !== null;
 }
 
@@ -94,17 +98,34 @@ export function trySwap(
   pads?: PadField,
 ): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
-  if (!swapMakesMatch(board, a, b)) return { valid: false, reason: 'no-match' };
+  const triggers = swapTriggers(board, a, b); // a swapped special fires even without a match
+  if (!swapMakesMatch(board, a, b) && triggers.length === 0) return { valid: false, reason: 'no-match' };
 
   board.swap(a, b);
   const steps: CascadeStep[] = [];
-  for (let matches = findMatches(board); matches.length > 0; matches = findMatches(board)) {
+  let firing: readonly Trigger[] = triggers.map((t) => ({ ...t, at: sameCell(t.at, a) ? b : a })); // they moved
+  for (
+    let matches = findMatches(board);
+    matches.length > 0 || firing.length > 0;
+    matches = findMatches(board)
+  ) {
     if (steps.length >= MAX_CASCADE) throw new Error('cascade did not settle');
-    const cleared = clearMatches(board, matches);
-    const padEvents = hitPads(board, pads, cleared);
+    // the swap's own round puts its special where the player swapped; later rounds in the middle of the shape
+    const round = resolveRound(board, matches, steps.length === 0 ? [b, a] : [], firing);
+    firing = [];
+    const struck = [...round.cleared.map((c) => c.at), ...round.struckPads];
+    const padEvents = hitPads(board, pads, struck);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
-    steps.push({ matches, cleared, padEvents, falls, spawns });
+    steps.push({
+      matches,
+      created: round.created,
+      fired: round.fired,
+      cleared: round.cleared,
+      padEvents,
+      falls,
+      spawns,
+    });
   }
 
   const reshuffled = !hasAnyMove(board);
@@ -188,28 +209,15 @@ function runThrough(board: Board, cell: Cell): boolean {
   return reach(-1, 0) + reach(1, 0) + 1 >= MIN_RUN || reach(0, -1) + reach(0, 1) + 1 >= MIN_RUN;
 }
 
-/** Hits the pads next to the cleared koi and opens the cells of those that bloomed or drifted away. */
-function hitPads(board: Board, pads: PadField | undefined, cleared: readonly Cleared[]): PadEvent[] {
+/** Hits the pads next to (or under) the struck cells and opens the cells of those that bloomed or drifted away. */
+function hitPads(board: Board, pads: PadField | undefined, struck: readonly Cell[]): PadEvent[] {
   if (!pads) return [];
-  const events = pads.hit(cleared.map((c) => c.at));
+  const events = pads.hit(struck);
   for (const event of events) if (event.type !== 'hit') board.setBlocked(event.pad.at, false);
   return events;
 }
 
-// clearMatches, applyGravity and refill are each O(N).
-
-function clearMatches(board: Board, matches: readonly Match[]): Cleared[] {
-  const cleared: Cleared[] = [];
-  for (const match of matches) {
-    for (const at of match.cells) {
-      const piece = board.get(at);
-      if (!piece) continue; // shared by a row and a column match: already cleared
-      cleared.push({ piece, at });
-      board.set(at, null);
-    }
-  }
-  return cleared;
-}
+// applyGravity and refill are each O(N).
 
 /**
  * Drops every piece straight down into the gaps below it, past lily pads, within its stretch of water: a koi never
