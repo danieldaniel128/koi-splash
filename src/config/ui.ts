@@ -1,7 +1,7 @@
 /** How the HUD moves (s, scale). Its look is in ui/theme.ts. */
 export const HUD_MOTION = {
   /** The score counts up to a new value in this long, and swells while it does. */
-  countUp: 0.55,
+  countUp: 0.35,
   scoreBump: 1.18,
   /** The moves counter pops when a move is spent. */
   movesBump: 1.3,

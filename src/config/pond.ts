@@ -95,15 +95,15 @@ export const BOARD_PADS = {
   rockSpeed: 0.9,
   /** A hit: the pad pops to this size and settles back. */
   hitPop: 1.3,
-  hitTime: 0.35,
+  hitTime: 0.25,
   /** A bloom: the lotus rises to this size, holds, then flies to the goal in the HUD. */
   bloomLift: 1.7,
-  bloomRise: 0.45,
-  bloomHold: 0.25,
-  flyTime: 0.65,
+  bloomRise: 0.3,
+  bloomHold: 0.1,
+  flyTime: 0.45,
   /** An empty pad drifts this far away (px) while it fades. */
   driftDistance: 36,
-  driftTime: 0.9,
+  driftTime: 0.6,
   /**
    * The pond's shore foam outlines each pad like its own: the shape it follows (share of the pad's radius), and how
    * fast it lets go as a blooming lotus lifts out (per unit of extra scale).
