@@ -21,14 +21,33 @@ npm run build    # static web build in dist/
 TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. There are no image files: the koi, stones and lily
 pads are painted on canvases once at startup (`src/art/`) and uploaded as textures.
 
+## Tech art
+
 The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
 into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks
 its tail, a swap shoves the water apart, and matched koi dive with a ring in the water while the koi above swim down
-into the gaps, under the lily pads. The shore, stones and pads soak the waves up. It's drawn in an ink and moonlight
+into the gaps, under the lily pads. The shore and the pads soak the waves up. It's drawn in an ink and moonlight
 toon look: the bank around the pond is painted once per screen size, and three passes read the waves each frame (the
 water under the koi, a filter that bends the koi under the waves, and a surface pass with shore foam and gold
 glints). The koi have a dark cartoon outline, and a broken foam line at their waterline that follows them and breaks
 around the fins (drawn each frame from a mask of the koi, `KoiContact`).
+
+Every texture is painted in code, so nothing is a fixed asset: sizes and colours come from config, and a texture is
+baked once for the screen it will be shown on. The pond's border is a ring of pieces along the shore. Where they go
+is plain math (`ringAlongShore`: random sizes round the rounded outline, scaled to close with no seam, unit tested);
+what they look like is a painter. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
+screen's real pixel density, so the whole border is one texture and one draw call.
+
+Changing the look is meant to be config, not surgery:
+
+- **A different border** (planks, bushes, lanterns): write a painter for one piece in `src/art`, add it to
+  `SHORE_STYLES` and set `POND.shore.style`. Piece sizes, spacing, how far they sit out on the bank and the corner
+  pieces are in `POND.shore`; `LAYOUT.shoreWidth` keeps room for them on screen.
+- **No ring at all** (say, one wooden deck): `ShoreRing` is the only thing that draws the border. Anything else that
+  takes the pond's rect from the layout can replace it.
+- **Rocks in the water:** `POND.props`. They stop the ripples and get the same shore foam as the pond's edge.
+- **Water and bank:** colours, waves and foam in `src/config/water.ts` and `src/config/pond.ts`.
+- **UI:** colours, type, spacing and motion are tokens in `src/ui/theme.ts`, read by the CSS and by Pixi.
 
 ## How it's built
 
@@ -53,9 +72,9 @@ and entering won or lost shows the end card.
 The layout is worked out from the screen, not fixed (`src/layout/gameLayout.ts`, values in `src/config/layout.ts`):
 the stage is at least 360 x 640 and grows to cover the whole screen with no letterboxing, then the HUD goes at the
 top, the specials bar at the bottom (inside the phone's notch and home bar), and the board takes the biggest cell
-that fits between them. Paddings, gaps, the space between koi and the water around the board are all config. The
-stones and the moon are pinned to the pond's corners, so the scene keeps its shape on any phone, tablet or desktop.
-Phones play upright; turned sideways they get a notice.
+that fits between them. Paddings, gaps, the space between koi, the water around the board and the room for the
+shore are all config. The border follows the pond's outline and the moon is pinned to its corner, so the scene keeps
+its shape on any phone, tablet or desktop. Phones play upright; turned sideways they get a notice.
 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
 It's built from small components (moves, score, goal, specials bar, end card) and a little CSS kit (panel, number,
