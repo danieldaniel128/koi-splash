@@ -3,8 +3,11 @@ import { bakeProp } from '../../art/pondProps';
 import { POND } from '../../config/pond';
 import type { PondProp } from '../../config/pond';
 
-/** Most stones and pads the water shaders take; must match MAX_PROPS in common.glsl. */
-export const MAX_PROPS = 8;
+/**
+ * Most stones and pads the water shaders take: the pond's own props first, then the lily pads on the board (see
+ * PondWater.float). Must match MAX_PROPS in common.glsl.
+ */
+export const MAX_PROPS = 16;
 
 /**
  * The stones, lily pads and reeds around the pond, painted once at startup (see art/pondProps) and drawn over the
@@ -44,15 +47,17 @@ export class PondProps extends Container {
  * uPropAxes: cosine and sine of the rotation, worked out once here instead of per pixel). Unused slots have a zero
  * size. Reeds don't block the water.
  */
-export function waterShapes(props: readonly PondProp[]): { shapes: Float32Array; axes: Float32Array } {
+export function waterShapes(props: readonly PondProp[]): {
+  shapes: Float32Array;
+  axes: Float32Array;
+  count: number;
+} {
   const shapes = new Float32Array(MAX_PROPS * 4);
   const axes = new Float32Array(MAX_PROPS * 2);
-  props
-    .filter((prop) => prop.kind !== 'reeds')
-    .slice(0, MAX_PROPS)
-    .forEach((prop, i) => {
-      shapes.set([...prop.at, ...prop.radius], i * 4);
-      axes.set([Math.cos(prop.turn), Math.sin(prop.turn)], i * 2);
-    });
-  return { shapes, axes };
+  const solid = props.filter((prop) => prop.kind !== 'reeds').slice(0, MAX_PROPS);
+  solid.forEach((prop, i) => {
+    shapes.set([...prop.at, ...prop.radius], i * 4);
+    axes.set([Math.cos(prop.turn), Math.sin(prop.turn)], i * 2);
+  });
+  return { shapes, axes, count: solid.length };
 }

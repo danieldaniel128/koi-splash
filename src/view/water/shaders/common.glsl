@@ -8,7 +8,7 @@ uniform vec3 uPondShape;
 
 // stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and the cosine and sine of
 // the rotation. Unused slots have a zero size.
-const int MAX_PROPS = 8;
+const int MAX_PROPS = 16;
 uniform vec4 uProps[MAX_PROPS];
 uniform vec2 uPropAxes[MAX_PROPS];
 
