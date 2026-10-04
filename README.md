@@ -42,8 +42,9 @@ painter. The tracer, the field, the ring and the atlas packing are all unit test
 
 Above the pond, the layout leaves an open scene (the pond sits low, like the art over the board in commercial
 match-3s), and a moonlit garden is painted into it once (`src/art/backdrop.ts`): sky, stars and the moon, misty
-hills, a pagoda, a tree line and a maple with a paper lantern. On a wide screen the horizon drops and the garden
-stands beside the pond instead, with a stone lantern on the ground (`planBackdrop` decides, tested). The ground
+hills, a pagoda, a tree line and a maple with a paper lantern. On a wide screen the sky still ends at the pond, so it
+sits on the ground, and the ground beside it is dressed: a maple tree with its lantern on one side, a stone lantern on
+the other (`planBackdrop` decides, tested). The ground
 itself is a soft moss lawn, low in contrast so it never competes with the board, with the pond's light spilling
 onto it round the shore (read from the same distance field as the water, so it follows any pond shape) and a few
 fallen petals. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the

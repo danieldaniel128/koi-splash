@@ -83,8 +83,9 @@ export const MOONLIT_GARDEN = {
       ink: '#060d1d',
       window: '#ffcf73',
       leaves: '#6a2140',
+      leavesLight: '#9a3358',
+      crown: '#34122b',
       lantern: { paper: '#ffd38a', glow: 'rgba(255, 190, 90, 0.5)' },
-      wideHorizon: 0.46,
     } satisfies BackdropLook,
   },
 } as const;
