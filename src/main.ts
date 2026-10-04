@@ -17,6 +17,7 @@ import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
 import { placeOn } from './layout/anchor';
+import { shoreStones } from './layout/shore';
 import { layoutGame } from './layout/gameLayout';
 import type { GameLayout, Rect } from './layout/gameLayout';
 import { readSafeInsets } from './layout/safeInsets';
@@ -162,9 +163,10 @@ function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayo
   return pads;
 }
 
-/** Stones around the pond (painted once) and fireflies over the bank, on the app's clock. */
+/** The stones around the pond (painted once) and fireflies over the bank, on the app's clock. */
 function createScenery(app: Application, layout: GameLayout): Container {
-  const props = new PondProps(placeProps(layout.pond), app.renderer.resolution * KOI_LOOK.bakeResolution);
+  const stones = [...placeProps(layout.pond), ...placeShore(layout.pond)];
+  const props = new PondProps(stones, app.renderer.resolution * KOI_LOOK.bakeResolution);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
   const fireflies = new Fireflies({
     spots: [
@@ -183,9 +185,16 @@ function createScenery(app: Application, layout: GameLayout): Container {
   return scenery;
 }
 
-/** The pond's stones, each at its corner of this pond. O(props). */
+/** The pond's stones in the water, each at its corner of this pond. O(props). */
 function placeProps(pond: Rect): PondProp[] {
   return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
+}
+
+/** The ring of stones along this pond's shore, upright, each with its own seed so no two look alike. O(stones). */
+function placeShore(pond: Rect): PondProp[] {
+  const rng = new Random(POND.shore.seed);
+  const stones = shoreStones(pond, { ...POND.shore, cornerRadius: POND.cornerRadius }, () => rng.next());
+  return stones.map((stone, i) => ({ kind: 'stone', ...stone, turn: 0, seed: POND.shore.seed * 100 + i }));
 }
 
 /** The lotus in the HUD's goal: painted by the same painter as the lotuses on the board. */

@@ -20,10 +20,23 @@ export type PondPropSpot = Omit<PondProp, 'at'> & Anchor;
 export const POND = {
   /** How far the water reaches past the board on each side, to the shore (the stones sit on it). */
   margin: { left: 16, right: 16, top: 20, bottom: 22 },
-  cornerRadius: 46,
-  /** The shore wanders in and out by up to this many px, in bends about this long (px). */
-  shoreWobble: 10,
+  cornerRadius: 24,
+  /** The shore wanders in and out by up to this many px, in bends about this long (px): a little, under the stones. */
+  shoreWobble: 3,
   shoreBend: 110,
+  /**
+   * The ring of stones along the shore (see shoreStones), px: each stone's half length along the shore and half
+   * depth across it, the gap between neighbours, how far out onto the bank it sits (the rest covers the water's
+   * edge), how much bigger the corner boulders are, and the seed that shapes them.
+   */
+  shore: {
+    length: [11, 17],
+    depth: [10, 13],
+    gap: 1.5,
+    outward: 4,
+    cornerScale: 1.3,
+    seed: 5,
+  },
 
   // --- bank: indigo with a faint seigaiha (overlapping waves) pattern, darker and wet right at the water
   bank: '#0b1830',
@@ -44,16 +57,11 @@ export const POND = {
   moon: '#f7ecc8',
 
   /**
-   * Stones at the corners, never over the board. They shape the water: ripples stop at them and the foam
-   * outlines them. Together with the lily pads on the board they share MAX_PROPS (16) slots in the water shaders.
-   * Each is pinned to a corner of the pond (offset in px), so the scene keeps its shape on a bigger screen.
+   * Stones standing in the water, never over the board (none in this pond: the shore stones frame it). They shape
+   * the water: ripples stop at them and the foam outlines them. Together with the lily pads on the board they share
+   * MAX_PROPS (16) slots in the water shaders. Each is pinned to a corner of the pond (offset in px).
    */
-  props: [
-    { kind: 'stone', corner: 'top-left', offset: [3, 4], radius: [40, 26], turn: -0.25, seed: 11 },
-    { kind: 'stone', corner: 'top-left', offset: [55, -6], radius: [16, 10], turn: 0.5, seed: 12 },
-    { kind: 'stone', corner: 'top-right', offset: [-23, 8], radius: [18, 11], turn: 0.3, seed: 13 },
-    { kind: 'stone', corner: 'bottom-right', offset: [-15, 8], radius: [42, 27], turn: 0.18, seed: 14 },
-  ] satisfies readonly PondPropSpot[] as readonly PondPropSpot[],
+  props: [] satisfies readonly PondPropSpot[] as readonly PondPropSpot[],
 
   /** Fireflies over the bank, where each one hovers: at the top of the screen, and on the bank below the pond. */
   fireflies: {
