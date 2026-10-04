@@ -8,9 +8,9 @@ export const POINTS = {
   fontSize: 24,
   font: THEME.font.number,
   /** Pop in, rise a little and hold (s, px), then fly to the score and shrink into it (s, scale). */
-  pop: 0.28,
+  pop: 0.18,
   rise: 14,
-  hold: 0.2,
-  flight: 0.5,
+  hold: 0.08,
+  flight: 0.32,
   landScale: 0.45,
 } as const;
