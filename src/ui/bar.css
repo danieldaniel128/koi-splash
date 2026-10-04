@@ -262,20 +262,86 @@
   white-space: nowrap;
 }
 
-/* The sound toggle: a small glass orb at the end of the booster bar. */
-.sound-toggle {
+/* The sound button: a small glass orb at the end of the booster bar; the speaker dims when every channel is off. */
+.sound-button {
   padding: 0;
   border: 0;
   color: var(--color-ink);
   cursor: pointer;
   pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--time-fast) ease-out;
 }
 
-.sound-toggle svg {
+.sound-button svg {
   width: 20px;
   height: 20px;
 }
 
-.sound-toggle[aria-pressed='false'] {
+.sound-button--muted {
   color: var(--color-muted);
+}
+
+.sound-button[aria-expanded='true'] {
+  color: var(--color-gold);
+}
+
+.sound-button:active {
+  transform: scale(0.92);
+}
+
+/* The sound menu: a glass panel over the button, a row per channel; it grows out of the button's corner. */
+.sound-menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xs); /* SOUND_MENU.look.padding: the layout sizes the panel by it */
+  opacity: 0;
+  transform: translateY(6px) scale(0.92);
+  transform-origin: 100% 100%;
+  transition:
+    opacity var(--time-fast) ease,
+    transform var(--time-normal) cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.sound-menu--open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.sound-menu__row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-muted);
+  font: 700 var(--text-md) var(--font-label);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--time-fast) ease;
+}
+
+.sound-menu__row[aria-checked='true'] {
+  color: var(--color-ink);
+}
+
+.sound-menu__row:focus-visible {
+  outline: var(--line) solid var(--color-gold);
+}
+
+.sound-menu__icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+}
+
+.sound-menu__name {
+  flex: 1;
+  text-align: left;
 }

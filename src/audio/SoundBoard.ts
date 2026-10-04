@@ -1,4 +1,3 @@
-import { AUDIO } from '../config/audio';
 import type { GameEventBus, GameEvents } from '../game/events';
 import * as sounds from './recipes';
 import type { Voice } from './Synth';
@@ -110,26 +109,15 @@ const SOUND_OF: { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents
 };
 
 /**
- * The game's sound: it listens to the game's events and plays what each one sounds like on the voice, and plays the
- * sparse koto notes of the background now and then. It knows nothing of the game beyond its events.
+ * The game's sound effects: it listens to the game's events and plays what each one sounds like on the voice (the
+ * effects channel). It knows nothing of the game beyond its events.
  */
 export class SoundBoard {
-  private untilMusic: number = AUDIO.music.start;
-
   constructor(
     events: GameEventBus,
     private readonly voice: Voice,
   ) {
     for (const type of Object.keys(SOUND_OF) as (keyof GameEvents)[]) this.listen(events, type);
-  }
-
-  /** The background: a low note now and then. Call once per frame. */
-  tick(deltaSeconds: number): void {
-    this.untilMusic -= deltaSeconds;
-    if (this.untilMusic > 0) return;
-    const [low, high] = AUDIO.music.every;
-    this.untilMusic = low + Math.random() * (high - low);
-    sounds.musicNote(this.voice);
   }
 
   /** Plays an event's recipe whenever it happens (the map pairs each event with a recipe for its own payload). */

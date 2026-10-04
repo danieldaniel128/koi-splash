@@ -1,3 +1,5 @@
+import type { Bus } from '../audio/Mixer';
+import type { SoundMenuLook } from '../layout/soundMenu';
 import type { BoosterSlot } from '../ui/BoosterBar';
 import type { PetalChoice } from '../ui/SpecialMenu';
 
@@ -68,4 +70,17 @@ export const RESULT_CARD = {
 /** Phones play upright: this media query is a phone (touch, short) held sideways. */
 export const PORTRAIT_LOCK = {
   sidewaysPhone: '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)',
+} as const;
+
+/**
+ * The sound menu (stage px): the speaker button at the bar's right end, lined up with the boosters' orbs, opens a
+ * small panel above it with a switch per channel, top to bottom.
+ */
+export const SOUND_MENU = {
+  look: { button: 36, barOrb: 58, width: 176, row: 44, padding: 4, gap: 10 } satisfies SoundMenuLook,
+  channels: [
+    { id: 'music', name: 'Music' },
+    { id: 'ambience', name: 'Ambience' },
+    { id: 'sfx', name: 'Effects' },
+  ] as const satisfies readonly { id: Bus; name: string }[],
 } as const;
