@@ -1,4 +1,5 @@
 import type { PropKind } from '../art/pondProps';
+import type { Anchor } from '../layout/anchor';
 
 /** A thing at the pond's edge or on the water: centre (stage px), half size (px), rotation (radians), paint seed. */
 export interface PondProp {
@@ -8,6 +9,9 @@ export interface PondProp {
   readonly turn: number;
   readonly seed: number;
 }
+
+/** A prop as the config places it: pinned to a corner of the pond, so it stays at the shore on any screen. */
+export type PondPropSpot = Omit<PondProp, 'at'> & Anchor;
 
 /**
  * The pond scene around the board, in stage px: the shape of the water, the bank around it and the moon's
@@ -37,41 +41,46 @@ export const POND = {
    */
   vignette: { stretch: [1.2, 1.1], strength: 0.4, from: 0.7, to: 1.5 },
 
-  // --- the moon's reflection on the open water below the board: centre (stage px) and radius (px)
-  moonAt: [262, 582],
+  // --- the moon's reflection on the open water below the board: centre (from the pond's corner) and radius (px)
+  moonSpot: { corner: 'bottom-right', offset: [-105, -30] } satisfies Anchor as Anchor,
   moonRadius: 19,
   moon: '#f7ecc8',
 
   /**
    * Stones, lily pads and reeds at the corners and on the open water, never over the board. Stones and pads also
    * shape the water: ripples stop at them and the foam outlines them. Together with the lily pads on the board they
-   * share MAX_PROPS (16) slots in the water shaders. Reeds fan out toward their `turn` (0 = up).
+   * share MAX_PROPS (16) slots in the water shaders. Reeds fan out toward their `turn` (0 = up). Each is pinned to
+   * a corner of the pond (offset in px), so the scene keeps its shape when the pond grows on a bigger screen.
    */
   props: [
-    { kind: 'stone', at: [-4, 108], radius: [40, 26], turn: -0.25, seed: 11 },
-    { kind: 'stone', at: [48, 98], radius: [16, 10], turn: 0.5, seed: 12 },
-    { kind: 'reeds', at: [370, 96], radius: [52, 52], turn: -1.75, seed: 21 },
-    { kind: 'stone', at: [344, 112], radius: [18, 11], turn: 0.3, seed: 13 },
-    { kind: 'lotus-pad', at: [48, 590], radius: [27, 27], turn: 0, seed: 31 },
-    { kind: 'pad', at: [100, 612], radius: [17, 17], turn: 0, seed: 32 },
-    { kind: 'pad', at: [186, 604], radius: [11, 11], turn: 0, seed: 34 },
-    { kind: 'stone', at: [352, 620], radius: [42, 27], turn: 0.18, seed: 14 },
-    { kind: 'reeds', at: [12, 672], radius: [66, 66], turn: 0.3, seed: 22 },
-    { kind: 'reeds', at: [302, 680], radius: [54, 54], turn: -0.3, seed: 23 },
-  ] satisfies readonly PondProp[] as readonly PondProp[],
+    { kind: 'stone', corner: 'top-left', offset: [3, 4], radius: [40, 26], turn: -0.25, seed: 11 },
+    { kind: 'stone', corner: 'top-left', offset: [55, -6], radius: [16, 10], turn: 0.5, seed: 12 },
+    { kind: 'reeds', corner: 'top-right', offset: [3, -8], radius: [52, 52], turn: -1.75, seed: 21 },
+    { kind: 'stone', corner: 'top-right', offset: [-23, 8], radius: [18, 11], turn: 0.3, seed: 13 },
+    { kind: 'lotus-pad', corner: 'bottom-left', offset: [55, -22], radius: [27, 27], turn: 0, seed: 31 },
+    { kind: 'pad', corner: 'bottom-left', offset: [107, 0], radius: [17, 17], turn: 0, seed: 32 },
+    { kind: 'pad', corner: 'bottom-left', offset: [193, -8], radius: [11, 11], turn: 0, seed: 34 },
+    { kind: 'stone', corner: 'bottom-right', offset: [-15, 8], radius: [42, 27], turn: 0.18, seed: 14 },
+    { kind: 'reeds', corner: 'bottom-left', offset: [19, 60], radius: [66, 66], turn: 0.3, seed: 22 },
+    { kind: 'reeds', corner: 'bottom-right', offset: [-65, 68], radius: [54, 54], turn: -0.3, seed: 23 },
+  ] satisfies readonly PondPropSpot[] as readonly PondPropSpot[],
 
   /** How far the lily pads rock on the water (radians) and how fast (radians per second). */
   padRock: 0.05,
   padRockSpeed: 0.8,
 
-  /** Fireflies over the bank: where each one hovers (stage px; below 640 is only seen on tall phones). */
-  fireflies: [
-    [34, 12],
-    [296, 8],
-    [150, 652],
-    [338, 640],
-    [84, 700],
-  ],
+  /** Fireflies over the bank, where each one hovers: at the top of the screen, and on the bank below the pond. */
+  fireflies: {
+    top: [
+      { corner: 'top-left', offset: [34, 12] },
+      { corner: 'top-right', offset: [-64, 8] },
+    ] satisfies readonly Anchor[] as readonly Anchor[],
+    belowPond: [
+      { corner: 'bottom-left', offset: [157, 40] },
+      { corner: 'bottom-right', offset: [-29, 28] },
+      { corner: 'bottom-left', offset: [91, 88] },
+    ] satisfies readonly Anchor[] as readonly Anchor[],
+  },
   /** How far a firefly wanders from its spot (px), and its glow's size (px) and colour. */
   fireflyRoam: 22,
   fireflySize: 26,

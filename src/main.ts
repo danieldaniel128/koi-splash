@@ -3,13 +3,17 @@ import type { PointData } from 'pixi.js';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
-import { HUD } from './config/hud';
-import { BOARD_LAYOUT, STAGE } from './config/layout';
+import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
+import type { PondProp } from './config/pond';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
+import { placeOn } from './layout/anchor';
+import { layoutGame } from './layout/gameLayout';
+import type { GameLayout, Rect } from './layout/gameLayout';
+import { readSafeInsets } from './layout/safeInsets';
 import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
 import { Fireflies } from './view/Fireflies';
@@ -26,27 +30,24 @@ import { SwipeInput } from './view/SwipeInput';
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
 async function boot(host: HTMLElement): Promise<void> {
   const app = await createApp(host);
+  const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
+  const { board } = layout;
 
-  const koiSize = BOARD.cellSize * KOI_LOOK.scale;
-  const textures = createTextures(app, koiSize);
-  const boardWidth = BOARD.cols * BOARD.cellSize;
-  const boardLeft = (STAGE.width - boardWidth) / 2;
+  const textures = createTextures(app, board.piece);
+  const pond = createPond(app, layout);
 
-  const pond = createPond(app, boardLeft);
+  const boardView = new BoardView(textures, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
+  boardView.position.set(board.x, board.y);
+  const hud = new Hud(layout.hud.width);
+  hud.position.set(layout.hud.x, layout.hud.y);
+  const popups = createScorePopups(hud, board);
+  const result = new ResultOverlay(layout.stage.width, layout.stage.height);
+  const pads = createPads(app, pond, hud, board);
 
-  const boardView = new BoardView(textures, { ...BOARD, koiSize });
-  boardView.position.set(boardLeft, BOARD_LAYOUT.top);
-  const hud = new Hud(boardWidth);
-  hud.position.set(boardLeft, HUD.top);
-  const boardOrigin = { x: boardLeft, y: BOARD_LAYOUT.top };
-  const popups = createScorePopups(hud, boardOrigin);
-  const result = new ResultOverlay(STAGE.width, STAGE.height);
-  const pads = createPads(app, pond, hud, boardOrigin);
-
-  startGame({ boardView, pond, popups, hud, pads, result });
+  startGame({ boardView, pond, popups, hud, pads, result }, board.cell);
 
   const stage = new Container();
-  putUnderWater(app, boardView, pond);
+  putUnderWater(app, boardView, pond, board);
   stage.addChild(
     pond.bank,
     pond.bottom,
@@ -54,21 +55,28 @@ async function boot(host: HTMLElement): Promise<void> {
     pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
     popups,
-    createScenery(app),
+    createScenery(app, layout),
     hud,
     result,
   );
   app.stage.addChild(stage);
-  keepFitted(app, stage, boardView, pond);
+  keepFitted(app, stage, layout.stage, boardView, pond);
 }
 
 /**
  * Fits the stage to the window now and on every resize, and tells the pond how the stage maps onto the screen
- * (the koi filter's position, line widths, the bank's cached painting).
+ * (the koi filter's position, line widths, the bank's cached painting). The layout is made once, for the screen the
+ * game starts on; a later resize (a desktop window, the phone's toolbar) scales it to fit.
  */
-function keepFitted(app: Application, stage: Container, boardView: BoardView, pond: PondWater): void {
+function keepFitted(
+  app: Application,
+  stage: Container,
+  size: GameLayout['stage'],
+  boardView: BoardView,
+  pond: PondWater,
+): void {
   const fit = (): void => {
-    fitStage(stage, app.screen.width, app.screen.height);
+    fitStage(stage, size, app.screen);
     const areaOrigin = boardView.toGlobal({ x: -WATER.koiReach, y: -WATER.koiReach });
     pond.mapToScreen(areaOrigin, {
       offset: stage.position,
@@ -83,14 +91,17 @@ function keepFitted(app: Application, stage: Container, boardView: BoardView, po
 }
 
 /** The game: the scene (presenter) wired to every display it drives, and the swipe input that feeds it. */
-function startGame(parts: {
-  boardView: BoardView;
-  pond: PondWater;
-  popups: ScorePopups;
-  hud: Hud;
-  pads: PadView;
-  result: ResultOverlay;
-}): void {
+function startGame(
+  parts: {
+    boardView: BoardView;
+    pond: PondWater;
+    popups: ScorePopups;
+    hud: Hud;
+    pads: PadView;
+    result: ResultOverlay;
+  },
+  cell: number,
+): void {
   const { boardView, pond, popups, hud, pads, result } = parts;
   const level = { ...LEVEL, ...SCORE };
   const scene = new GameScene({
@@ -98,7 +109,7 @@ function startGame(parts: {
     level,
     rng: new Random(),
     view: boardView,
-    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, popups, level.pointsPerPiece),
+    animator: new BoardAnimator(boardView, cell, pond, popups, level.pointsPerPiece),
     status: hud,
     pads,
     result,
@@ -106,7 +117,7 @@ function startGame(parts: {
   result.on('restart', () => {
     scene.restart();
   });
-  new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
+  new SwipeInput(boardView, cell * INPUT.swipeThreshold, scene.handleSwipe);
 }
 
 /** The points each match earns, over the board; they fly to the score in the HUD. */
@@ -121,18 +132,18 @@ function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
  * The lily pads on the board, floating over the koi layer: they rock on the app's clock, and a bloomed lotus flies
  * to the goal in the HUD.
  */
-function createPads(app: Application, pond: PondWater, hud: Hud, boardOrigin: PointData): PadView {
+function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayout['board']): PadView {
   const goal = hud.goalAnchor();
   const pads = new PadView(
     {
-      cellSize: BOARD.cellSize,
-      goalTarget: { x: hud.x + goal.x - boardOrigin.x, y: hud.y + goal.y - boardOrigin.y },
-      toStage: (point) => ({ x: boardOrigin.x + point.x, y: boardOrigin.y + point.y }),
+      cellSize: board.cell,
+      goalTarget: { x: hud.x + goal.x - board.x, y: hud.y + goal.y - board.y },
+      toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,
     app.renderer.resolution * KOI_LOOK.bakeResolution,
   );
-  pads.position.set(boardOrigin.x, boardOrigin.y);
+  pads.position.set(board.x, board.y);
   app.ticker.add((ticker) => {
     pads.tick(ticker.deltaMS / 1000);
   });
@@ -140,10 +151,14 @@ function createPads(app: Application, pond: PondWater, hud: Hud, boardOrigin: Po
 }
 
 /** Stones, lily pads and reeds around the pond (painted once) and fireflies over the bank, on the app's clock. */
-function createScenery(app: Application): Container {
-  const props = new PondProps(POND.props, app.renderer.resolution * KOI_LOOK.bakeResolution);
+function createScenery(app: Application, layout: GameLayout): Container {
+  const props = new PondProps(placeProps(layout.pond), app.renderer.resolution * KOI_LOOK.bakeResolution);
+  const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
   const fireflies = new Fireflies({
-    spots: POND.fireflies,
+    spots: [
+      ...POND.fireflies.top.map((spot) => placeOn(screen, spot)),
+      ...POND.fireflies.belowPond.map((spot) => placeOn(layout.pond, spot)),
+    ],
     roam: POND.fireflyRoam,
     size: POND.fireflySize,
     color: POND.firefly,
@@ -155,6 +170,11 @@ function createScenery(app: Application): Container {
   const scenery = new Container();
   scenery.addChild(props, fireflies);
   return scenery;
+}
+
+/** The pond's stones, pads and reeds, each at its corner of this pond. O(props). */
+function placeProps(pond: Rect): PondProp[] {
+  return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
 }
 
 /** The koi (one tail beat of poses each) and their shadows, baked once at the screen's resolution. */
@@ -183,17 +203,14 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
  * The bank, the water below and above the board, animated by the app's clock and repainted after a lost WebGL
  * context comes back.
  */
-function createPond(app: Application, boardLeft: number): PondWater {
+function createPond(app: Application, layout: GameLayout): PondWater {
   const pond = new PondWater(app.renderer, {
-    stageWidth: STAGE.width,
-    stageHeight: STAGE.height,
-    board: {
-      x: boardLeft,
-      y: BOARD_LAYOUT.top,
-      width: BOARD.cols * BOARD.cellSize,
-      height: BOARD.rows * BOARD.cellSize,
-    },
-    props: POND.props,
+    stageWidth: layout.stage.width,
+    stageHeight: layout.stage.height,
+    board: layout.board,
+    pond: layout.pond,
+    props: placeProps(layout.pond),
+    moonAt: placeOn(layout.pond, POND.moonSpot),
   });
   app.ticker.add((ticker) => {
     pond.tick(ticker.deltaMS / 1000);
@@ -210,7 +227,7 @@ function createPond(app: Application, boardLeft: number): PondWater {
  * koi swim and push the water back (wakes when they move, tail flicks when they rest). Once everything has moved
  * this frame, the shadows follow the koi and the pond marks where they touch the water, for the foam around them.
  */
-function putUnderWater(app: Application, boardView: BoardView, pond: PondWater): void {
+function putUnderWater(app: Application, boardView: BoardView, pond: PondWater, board: Rect): void {
   const life = new KoiLife(pond, boardView.position);
   app.ticker.add((ticker) => {
     life.update([...boardView.koi()], ticker.deltaMS / 1000);
@@ -226,12 +243,7 @@ function putUnderWater(app: Application, boardView: BoardView, pond: PondWater):
   );
   const margin = WATER.koiReach;
   boardView.filters = [pond.koiFilter];
-  boardView.filterArea = new Rectangle(
-    -margin,
-    -margin,
-    BOARD.cols * BOARD.cellSize + margin * 2,
-    BOARD.rows * BOARD.cellSize + margin * 2,
-  );
+  boardView.filterArea = new Rectangle(-margin, -margin, board.width + margin * 2, board.height + margin * 2);
 }
 
 async function createApp(host: HTMLElement): Promise<Application> {
@@ -248,11 +260,18 @@ async function createApp(host: HTMLElement): Promise<Application> {
   return app;
 }
 
-/** Scales the logical stage to fit the window and centres it (letterboxed, never stretched). */
-function fitStage(stage: Container, screenWidth: number, screenHeight: number): void {
-  const scale = Math.min(screenWidth / STAGE.width, screenHeight / STAGE.height);
+/**
+ * Scales the stage to fit the screen and centres it, never stretched. On the screen the layout was made for it
+ * covers it exactly; after a resize the bank's colour fills the rest.
+ */
+function fitStage(
+  stage: Container,
+  size: { width: number; height: number },
+  screen: { width: number; height: number },
+): void {
+  const scale = Math.min(screen.width / size.width, screen.height / size.height);
   stage.scale.set(scale);
-  stage.position.set((screenWidth - STAGE.width * scale) / 2, (screenHeight - STAGE.height * scale) / 2);
+  stage.position.set((screen.width - size.width * scale) / 2, (screen.height - size.height * scale) / 2);
 }
 
 function showBootError(host: HTMLElement, error: unknown): void {

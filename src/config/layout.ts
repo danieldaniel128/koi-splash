@@ -1,13 +1,28 @@
-/**
- * The game is laid out on a fixed logical stage and scaled to fit the window, so every position in the code is in
- * these units no matter the phone. 360 x 640 is a common phone viewport in CSS pixels.
- */
-export const STAGE = {
-  width: 360,
-  height: 640,
-} as const;
+import type { LayoutConfig } from '../layout/gameLayout';
+import { BOARD } from './board';
+import { POND } from './pond';
 
-/** Where the board sits on the stage. The space above it is kept for the HUD. */
-export const BOARD_LAYOUT = {
-  top: 128,
-} as const;
+/**
+ * How the game is laid out on any screen (see layoutGame), in stage px. The stage is at least 360 x 640 (a common
+ * phone viewport in CSS pixels) and grows to cover the whole screen; everything else is placed from these values.
+ */
+export const LAYOUT = {
+  cols: BOARD.cols,
+  rows: BOARD.rows,
+  designWidth: 360,
+  designHeight: 640,
+  hudHeight: 58,
+  barHeight: 66,
+  sidePadding: 8,
+  sectionGap: 10,
+  pondMargin: POND.margin,
+  /**
+   * Water between neighbouring koi (px): a koi is painted in a square of its cell minus this. The fish fits a circle
+   * of ~0.43 of that square, so even at 1 px there is about a sixth of a cell of water between neighbours however
+   * they turn. Higher = more space.
+   */
+  cellGap: 1,
+  minCell: 36,
+  maxCell: 60,
+  maxPanelWidth: 440,
+} as const satisfies LayoutConfig;

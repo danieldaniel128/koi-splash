@@ -1,6 +1,5 @@
-/** HUD look, in stage units. It sits on the bank above the pond (see BOARD_LAYOUT.top). */
+/** HUD look, in stage units. It sits on the bank above the pond (see LAYOUT.hudHeight). */
 export const HUD = {
-  top: 26,
   /** Moonlight white for text and rims, gold for the score and the goal bar. */
   ink: '#eef4f2',
   muted: '#9fb6c4',
