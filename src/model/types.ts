@@ -38,8 +38,9 @@ export interface Fall {
 /** A new piece that entered from above the board. `from.row` is negative (above the top edge). */
 export interface Spawn {
   readonly piece: Piece;
-  readonly from: Cell;
   readonly to: Cell;
+  /** Its place in the queue of new koi rising in its stretch of water: 0 is the lowest, which rises first. */
+  readonly order: number;
 }
 
 /** One round of a cascade: what matched, what was removed, what fell and what came in. */

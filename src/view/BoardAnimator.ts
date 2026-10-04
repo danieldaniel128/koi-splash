@@ -243,9 +243,8 @@ export class BoardAnimator {
       koi.tint = mixColor(WHITE, UNDERWATER, depth.amount);
     };
     show();
-    const rowsAboveBoard = -spawn.from.row - 1;
     await gsap
-      .timeline({ delay: delay + TIMING.swimBase + rowsAboveBoard * TIMING.riseStagger })
+      .timeline({ delay: delay + TIMING.swimBase + spawn.order * TIMING.riseStagger })
       .to(depth, { amount: 0, duration: TIMING.rise, ease: 'power2.out', onUpdate: show })
       .call(
         () => {
