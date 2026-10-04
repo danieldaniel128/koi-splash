@@ -1,7 +1,8 @@
 import { gsap } from 'gsap';
 import { Container, Graphics, Text } from 'pixi.js';
-import { HUD, RESULT } from '../config/hud';
+import { RESULT } from '../config/hud';
 import type { GameStatus } from '../game/GameStatus';
+import { THEME } from '../ui/theme';
 
 export type Outcome = 'won' | 'lost';
 
@@ -22,9 +23,9 @@ export class ResultOverlay extends Container {
     this.dim
       .rect(-reachX, -reachY, stageWidth + reachX * 2, stageHeight + reachY * 2)
       .fill({ color: RESULT.dimColor, alpha: RESULT.dimAlpha });
-    this.title = this.createText(RESULT.titleSize, -RESULT.lineGap, HUD.gold, HUD.numberFont);
-    this.detail = this.createText(RESULT.detailSize, 4, HUD.ink, HUD.labelFont);
-    const hint = this.createText(RESULT.hintSize, RESULT.lineGap, HUD.muted, HUD.labelFont);
+    this.title = this.createText(RESULT.titleSize, -RESULT.lineGap, THEME.color.gold, THEME.font.number);
+    this.detail = this.createText(RESULT.detailSize, 4, THEME.color.ink, THEME.font.label);
+    const hint = this.createText(RESULT.hintSize, RESULT.lineGap, THEME.color.muted, THEME.font.label);
     hint.text = 'Tap to play again';
     this.card.addChild(panel(), this.title, this.detail, hint);
     this.card.position.set(stageWidth / 2, stageHeight / 2 - RESULT.lineGap);
@@ -69,8 +70,8 @@ function panel(): Graphics {
   const height = RESULT.cardHeight;
   return new Graphics()
     .roundRect(-width / 2, -height / 2, width, height, RESULT.cardRadius)
-    .fill({ color: HUD.panel, alpha: RESULT.cardAlpha })
-    .stroke({ width: 1.5, color: HUD.rim, alpha: HUD.rimAlpha })
+    .fill({ color: THEME.color.panelSolid, alpha: RESULT.cardAlpha })
+    .stroke({ width: THEME.line, color: THEME.color.rim })
     .roundRect(-width / 2 + 6, -height / 2 + 6, width - 12, height - 12, RESULT.rimRadius)
-    .stroke({ width: 1, color: HUD.rim, alpha: RESULT.rimAlpha });
+    .stroke({ width: 1, color: THEME.color.rim, alpha: RESULT.rimAlpha });
 }

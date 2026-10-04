@@ -1,0 +1,84 @@
+/*
+ * The UI kit: small reusable pieces every component is built from. Every value comes from the theme (ui/theme.ts,
+ * written onto the page as CSS variables), so a new look is a change of tokens, not of components.
+ */
+
+.ui {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  pointer-events: none; /* swipes go through to the board; controls opt back in */
+  font-family: var(--font-label);
+  color: var(--color-ink);
+}
+
+.ui > * {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+/* A see-through indigo panel with a thin moonlit rim, like the pond's foam lines. */
+.panel {
+  background: var(--color-panel);
+  border: var(--line) solid var(--color-rim);
+  border-radius: var(--radius-round);
+  box-shadow: var(--shadow);
+}
+
+/* Numbers: the print-like serif with lining, even-width figures, so a counting score doesn't jitter. */
+.number {
+  font-family: var(--font-number);
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1;
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+/* A thin rounded track, and the gold fill inside it. */
+.track {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-round);
+  background: var(--color-track);
+  overflow: hidden;
+}
+
+.track > * {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--color-gold);
+  box-shadow: 0 0 6px var(--color-gold);
+  transition: width var(--time-slow) ease-out;
+}
+
+/* A water drop: a rounded square with one sharp corner, turned so the point is on top. Content stays upright. */
+.drop {
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+}
+
+.drop::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  background: var(--color-panel);
+  border: var(--line) solid var(--color-rim);
+  border-radius: 50% 0 50% 50%;
+  box-shadow: var(--shadow);
+  transform: rotate(-45deg);
+}
+
+.drop > * {
+  position: relative;
+}

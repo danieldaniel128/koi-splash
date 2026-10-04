@@ -1,5 +1,8 @@
 import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
+import './ui/kit.css';
+import './ui/hud.css';
 import type { PointData } from 'pixi.js';
+import { bakeLotusPad } from './art/pondProps';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
@@ -7,6 +10,7 @@ import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
 import type { PondProp } from './config/pond';
+import { GOAL_TRAY } from './config/ui';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
@@ -17,7 +21,6 @@ import { readSafeInsets } from './layout/safeInsets';
 import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
 import { Fireflies } from './view/Fireflies';
-import { Hud } from './view/Hud';
 import { PadView } from './view/PadView';
 import { ResultOverlay } from './view/ResultOverlay';
 import { ScorePopups } from './view/ScorePopups';
@@ -26,20 +29,24 @@ import { KoiTextures } from './view/KoiTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
+import { Hud } from './ui/Hud';
+import { applyTheme } from './ui/theme';
+import { UiLayer } from './ui/UiLayer';
 
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
 async function boot(host: HTMLElement): Promise<void> {
   const app = await createApp(host);
   const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
   const { board } = layout;
+  applyTheme(document.documentElement);
+  const ui = new UiLayer(host, layout.stage);
+  const hud = new Hud(ui, layout.hud, lotusIcon(app));
 
   const textures = createTextures(app, board.piece);
   const pond = createPond(app, layout);
 
   const boardView = new BoardView(textures, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
   boardView.position.set(board.x, board.y);
-  const hud = new Hud(layout.hud.width);
-  hud.position.set(layout.hud.x, layout.hud.y);
   const popups = createScorePopups(hud, board);
   const result = new ResultOverlay(layout.stage.width, layout.stage.height);
   const pads = createPads(app, pond, hud, board);
@@ -56,11 +63,10 @@ async function boot(host: HTMLElement): Promise<void> {
     pond.surface,
     popups,
     createScenery(app, layout),
-    hud,
     result,
   );
   app.stage.addChild(stage);
-  keepFitted(app, stage, layout.stage, boardView, pond);
+  keepFitted(app, { stage, ui }, layout.stage, boardView, pond);
 }
 
 /**
@@ -70,13 +76,14 @@ async function boot(host: HTMLElement): Promise<void> {
  */
 function keepFitted(
   app: Application,
-  stage: Container,
+  { stage, ui }: { stage: Container; ui: UiLayer },
   size: GameLayout['stage'],
   boardView: BoardView,
   pond: PondWater,
 ): void {
   const fit = (): void => {
     fitStage(stage, size, app.screen);
+    ui.fit(stage.scale.x, stage.position);
     const areaOrigin = boardView.toGlobal({ x: -WATER.koiReach, y: -WATER.koiReach });
     pond.mapToScreen(areaOrigin, {
       offset: stage.position,
@@ -123,7 +130,7 @@ function startGame(
 /** The points each match earns, over the board; they fly to the score in the HUD. */
 function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
   const score = hud.scoreAnchor();
-  const popups = new ScorePopups({ x: hud.x + score.x - boardOrigin.x, y: hud.y + score.y - boardOrigin.y });
+  const popups = new ScorePopups({ x: score.x - boardOrigin.x, y: score.y - boardOrigin.y });
   popups.position.set(boardOrigin.x, boardOrigin.y);
   return popups;
 }
@@ -137,7 +144,7 @@ function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayo
   const pads = new PadView(
     {
       cellSize: board.cell,
-      goalTarget: { x: hud.x + goal.x - board.x, y: hud.y + goal.y - board.y },
+      goalTarget: { x: goal.x - board.x, y: goal.y - board.y },
       toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,
@@ -175,6 +182,12 @@ function createScenery(app: Application, layout: GameLayout): Container {
 /** The pond's stones, pads and reeds, each at its corner of this pond. O(props). */
 function placeProps(pond: Rect): PondProp[] {
   return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
+}
+
+/** The lotus in the HUD's goal: painted by the same painter as the lotuses on the board. */
+function lotusIcon(app: Application): string {
+  const resolution = app.renderer.resolution * KOI_LOOK.bakeResolution;
+  return bakeLotusPad(GOAL_TRAY.iconRadius, 1, 7, resolution).toDataURL();
 }
 
 /** The koi (one tail beat of poses each) and their shadows, baked once at the screen's resolution. */

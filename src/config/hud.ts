@@ -1,31 +1,3 @@
-/** HUD look, in stage units. It sits on the bank above the pond (see LAYOUT.hudHeight). */
-export const HUD = {
-  /** Moonlight white for text and rims, gold for the score and the goal bar. */
-  ink: '#eef4f2',
-  muted: '#9fb6c4',
-  gold: '#ffd76a',
-  /** Panels: deep indigo, a little see-through, with a thin moonlit rim like the pond's foam lines. */
-  panel: '#0b1a33',
-  panelAlpha: 0.9,
-  rim: '#d4e8ee',
-  rimAlpha: 0.4,
-  /** The moves counter is a water drop this wide (px); the score sits in a pill this tall. */
-  dropRadius: 22,
-  pillHeight: 50,
-  pillLeft: 62,
-  barHeight: 6,
-  barBack: '#1a3150',
-  /** A print-like serif with lining figures (Georgia's old-style figures make a 0 look like an o). */
-  numberFont: '"Palatino Linotype", Palatino, "Book Antiqua", "Noto Serif", serif',
-  labelFont: 'system-ui, -apple-system, "Segoe UI", sans-serif',
-  /** How long the score takes to count up to a new value, and how much it swells while it does (s, scale). */
-  countUp: 0.55,
-  bump: 1.18,
-  /** The moves counter pops to this size when a move is spent, and settles back in this long (scale, s). */
-  movesBump: 1.3,
-  movesSettle: 0.3,
-} as const;
-
 /** The end-of-level card: a panel in the HUD's style over the dimmed pond. */
 export const RESULT = {
   dimColor: '#040c18',

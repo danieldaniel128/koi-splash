@@ -1,12 +1,12 @@
-import { HUD } from './hud';
+import { THEME } from '../ui/theme';
 
 /** The points that pop up over a match, then fly to the score. */
 export const POINTS = {
   /** The score's own gold and font, so the points land in it seamlessly. */
-  fill: HUD.gold,
+  fill: THEME.color.gold,
   stroke: '#0a1a2e',
   fontSize: 24,
-  font: HUD.numberFont,
+  font: THEME.font.number,
   /** Pop in, rise a little and hold (s, px), then fly to the score and shrink into it (s, scale). */
   pop: 0.28,
   rise: 14,
