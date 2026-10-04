@@ -4,7 +4,9 @@ import type { PointData } from 'pixi.js';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
 import { scoreRound } from '../model/score';
+import type { BoosterChange, BoosterUse } from '../model/boosters';
 import type { CascadeStep, Cell, Cleared, Created, Piece, Spawn } from '../model/types';
+import type { BoosterMotions } from './BoosterMotions';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
 import { planRound } from './specialTiming';
@@ -50,7 +52,28 @@ export class BoardAnimator {
     private readonly pointsPerPiece: number,
     /** The specials' effects and the ways koi leave around them. */
     private readonly specials: { readonly fx: SpecialFx; readonly motions: SpecialMotions },
+    /** The boosters' motions, and where the feed's pellets are thrown from (board space). */
+    private readonly boosters: { readonly motions: BoosterMotions; readonly feedFrom: () => PointData },
   ) {}
+
+  /** A booster changed the board: the view plays it (a leap, a feeding, a koi powering up) before it settles. */
+  async playBooster(use: BoosterUse, change: BoosterChange): Promise<void> {
+    this.round = 0;
+    const { motions, feedFrom } = this.boosters;
+    if (use.type === 'swap') await motions.leap(change.moved);
+    else if (use.type === 'feed' && change.fed !== undefined) {
+      await motions.feed(change.moved, use.at, change.fed, feedFrom());
+    } else {
+      await Promise.all(
+        change.made.map(({ piece, at }) =>
+          motions.powerUp(piece, at, () => {
+            this.view.makeSpecial(piece);
+            this.specials.fx.birth(at, piece.kind, 0);
+          }),
+        ),
+      );
+    }
+  }
 
   /**
    * Two koi trade places: the one the player dragged lifts toward the surface and passes over the other. They shove

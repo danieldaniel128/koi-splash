@@ -1,4 +1,5 @@
 import type { BoosterSlot } from '../ui/BoosterBar';
+import type { PetalChoice } from '../ui/SpecialMenu';
 
 /** How the HUD moves (s, scale). Its look is in the theme (src/theme). */
 export const HUD_MOTION = {
@@ -25,14 +26,34 @@ export const GOAL_TRAY = {
 } as const;
 
 /**
- * The booster bar under the pond, left to right: which icon, its name, and how many the player starts with (the
- * prototype gives one of each per pond). The boosters themselves come later.
+ * The booster bar under the pond, left to right (the prototype's): which booster, its name, how many a level gives,
+ * and what the pill over the pond says while it's armed.
  */
 export const BOOSTERS = [
-  { icon: 'swap', name: 'Swap', count: 1 },
-  { icon: 'special', name: 'Special', count: 1 },
-  { icon: 'feed', name: 'Feed', count: 1 },
+  { type: 'swap', name: 'Swap', count: 1, tip: 'Pick two koi to swap' },
+  { type: 'special', name: 'Special', count: 1, tip: 'Pick a koi to power up' },
+  { type: 'feed', name: 'Feed', count: 1, tip: 'Tap a colour to feed' },
 ] as const satisfies readonly BoosterSlot[];
+
+/**
+ * The special booster's petals (after the prototype): one per special, left to right, on an arc `reach` cells out and
+ * `spread` rad apart, fanned down for a koi in the top `topRows` rows; each `petal` cells across, blooming over
+ * `open` s, `stagger` s apart, and kept `edge` px inside the screen.
+ */
+export const SPECIAL_MENU = {
+  choices: [
+    { type: 'line', name: 'Striped koi' },
+    { type: 'whirl', name: 'Whirlpool' },
+    { type: 'rainbow', name: 'Rainbow koi' },
+  ],
+  reach: 1.7,
+  spread: 1.25,
+  petal: 1.25,
+  open: 0.3,
+  stagger: 0.06,
+  topRows: 3,
+  edge: 44,
+} as const satisfies { choices: readonly PetalChoice[] } & Record<string, unknown>;
 
 /** The end-of-level card fades in and pops (s). */
 export const RESULT_CARD = {

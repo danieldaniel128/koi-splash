@@ -46,3 +46,64 @@ export const SPECIAL_FX = {
   /** The game's clock slows to this for a moment on a whirlpool's pop or a rainbow's first beam (s). */
   hitStop: { scale: 0.08, time: 0.07 },
 } as const;
+
+/**
+ * The boosters' motions, after the prototype (times in seconds, sizes in cells).
+ * - swap: both koi leap in crossing arcs; the leap takes `min` + `perCell` per cell apart past the first (at most
+ *   `max`) and peaks `height` high (a little lower for near swaps), the second koi `height2` of that, landing at
+ *   `second` of the leap. They grow by `grow` at the top and bow `bend` of the way sideways; the first spins a full
+ *   turn, the second tilts `tilt` rad and back; the game stops for `hitStop` as they cross
+ * - feed: `pellets` (`pellet` cells across) are lobbed from the button over `throw`, scattering `scatter` round the
+ *   food, and float for
+ *   `food`; the school turns to it (`turn`), then each koi swims a bowed path (`bend` per cell, up to 3) in `swim0` +
+ *   `swimPer` per cell (at most `swimMax`), `stagger` after the one before, the koi pushed aside `pushed` later; the
+ *   board holds `hold` once they're in place. It gathers up to `lines` lines of 3
+ * - special: the koi rises `rise` cells and spins `spinTurns` turns in `spin`, `sparkles` per second swirling in
+ */
+export const BOOSTER_MOTION = {
+  swap: {
+    min: 0.45,
+    max: 0.8,
+    perCell: 0.075,
+    height: 1.05,
+    height2: 0.62,
+    grow: 0.42,
+    bend: 0.22,
+    second: 0.9,
+    tilt: -0.6,
+    hitStop: 0.06,
+  },
+  feed: {
+    pellets: 9,
+    pellet: 0.26,
+    throw: 0.5,
+    lob: 0.75,
+    scatter: 0.6,
+    food: 1.5,
+    turn: 0.16,
+    swim0: 0.34,
+    swimPer: 0.085,
+    swimMax: 0.95,
+    bend: 0.32,
+    stagger: 0.035,
+    pushed: 0.1,
+    hold: 0.16,
+    lines: 3,
+  },
+  special: { rise: 0.3, spin: 0.42, spinTurns: 2, sparkles: 40 },
+} as const;
+
+/**
+ * How the board answers an armed booster (after the prototype): the koi it can't take dim by `dim` (easing in at
+ * `dimIn` per second), the ones it can pulse by `pulse` in a wave at `pulseSpeed`, and the picked koi lifts `lift`
+ * cells over a gold ring with pink arcs.
+ */
+export const BOOSTER_MARKS = {
+  dim: 0.5,
+  dimIn: 6,
+  pulse: 0.05,
+  pulseSpeed: 4.2,
+  lift: 0.14,
+  gold: '#ffd76a',
+  pink: '#ffb3d1',
+} as const;

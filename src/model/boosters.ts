@@ -23,10 +23,11 @@ export interface Moved {
   readonly to: Cell;
 }
 
-/** What a booster did to the board before it settles: the koi it moved, and the koi it made special. */
+/** What a booster did to the board before it settles: the koi it moved, the koi it made special, the colour fed. */
 export interface BoosterChange {
   readonly moved: readonly Moved[];
   readonly made: readonly { readonly piece: Piece; readonly at: Cell }[];
+  readonly fed?: Kind;
 }
 
 /** Whether a booster can be used on this cell: a koi, and for the special booster a plain one. O(1), feed O(N). */
@@ -90,7 +91,7 @@ function feed(board: Board, at: Cell, lines: number): BoosterChange | null {
   const moved = assign(board, targets, school);
   for (const move of moved) board.set(move.to, null);
   for (const move of moved) board.set(move.to, move.piece);
-  return { moved, made: [] };
+  return { moved, made: [], fed: kind };
 }
 
 /** The nearest lines of 3 open cells to the food, a cell apart from each other. */

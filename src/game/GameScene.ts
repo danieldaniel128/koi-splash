@@ -6,7 +6,9 @@ import { createGoals, goalsMet } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
-import { createBoard, resetBoard, trySwap } from '../model/rules';
+import { applyBooster, canTarget } from '../model/boosters';
+import type { BoosterType, BoosterUse } from '../model/boosters';
+import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
 import { starsFor } from '../model/stars';
@@ -120,6 +122,33 @@ export class GameScene {
     void this.playTurn(from, to);
   };
 
+  /** True when a booster can be used: the board is still and the level is on. */
+  get canBoost(): boolean {
+    return this.turn.can('swapping');
+  }
+
+  /** Whether a booster can be used on this cell (see canTarget). */
+  canTarget(type: BoosterType, cell: Cell): boolean {
+    return canTarget(this.board, type, cell);
+  }
+
+  /**
+   * Uses a booster: the board changes as it says, the view plays it, then the board settles like after a swap. No
+   * move is spent. Resolves false (and changes nothing) when it can't be used now or has nothing to do.
+   */
+  async useBooster(use: BoosterUse): Promise<boolean> {
+    if (!this.canBoost) return false;
+    const change = applyBooster(this.board, use);
+    if (!change) return false;
+    await this.runTurn(async () => {
+      await this.deps.animator.playBooster(use, change);
+      const swap = use.type === 'swap' ? [use.b, use.a] : []; // a special made by it forms where the first koi lands
+      const result = settle(this.board, this.deps.spec, this.deps.rng, { pads: this.pads, swap });
+      await this.playCascade(result);
+    });
+    return true;
+  }
+
   /** Starts the level over with a fresh board. Only allowed once the level has ended. */
   restart(): void {
     if (!this.turn.is('won') && !this.turn.is('lost')) return;
@@ -166,7 +195,7 @@ export class GameScene {
   }
 
   private async resolveSwap([first, second]: readonly [PlacedPiece, PlacedPiece]): Promise<void> {
-    const { spec, rng, view, animator } = this.deps;
+    const { spec, rng, animator } = this.deps;
     const result = trySwap(this.board, first.at, second.at, spec, rng, this.pads);
     if (!result.valid) {
       await animator.invalidSwap(first, second);
@@ -177,9 +206,14 @@ export class GameScene {
     this.level.movesLeft--;
     this.deps.status.update(this.status());
     await animator.swap(first, second);
+    await this.playCascade(result);
+  }
+
+  /** Plays a settled board's rounds, then ends the turn (won, lost or on to the next). */
+  private async playCascade(result: { steps: readonly CascadeStep[]; reshuffled: boolean }): Promise<void> {
     this.turn.transition('resolving');
     for (const [round, step] of result.steps.entries()) await this.playRound(step, round);
-    if (result.reshuffled) view.render(this.board);
+    if (result.reshuffled) this.deps.view.render(this.board);
     this.turn.next();
   }
 

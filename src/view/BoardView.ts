@@ -1,7 +1,7 @@
 import { Container, Point, Rectangle } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import type { Board } from '../model/Board';
-import type { Cell, Piece } from '../model/types';
+import type { Cell, Piece, Special } from '../model/types';
 import { Koi } from './Koi';
 import type { KoiTextures } from './KoiTextures';
 import { KoiWaterline } from './KoiWaterline';
@@ -67,6 +67,26 @@ export class BoardView extends Container {
     const koi = this.pieces.get(id);
     if (!koi) throw new Error(`no sprite for piece ${id}`);
     return koi;
+  }
+
+  /** The koi resting in a cell, or null (an empty or blocked cell). O(koi): it's found by where the koi are. */
+  koiAt(cell: Cell): Koi | null {
+    for (const koi of this.pieces.values()) {
+      const at = this.cellOf(koi);
+      if (at?.col === cell.col && at.row === cell.row) return koi;
+    }
+    return null;
+  }
+
+  /** A picture of the koi in a cell as a special (the special booster's petals). */
+  previewAt(cell: Cell, type: Special['type']): string {
+    const koi = this.koiAt(cell);
+    return this.specials.preview(type, koi?.kind ?? 0);
+  }
+
+  /** The cell a koi rests in (nearest to where it is now), or null when it's off the board. */
+  cellOf(koi: Koi): Cell | null {
+    return this.pointToCell(koi.position);
   }
 
   /** Every koi on the board, for the effects that follow the fish (swimming, wakes). O(K) to walk. */
