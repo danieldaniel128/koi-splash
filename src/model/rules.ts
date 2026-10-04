@@ -83,10 +83,8 @@ export function hasAnyMove(board: Board): boolean {
 }
 
 /**
- * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then clears, drops and refills
- * until nothing matches, and returns every round as data so the view can animate it step by step. With `pads`,
- * each round also hits the pads next to the cleared koi; a pad that blooms or drifts away opens its cell, and the
- * koi above fall into it in that same round.
+ * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then settles the board (see settle)
+ * and returns every round as data so the view can animate it step by step.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
 export function trySwap(
@@ -102,35 +100,50 @@ export function trySwap(
   if (!swapMakesMatch(board, a, b) && triggers.length === 0) return { valid: false, reason: 'no-match' };
 
   board.swap(a, b);
+  const firing = triggers.map((t) => ({ ...t, at: sameCell(t.at, a) ? b : a })); // they moved with the swap
+  return { valid: true, ...settle(board, spec, rng, { pads, swap: [b, a], firing }) };
+}
+
+/** What starts a cascade: the cells just swapped (a special appears there first), and specials set to fire. */
+export interface SettleStart {
+  readonly pads?: PadField | undefined;
+  readonly swap?: readonly Cell[];
+  readonly firing?: readonly Trigger[];
+}
+
+/**
+ * Clears, fires, drops and refills until nothing matches and nothing is left to fire, one round at a time, and
+ * reshuffles a board left with no move. Each round hits the pads next to the cleared koi (and under a blast); a pad
+ * that blooms or drifts away opens its cell, and the koi above fall into it in that same round. Shared by swaps and
+ * boosters. O(S * N).
+ */
+export function settle(
+  board: Board,
+  spec: BoardSpec,
+  rng: Random,
+  start: SettleStart = {},
+): { steps: CascadeStep[]; reshuffled: boolean } {
   const steps: CascadeStep[] = [];
-  let firing: readonly Trigger[] = triggers.map((t) => ({ ...t, at: sameCell(t.at, a) ? b : a })); // they moved
+  let firing: readonly Trigger[] = start.firing ?? [];
   for (
     let matches = findMatches(board);
     matches.length > 0 || firing.length > 0;
     matches = findMatches(board)
   ) {
     if (steps.length >= MAX_CASCADE) throw new Error('cascade did not settle');
-    // the swap's own round puts its special where the player swapped; later rounds in the middle of the shape
-    const round = resolveRound(board, matches, steps.length === 0 ? [b, a] : [], firing);
+    // the first round puts its special where the player swapped; later rounds in the middle of the shape
+    const round = resolveRound(board, matches, steps.length === 0 ? (start.swap ?? []) : [], firing);
     firing = [];
     const struck = [...round.cleared.map((c) => c.at), ...round.struckPads];
-    const padEvents = hitPads(board, pads, struck);
+    const padEvents = hitPads(board, start.pads, struck);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
-    steps.push({
-      matches,
-      created: round.created,
-      fired: round.fired,
-      cleared: round.cleared,
-      padEvents,
-      falls,
-      spawns,
-    });
+    const { created, fired, cleared } = round;
+    steps.push({ matches, created, fired, cleared, padEvents, falls, spawns });
   }
-
   const reshuffled = !hasAnyMove(board);
   if (reshuffled) fillSafely(board, spec.kinds, rng);
-  return { valid: true, steps, reshuffled };
+  return { steps, reshuffled };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
