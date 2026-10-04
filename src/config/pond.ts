@@ -18,11 +18,8 @@ export type PondPropSpot = Omit<PondProp, 'at'> & Anchor;
  * reflection. The look is an ink print by moonlight: deep indigo water, pale ink lines, a touch of gold.
  */
 export const POND = {
-  /**
-   * How far the water reaches past the board on each side. The sides run off the edge of a phone screen, so the
-   * board reads as a patch of a bigger pond, not a tray; the strip below the board is open water for the moon.
-   */
-  margin: { left: 26, right: 26, top: 24, bottom: 70 },
+  /** How far the water reaches past the board on each side, to the shore (the stones sit on it). */
+  margin: { left: 16, right: 16, top: 20, bottom: 22 },
   cornerRadius: 46,
   /** The shore wanders in and out by up to this many px, in bends about this long (px). */
   shoreWobble: 10,
@@ -41,8 +38,8 @@ export const POND = {
    */
   vignette: { stretch: [1.2, 1.1], strength: 0.4, from: 0.7, to: 1.5 },
 
-  // --- the moon's reflection on the open water below the board: centre (from the pond's corner) and radius (px)
-  moonSpot: { corner: 'bottom-right', offset: [-105, -30] } satisfies Anchor as Anchor,
+  // --- the moon's reflection on the water, under the koi: centre (from the pond's corner) and radius (px)
+  moonSpot: { corner: 'bottom-right', offset: [-100, -40] } satisfies Anchor as Anchor,
   moonRadius: 19,
   moon: '#f7ecc8',
 

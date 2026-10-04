@@ -16,10 +16,10 @@ export interface LayoutConfig {
   /** The HUD band above the pond and the specials bar below it. */
   readonly hudHeight: number;
   readonly barHeight: number;
-  /** Space between the screen edges and everything, and between the HUD, the pond and the bar. */
+  /** Space between the screen edges and everything (the pond's shore too), and between the HUD, the pond and the bar. */
   readonly sidePadding: number;
   readonly sectionGap: number;
-  /** Water between the board and the pond's shore on each side. The sides may run off the screen (on purpose). */
+  /** Water between the board and the pond's shore on each side. The whole pond stays on screen. */
   readonly pondMargin: {
     readonly left: number;
     readonly right: number;
@@ -53,8 +53,8 @@ export interface GameLayout {
 
 /**
  * Lays the game out for a screen: the stage is the design size scaled to fit, then grown to cover the whole screen
- * (tall phones get more height, tablets more width, never letterboxing). Top to bottom: the HUD, the pond with the
- * board centred in it, the specials bar. The cell is as big as the space allows, within minCell..maxCell.
+ * (tall phones get more height, tablets more width, never letterboxing). Top to bottom: the HUD, the pond centred
+ * with the board in it, the specials bar. The cell is as big as the space allows, within minCell..maxCell.
  */
 export function layoutGame(
   screen: { width: number; height: number },
@@ -74,11 +74,11 @@ export function layoutGame(
   const margin = config.pondMargin;
   const bandTop = hud.y + hud.height + config.sectionGap + margin.top;
   const bandBottom = bar.y - config.sectionGap - margin.bottom;
-  const cell = cellSize(stage.width, bandBottom - bandTop, config);
+  const cell = cellSize(stage.width - margin.left - margin.right, bandBottom - bandTop, config);
   const width = cell * config.cols;
   const height = cell * config.rows;
   const board = {
-    x: (stage.width - width) / 2,
+    x: (stage.width - width - margin.left - margin.right) / 2 + margin.left,
     y: bandTop + (bandBottom - bandTop - height) / 2,
     width,
     height,
@@ -94,9 +94,9 @@ export function layoutGame(
   return { stage, hud, board, pond, bar };
 }
 
-/** The biggest cell that fits: the board within the side padding, and within the band left for it between margins. */
-function cellSize(stageWidth: number, bandHeight: number, config: LayoutConfig): number {
-  const byWidth = (stageWidth - config.sidePadding * 2) / config.cols;
+/** The biggest cell that fits: the board in the width left beside the pond's margins, and in the band between them. */
+function cellSize(boardRoom: number, bandHeight: number, config: LayoutConfig): number {
+  const byWidth = (boardRoom - config.sidePadding * 2) / config.cols;
   const byHeight = bandHeight / config.rows;
   return Math.min(Math.max(Math.min(byWidth, byHeight), config.minCell), config.maxCell);
 }

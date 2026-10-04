@@ -14,7 +14,7 @@ export const LAYOUT = {
   hudHeight: 58,
   barHeight: 66,
   sidePadding: 8,
-  sectionGap: 10,
+  sectionGap: 14, // room for the shore stones between the pond and the HUD or the bar
   pondMargin: POND.margin,
   /**
    * Water between neighbouring koi (px): a koi is painted in a square of its cell minus this. The fish fits a circle

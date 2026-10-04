@@ -46,10 +46,11 @@ describe('layoutGame', () => {
     expect(bar.y + bar.height).toBeLessThanOrEqual(stage.height - 34 / stage.scale);
   });
 
-  it('on a tall phone the board takes the full width and the bar moves down to the bottom', () => {
+  it('on a tall phone the pond takes the full width, on screen, and the bar moves down to the bottom', () => {
     const design = layoutGame({ width: 360, height: 640 }, NO_INSETS, CONFIG);
     const tall = layoutGame({ width: 390, height: 844 }, NO_INSETS, CONFIG);
-    expect(tall.board.width).toBeCloseTo(tall.stage.width - CONFIG.sidePadding * 2);
+    expect(tall.pond.x).toBeCloseTo(CONFIG.sidePadding);
+    expect(tall.pond.width).toBeCloseTo(tall.stage.width - CONFIG.sidePadding * 2);
     expect(tall.bar.y).toBeGreaterThan(design.bar.y);
   });
 
@@ -58,7 +59,7 @@ describe('layoutGame', () => {
     const tablet = layoutGame({ width: 768, height: 1024 }, NO_INSETS, CONFIG);
     expect(tablet.stage.width).toBeGreaterThan(design.stage.width);
     expect(tablet.board.cell * tablet.stage.scale).toBeGreaterThan(design.board.cell * design.stage.scale);
-    expect(tablet.board.x * 2 + tablet.board.width).toBeCloseTo(tablet.stage.width);
+    expect(tablet.pond.x * 2 + tablet.pond.width).toBeCloseTo(tablet.stage.width);
   });
 
   it('keeps the cell within its bounds and the gap between pieces', () => {
