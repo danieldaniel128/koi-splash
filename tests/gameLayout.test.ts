@@ -14,6 +14,7 @@ const CONFIG: LayoutConfig = {
   shoreWidth: 12,
   pondMargin: { left: 26, right: 26, top: 24, bottom: 70 },
   cellGap: 4,
+  pondAlign: 0.5,
   minCell: 36,
   maxCell: 56,
 };
@@ -68,6 +69,15 @@ describe('layoutGame', () => {
     expect(hud.width).toBeCloseTo(pond.width + CONFIG.shoreWidth * 2);
     expect(hud.x).toBeCloseTo(pond.x - CONFIG.shoreWidth);
     expect(bar.x).toBeCloseTo(hud.x);
+  });
+
+  it('sits the pond low when asked, leaving the scene above it', () => {
+    const screen = { width: 390, height: 844 };
+    const centred = layoutGame(screen, NO_INSETS, CONFIG);
+    const low = layoutGame(screen, NO_INSETS, { ...CONFIG, pondAlign: 0.8 });
+    expect(low.pond.y).toBeGreaterThan(centred.pond.y);
+    expect(low.scene.height).toBeCloseTo(low.pond.y - CONFIG.shoreWidth);
+    expect(low.bar.y).toBeGreaterThanOrEqual(low.pond.y + low.pond.height + CONFIG.shoreWidth);
   });
 
   it('keeps the cell within its bounds and the gap between pieces', () => {
