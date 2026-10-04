@@ -1,3 +1,4 @@
+import { Random } from '../core/Random';
 import { drawShadowOnly } from './blur';
 
 /**
@@ -53,7 +54,8 @@ export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement
   ctx.translate(width / 2, height / 2);
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  const random = seededRandom(prop.seed);
+  const rng = new Random(prop.seed); // the same seed always paints the same prop
+  const random = (): number => rng.next();
   if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
   else if (prop.kind === 'reeds') paintReeds(ctx, prop.radius[0], random);
   else paintPad(ctx, prop.radius[0], random, prop.kind === 'lotus-pad');
@@ -281,16 +283,4 @@ function trace(ctx: Ctx, points: readonly Pt[]): void {
     ctx.quadraticCurveTo(point[0], point[1], ...mid(point, next));
   });
   ctx.closePath();
-}
-
-/** Small seeded random number generator (mulberry32): the same seed always paints the same prop. */
-function seededRandom(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }

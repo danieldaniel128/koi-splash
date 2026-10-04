@@ -76,7 +76,8 @@ export function bakeKoiContact(
   const ctx = context(canvas);
   // only recolour from here on: the cover (alpha) must stay as it is, or the waterline would move to trace the fins
   ctx.globalCompositeOperation = 'source-atop';
-  const fade = ctx.createLinearGradient(0, body.height * 0.4, 0, body.height * 0.72);
+  const [from, to] = BODY_UNDER; // where the body goes under, so the foam fades with it
+  const fade = ctx.createLinearGradient(0, body.height * from, 0, body.height * to);
   fade.addColorStop(0, '#ffffff');
   fade.addColorStop(1, '#ff00ff');
   ctx.fillStyle = fade;
@@ -86,15 +87,25 @@ export function bakeKoiContact(
 }
 
 /**
+ * The ring a tail beat sends out, in the bake's own units (stage px): where the koi's silhouette, blurred by `blur`
+ * px, falls to `level`, so it's rounder than the fish, like a real ripple; `width` is how far around that level it
+ * spreads (in blurred cover), and `pad` the room around the koi on the canvas.
+ */
+export interface KoiRippleRing {
+  readonly blur: number;
+  readonly level: number;
+  readonly width: number;
+  readonly pad: number;
+}
+
+/**
  * A soft ring of light around a koi's whole shape (fins and tail too), for the small ripple each beat of its tail
- * sends out (the game grows and fades it). The ring is where the koi's silhouette, blurred by `blur` px, falls to
- * `level`, so it's rounder than the fish, like a real ripple; `width` is how far around that level it spreads (in
- * blurred cover). Head up, centred on a canvas padded by `pad` px all round.
+ * sends out (the game grows and fades it). Head up, centred on a canvas padded by `ring.pad` px all round.
  */
 export function bakeKoiRipple(
   variety: KoiVariety,
   bake: BakeOptions,
-  ring: { readonly blur: number; readonly level: number; readonly width: number; readonly pad: number },
+  ring: KoiRippleRing,
 ): HTMLCanvasElement {
   const scale = bake.resolution ?? 1;
   const koi = solid(bakeKoi(variety, { ...bake, tailWag: 0 }), '#ffffff');

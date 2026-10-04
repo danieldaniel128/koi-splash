@@ -3,7 +3,7 @@ import { drawBlurred } from '../art/blur';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact, bakeKoiRipple } from '../art/koiInk';
-import type { KoiContactShape, KoiInk } from '../art/koiInk';
+import type { KoiContactShape, KoiInk, KoiRippleRing } from '../art/koiInk';
 import type { Kind } from '../model/types';
 
 /** How the koi textures are baked. */
@@ -27,7 +27,7 @@ export interface KoiBake {
   readonly contact: KoiContactShape;
   readonly contactResolution: number;
   /** The ring a tail beat sends out (see bakeKoiRipple), baked at contactResolution. */
-  readonly ripple: Parameters<typeof bakeKoiRipple>[2];
+  readonly ripple: KoiRippleRing;
 }
 
 /**

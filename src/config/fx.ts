@@ -1,3 +1,5 @@
+import { HUD } from './hud';
+
 /**
  * One splash per match, drawn over the water: a bright flash over the match, a burst of foam where each koi goes
  * under, and droplets of different sizes thrown up in arcs that land with small rings of their own. Stage px, seconds.
@@ -41,10 +43,11 @@ export const SPLASH = {
 
 /** The points that pop up over a match, then fly to the score. */
 export const POINTS = {
-  fill: '#ffd76a',
+  /** The score's own gold and font, so the points land in it seamlessly. */
+  fill: HUD.gold,
   stroke: '#0a1a2e',
   fontSize: 24,
-  font: '"Palatino Linotype", Palatino, "Book Antiqua", "Noto Serif", serif',
+  font: HUD.numberFont,
   /** Pop in, rise a little and hold (s, px), then fly to the score and shrink into it (s, scale). */
   pop: 0.28,
   rise: 14,
