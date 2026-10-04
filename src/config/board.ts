@@ -2,8 +2,11 @@ import { parseShape } from '../model/shape';
 import type { BoardSpec } from '../model/rules';
 import { LEVEL } from './level';
 
-/** The board the level is played on: its shape (from LEVEL.shape) and how many koi colours are in play. */
+/** The board's shape for the level (drawn in LEVEL.shape). */
+export const SHAPE = parseShape(LEVEL.shape);
+
+/** The board the level is played on: its shape and how many koi colours are in play. */
 export const BOARD: BoardSpec = {
-  ...parseShape(LEVEL.shape),
+  ...SHAPE,
   kinds: 5,
 };
