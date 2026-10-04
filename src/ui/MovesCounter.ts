@@ -1,0 +1,23 @@
+import { HUD_MOTION } from '../config/ui';
+import { bump, el } from './UiLayer';
+
+/** Moves left, big, in a glass orb. It pops each time a move is spent, and warns when only a few are left. */
+export class MovesCounter {
+  readonly element: HTMLElement;
+  private readonly value = el('span', 'number moves__value');
+  private shown = -1;
+
+  constructor() {
+    this.element = el('div', 'orb moves', this.value, el('span', 'label', 'moves'));
+  }
+
+  update(movesLeft: number): void {
+    if (movesLeft === this.shown) return;
+    const first = this.shown < 0;
+    this.shown = movesLeft;
+    this.value.textContent = `${movesLeft}`;
+    this.element.classList.toggle('moves--low', movesLeft <= HUD_MOTION.lowMoves);
+    this.element.classList.toggle('moves--last', movesLeft <= HUD_MOTION.lastMoves);
+    if (!first) bump(this.value, HUD_MOTION.movesBump, HUD_MOTION.movesSettle);
+  }
+}

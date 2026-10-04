@@ -1,8 +1,10 @@
-import { Container, Graphics, Point, Rectangle, Sprite } from 'pixi.js';
+import { Container, Point, Rectangle } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import type { Board } from '../model/Board';
 import type { Cell, Piece } from '../model/types';
+import { Koi } from './Koi';
 import type { KoiTextures } from './KoiTextures';
+import { KoiWaterline } from './KoiWaterline';
 
 export interface BoardViewLayout {
   readonly cols: number;
@@ -11,23 +13,31 @@ export interface BoardViewLayout {
   readonly koiSize: number;
 }
 
-/** Draws the board: one sprite per piece, found by the piece id so a koi keeps its sprite while it moves. */
+/**
+ * Draws the board: one koi per piece, found by the piece id so a koi keeps its sprite while it moves. What the koi
+ * cast into the water (shadows on the bottom, their shape at the waterline for the pond's foam) follows them in a
+ * KoiWaterline; the shadows sit in their own layer under all the koi.
+ */
 export class BoardView extends Container {
-  private readonly sprites = new Map<number, Sprite>();
+  private readonly pieces = new Map<number, Koi>();
+  private readonly waterline: KoiWaterline;
+  private readonly koiLayer = new Container();
 
   constructor(
     private readonly textures: KoiTextures,
     private readonly layout: BoardViewLayout,
+    private readonly random: () => number = Math.random,
   ) {
     super();
-    const width = layout.cols * layout.cellSize;
-    const height = layout.rows * layout.cellSize;
     // the whole board area takes pointer input, including the gaps between koi
-    this.hitArea = new Rectangle(0, 0, width, height);
-    // new koi start above the top edge; the mask hides them until they slide in
-    const mask = new Graphics().rect(0, 0, width, height).fill(0xffffff);
-    this.addChild(mask);
-    this.mask = mask;
+    this.hitArea = new Rectangle(0, 0, layout.cols * layout.cellSize, layout.rows * layout.cellSize);
+    this.waterline = new KoiWaterline(textures);
+    this.addChild(this.waterline.shadows, this.koiLayer);
+  }
+
+  /** Where each koi meets the water, in the board's space: drawn by the pond into its mask, never shown. */
+  get contacts(): Container {
+    return this.waterline.contacts;
   }
 
   /**
@@ -40,29 +50,47 @@ export class BoardView extends Container {
       const piece = board.get(cell);
       if (!piece) continue;
       seen.add(piece.id);
-      const sprite = this.sprites.get(piece.id) ?? this.createSprite(piece.id, piece.kind);
-      sprite.position.copyFrom(this.cellToPoint(cell));
+      const koi = this.pieces.get(piece.id) ?? this.createKoi(piece.id, piece.kind);
+      koi.position.copyFrom(this.cellToPoint(cell));
     }
     this.removeSpritesNotIn(seen);
   }
 
-  /** The sprite showing a piece. Throws when the piece has no sprite, which means the view fell out of sync. */
-  spriteOf(id: number): Sprite {
-    const sprite = this.sprites.get(id);
-    if (!sprite) throw new Error(`no sprite for piece ${id}`);
-    return sprite;
+  /** The koi showing a piece. Throws when the piece has no koi, which means the view fell out of sync. */
+  spriteOf(id: number): Koi {
+    const koi = this.pieces.get(id);
+    if (!koi) throw new Error(`no sprite for piece ${id}`);
+    return koi;
   }
 
-  /** Adds a sprite for a new piece at a cell (the cell may be above the board, for koi about to drop in). */
-  addPiece(piece: Piece, at: Cell): Sprite {
-    const sprite = this.createSprite(piece.id, piece.kind);
-    sprite.position.copyFrom(this.cellToPoint(at));
-    return sprite;
+  /** Every koi on the board, for the effects that follow the fish (swimming, wakes). O(K) to walk. */
+  *koi(): IterableIterator<Koi> {
+    yield* this.pieces.values();
+  }
+
+  /** What the koi cast into the water follows them. Call once per frame after the koi moved, before the pond draws. */
+  follow(deltaSeconds: number): void {
+    this.waterline.follow(deltaSeconds);
+  }
+
+  /** Adds a koi for a new piece at a cell. */
+  addPiece(piece: Piece, at: Cell): Koi {
+    const koi = this.createKoi(piece.id, piece.kind);
+    koi.position.copyFrom(this.cellToPoint(at));
+    return koi;
   }
 
   removePiece(id: number): void {
-    this.sprites.get(id)?.destroy();
-    this.sprites.delete(id);
+    const koi = this.pieces.get(id);
+    if (!koi) return;
+    this.waterline.remove(koi);
+    koi.destroy();
+    this.pieces.delete(id);
+  }
+
+  /** Draws a koi above all the others (the one the player drags passes over the one it swaps with). */
+  bringToFront(koi: Koi): void {
+    this.koiLayer.addChild(koi);
   }
 
   /** Centre of a cell, in this container's space. */
@@ -79,17 +107,17 @@ export class BoardView extends Container {
     return onBoard ? { col, row } : null;
   }
 
-  private createSprite(id: number, kind: number): Sprite {
-    const sprite = new Sprite(this.textures.get(kind));
-    sprite.anchor.set(0.5);
-    sprite.setSize(this.layout.koiSize);
-    this.sprites.set(id, sprite);
-    this.addChild(sprite);
-    return sprite;
+  /** Creates a piece's koi, which the animations move, and sets it in the water. */
+  private createKoi(id: number, kind: number): Koi {
+    const koi = new Koi(kind, this.textures.swim(kind), this.layout.koiSize, this.random);
+    this.pieces.set(id, koi);
+    this.koiLayer.addChild(koi);
+    this.waterline.add(koi);
+    return koi;
   }
 
   private removeSpritesNotIn(ids: ReadonlySet<number>): void {
-    for (const id of this.sprites.keys()) {
+    for (const id of this.pieces.keys()) {
       if (!ids.has(id)) this.removePiece(id);
     }
   }

@@ -1,9 +1,12 @@
+import { parseShape } from '../model/shape';
 import type { BoardSpec } from '../model/rules';
+import { LEVEL } from './level';
 
-export const BOARD = {
-  cols: 7,
-  rows: 9,
+/** The board's shape for the level (drawn in LEVEL.shape). */
+export const SHAPE = parseShape(LEVEL.shape);
+
+/** The board the level is played on: its shape and how many koi colours are in play. */
+export const BOARD: BoardSpec = {
+  ...SHAPE,
   kinds: 5,
-  /** Size of one cell on the stage. */
-  cellSize: 46,
-} as const satisfies BoardSpec & { cellSize: number };
+};

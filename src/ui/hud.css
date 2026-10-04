@@ -1,0 +1,156 @@
+/* The HUD above the pond: the moves orb, then a glass panel with the score, the goal chip and the star bar. */
+
+.hud {
+  display: flex;
+  align-items: center;
+}
+
+.moves {
+  position: relative;
+  z-index: 1; /* over the panel's left end */
+  flex: none;
+  width: 78px;
+  height: 78px;
+  transition: box-shadow var(--time-normal);
+}
+
+.moves__value {
+  font-size: 34px;
+}
+
+.moves .label {
+  margin-top: 1px;
+}
+
+.moves--low {
+  box-shadow:
+    inset 0 0 0 2px var(--color-coral),
+    inset 0 2px 1px rgba(255, 255, 255, 0.28),
+    inset 0 -8px 14px rgba(0, 10, 20, 0.45),
+    0 0 14px rgba(255, 143, 158, 0.45);
+}
+
+.moves--low .moves__value {
+  color: var(--color-coral);
+}
+
+.moves--last {
+  animation: moves-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes moves-pulse {
+  50% {
+    transform: scale(1.07);
+  }
+}
+
+.hud__panel {
+  flex: 1;
+  height: 70px;
+  margin-left: -26px; /* tucked under the orb */
+  padding: var(--space-sm) var(--space-md) var(--space-sm) 34px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.hud__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.score {
+  display: grid;
+}
+
+.score__value {
+  font-size: var(--text-xl);
+  color: var(--color-gold);
+  transform-origin: left center;
+}
+
+.goal {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+}
+
+.chip__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-gold);
+}
+
+.chip__image {
+  width: 38px;
+  height: 38px;
+  margin: -5px; /* the baked lotus has room around it for its shadow */
+}
+
+.chip__count {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 22px;
+  font-size: var(--text-lg);
+}
+
+.chip__count svg {
+  width: 20px;
+  height: 20px;
+}
+
+.chip--done {
+  box-shadow:
+    inset 0 0 0 1.5px var(--color-gold),
+    0 0 12px rgba(255, 215, 106, 0.45);
+}
+
+.chip--done .chip__count {
+  color: var(--color-gold);
+}
+
+.stars {
+  position: relative;
+  height: 18px;
+  margin-top: var(--space-xs);
+}
+
+.stars__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 7px;
+}
+
+.stars__fill {
+  background: linear-gradient(90deg, var(--color-goldDeep), var(--color-goldLight));
+}
+
+.stars__star {
+  position: absolute;
+  top: -3px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  color: #33415e;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+  transition:
+    color var(--time-normal),
+    filter var(--time-normal);
+}
+
+.stars__star svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.stars__star--lit {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 4px rgba(255, 215, 106, 0.75));
+}

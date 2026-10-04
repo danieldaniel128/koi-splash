@@ -1,6 +1,7 @@
 import type { Random } from '../core/Random';
 import { Board } from './Board';
-import type { CascadeStep, Cell, Cleared, Fall, Kind, Match, Spawn, SwapResult } from './types';
+import type { PadEvent, PadField } from './pads';
+import type { CascadeStep, Cell, Cleared, Fall, Kind, Match, Piece, Spawn, SwapResult } from './types';
 import { isAdjacent } from './types';
 
 export interface BoardSpec {
@@ -8,6 +9,8 @@ export interface BoardSpec {
   readonly rows: number;
   /** How many koi colours are in play. */
   readonly kinds: number;
+  /** The cells the board's shape doesn't have (see parseShape); none for a plain rectangle. */
+  readonly holes?: readonly Cell[];
 }
 
 const MIN_RUN = 3;
@@ -16,18 +19,24 @@ const MAX_CASCADE = 50;
 
 // Run times below use N = cols * rows (63 cells on the 7 x 9 board).
 
-/** A full board with no ready-made matches and at least one valid move. O(N) per try, see fillSafely. */
-export function createBoard(spec: BoardSpec, rng: Random): Board {
-  const board = new Board(spec.cols, spec.rows);
+/**
+ * A full board with no ready-made matches and at least one valid move. Blocked cells (the lily pads) are placed
+ * first, so the koi only ever fill the free cells around them. O(N) per try, see fillSafely.
+ */
+export function createBoard(spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): Board {
+  const board = new Board(spec.cols, spec.rows, spec.holes);
+  for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
   return board;
 }
 
 /**
- * Gives an existing board a fresh layout (for playing the level again). Piece ids keep counting up from where they
- * were, so the view never mistakes a new koi for an old sprite with the same id.
+ * Gives an existing board a fresh layout (for playing the level again), with the new blocked cells placed first.
+ * Piece ids keep counting up from where they were, so the view never mistakes a new koi for an old sprite.
  */
-export function resetBoard(board: Board, spec: BoardSpec, rng: Random): void {
+export function resetBoard(board: Board, spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): void {
+  for (const cell of board.cells()) board.setBlocked(cell, false);
+  for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
 }
 
@@ -71,10 +80,19 @@ export function hasAnyMove(board: Board): boolean {
 
 /**
  * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then clears, drops and refills
- * until nothing matches, and returns every round as data so the view can animate it step by step.
+ * until nothing matches, and returns every round as data so the view can animate it step by step. With `pads`,
+ * each round also hits the pads next to the cleared koi; a pad that blooms or drifts away opens its cell, and the
+ * koi above fall into it in that same round.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
-export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Random): SwapResult {
+export function trySwap(
+  board: Board,
+  a: Cell,
+  b: Cell,
+  spec: BoardSpec,
+  rng: Random,
+  pads?: PadField,
+): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
   if (!swapMakesMatch(board, a, b)) return { valid: false, reason: 'no-match' };
 
@@ -83,9 +101,10 @@ export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Ra
   for (let matches = findMatches(board); matches.length > 0; matches = findMatches(board)) {
     if (steps.length >= MAX_CASCADE) throw new Error('cascade did not settle');
     const cleared = clearMatches(board, matches);
+    const padEvents = hitPads(board, pads, cleared);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
-    steps.push({ matches, cleared, falls, spawns });
+    steps.push({ matches, cleared, padEvents, falls, spawns });
   }
 
   const reshuffled = !hasAnyMove(board);
@@ -101,7 +120,9 @@ export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Ra
  */
 function fillSafely(board: Board, kinds: number, rng: Random): void {
   do {
-    for (const cell of board.cells()) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
+    for (const cell of board.cells()) {
+      if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
+    }
   } while (!hasAnyMove(board));
 }
 
@@ -167,6 +188,14 @@ function runThrough(board: Board, cell: Cell): boolean {
   return reach(-1, 0) + reach(1, 0) + 1 >= MIN_RUN || reach(0, -1) + reach(0, 1) + 1 >= MIN_RUN;
 }
 
+/** Hits the pads next to the cleared koi and opens the cells of those that bloomed or drifted away. */
+function hitPads(board: Board, pads: PadField | undefined, cleared: readonly Cleared[]): PadEvent[] {
+  if (!pads) return [];
+  const events = pads.hit(cleared.map((c) => c.at));
+  for (const event of events) if (event.type !== 'hit') board.setBlocked(event.pad.at, false);
+  return events;
+}
+
 // clearMatches, applyGravity and refill are each O(N).
 
 function clearMatches(board: Board, matches: readonly Match[]): Cleared[] {
@@ -182,36 +211,58 @@ function clearMatches(board: Board, matches: readonly Match[]): Cleared[] {
   return cleared;
 }
 
-/** Drops every piece straight down into the gaps below it. */
+/**
+ * Drops every piece straight down into the gaps below it, past lily pads, within its stretch of water: a koi never
+ * crosses a hole (that would be swimming over the bank).
+ */
 function applyGravity(board: Board): Fall[] {
   const falls: Fall[] = [];
   for (let col = 0; col < board.cols; col++) {
-    let target = board.rows - 1;
-    for (let row = board.rows - 1; row >= 0; row--) {
-      const piece = board.get({ col, row });
-      if (!piece) continue;
-      if (row !== target) {
-        board.set({ col, row: target }, piece);
-        board.set({ col, row }, null);
-        falls.push({ piece, from: { col, row }, to: { col, row: target } });
-      }
-      target--;
+    for (const slots of stretches(board, col)) {
+      const pieces = slots
+        .map((row) => ({ piece: board.get({ col, row }), row }))
+        .filter((entry): entry is { piece: Piece; row: number } => entry.piece !== null);
+      slots.forEach((row, i) => {
+        const entry = pieces[i];
+        board.set({ col, row }, entry?.piece ?? null);
+        if (entry && entry.row !== row)
+          falls.push({ piece: entry.piece, from: { col, row: entry.row }, to: { col, row } });
+      });
     }
   }
   return falls;
 }
 
-/** Fills the empty cells at the top of each column with new pieces that drop in from above the board. */
+/**
+ * A column's stretches of water, split by the holes: in each, the rows a piece can be in (not under a pad), from
+ * the bottom up. A plain column is one stretch.
+ */
+function stretches(board: Board, col: number): number[][] {
+  const result: number[][] = [];
+  let current: number[] = [];
+  for (let row = board.rows - 1; row >= 0; row--) {
+    const cell = { col, row };
+    if (board.isHole(cell)) {
+      if (current.length > 0) result.push(current);
+      current = [];
+    } else if (!board.isBlocked(cell)) current.push(row);
+  }
+  if (current.length > 0) result.push(current);
+  return result;
+}
+
+/** Fills the empty cells at the top of each stretch of water with new koi rising from the deep, the lowest first. */
 function refill(board: Board, kinds: number, rng: Random): Spawn[] {
   const spawns: Spawn[] = [];
   for (let col = 0; col < board.cols; col++) {
-    let empty = 0;
-    while (empty < board.rows && !board.get({ col, row: empty })) empty++;
-    for (let row = empty - 1; row >= 0; row--) {
-      const piece = board.createPiece(rng.int(0, kinds - 1));
-      const to = { col, row };
-      board.set(to, piece);
-      spawns.push({ piece, from: { col, row: row - empty }, to });
+    for (const slots of stretches(board, col)) {
+      const empty = slots.filter((row) => !board.get({ col, row })); // bottom to top
+      empty.forEach((row, order) => {
+        const piece = board.createPiece(rng.int(0, kinds - 1));
+        const to = { col, row };
+        board.set(to, piece);
+        spawns.push({ piece, to, order });
+      });
     }
   }
   return spawns;

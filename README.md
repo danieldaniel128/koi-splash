@@ -1,10 +1,11 @@
 # Koi Splash
 
-A calm but juicy match-3 on a moonlit koi pond. Built for the mini-game home assignment.
+A calm match-3 on a moonlit koi pond, built for the mini-game home assignment. Swipe a koi into its neighbour's
+cell to line up three or more of a colour. Lily pads float between the koi; matches next to a lotus bud open it, and
+the goal is to bloom all three lotuses in 15 moves.
 
-Play it here: https://danieldaniel128.github.io/koi-splash/
-
-The build is hosted on GitHub Pages and always shows the last finished milestone (see Workflow below).
+Play it here: https://danieldaniel128.github.io/koi-splash/ (GitHub Pages, deployed by GitHub Actions from `main`
+only, so it always shows the last finished milestone).
 
 ## Running it
 
@@ -17,107 +18,164 @@ npm run build    # static web build in dist/
 
 ## Stack & assets
 
-- TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
-- The pond is a custom GLSL shader (`src/view/shaders/water.frag`): a night bank with a moon glow, a rounded pond
-  with a lit rim, faint sockets under the cells, a net of soft oval caustic loops (two copies drifting against each
-  other make the water shimmer) and ripple rings from swaps and matches that bend the light. It's one quad, computed
-  per pixel on the GPU, with no textures.
+TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. There are no image files: the koi, stones and lily
+pads are painted on canvases once at startup (`src/art/`) and uploaded as textures.
+
+## Tech art
+
+The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
+into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks
+its tail, a swap shoves the water apart, and matched koi dive with a ring in the water while the koi above swim down
+into the gaps, under the lily pads. The shore and the pads soak the waves up. It's drawn in an ink and moonlight
+toon look: the bank around the pond is painted once per screen size, and three passes read the waves each frame (the
+water under the koi, a filter that bends the koi under the waves, and a surface pass with shore foam and gold
+glints). The koi have a dark cartoon outline, and a broken foam line at their waterline that follows them and breaks
+around the fins (drawn each frame from a mask of the koi, `KoiContact`).
+
+Every texture is painted in code, so nothing is a fixed asset: sizes and colours come from config, and a texture is
+baked once for the screen it will be shown on. The pond takes the board's shape. `traceShore` walks the edge of the
+cells (round notches, bays and islands of bank), pushes it out by the margins and rounds every corner; that outline
+is baked once into a distance field (`bakeDistanceField`), so every water shader knows how far it is from the shore
+of any shape with a single texture read. The border is a ring of pieces along the same outline. Where they go is
+plain math (`ringAlongShore`: random sizes round each loop, scaled to close with no seam); what they look like is a
+painter. The tracer, the field, the ring and the atlas packing are all unit tested.
+
+Above the pond, the layout leaves an open scene (the pond sits low, like the art over the board in commercial
+match-3s), and a moonlit garden is painted into it once (`src/art/backdrop.ts`): sky, stars and the moon, misty
+hills, a pagoda, a tree line and a maple with a paper lantern. On a wide screen the sky still ends at the pond, so it
+sits on the ground, and the ground beside it is dressed: a maple tree with its lantern on one side, a stone lantern on
+the other (`planBackdrop` decides, tested). The ground
+itself is a soft moss lawn, low in contrast so it never competes with the board, with the pond's light spilling
+onto it round the shore (read from the same distance field as the water, so it follows any pond shape) and a few
+fallen petals. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
+screen's real pixel density, so the whole border is one texture and one draw call.
+
+Changing the look is meant to be config, not surgery:
+
+- **A different board shape:** draw it in `LEVEL.shape` (`#` a cell, `.` bank). The water, the stones and the
+  rules all follow; keep notches at least 2 cells wide so the stones fit.
+- **A different border** (planks, bushes, lanterns): write a painter for one piece in `src/art`, add it to
+  `SHORE_STYLES` and set `POND.shore.style`. Piece sizes, spacing, how far they sit out on the bank and the corner
+  pieces are in `POND.shore`; `LAYOUT.shoreWidth` keeps room for them on screen.
+- **No ring at all** (say, one wooden deck): `ShoreRing` is the only thing that draws the border. Anything else that
+  takes the pond's rect from the layout can replace it.
+- **Rocks in the water:** `POND.props`. They stop the ripples and get the same shore foam as the pond's edge.
+- **Water and bank:** colours, waves and foam in `src/config/water.ts` and `src/config/pond.ts`.
+- **UI and background:** colours, type, spacing, motion, the bank and the garden above the pond are one theme in
+  `src/theme`, read by the CSS and by Pixi. A new look is a new theme file.
 
 ## How it's built
 
-I went with MVP, with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. When you swipe,
-the model works out the whole cascade at once and hands it back as a list of steps (what matched, what fell, what
-spawned). The presenter then plays those steps through the view one at a time.
+MVP with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. On a swipe it works out the
+whole cascade at once and returns it as data: a list of steps, each with what matched, what cleared, what fell and
+what spawned. The presenter (`GameScene`) plays those steps through the animator one at a time. The view never
+decides anything, so the board on screen can't drift from the real one, and the rules can be tested without a
+browser.
 
-I wanted it this way for two reasons. First, the rules can be tested without a browser. Second, the board on screen
-can't drift away from the real board, because the view never decides anything; it only animates what it's told.
-Effects and sound will listen on an event bus, so I can add juice without touching the game logic.
+The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
+if it's complete, without knowing which goal it is. A level picks a lotus goal or a score goal in config. The lily
+pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
+and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
+its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
+moves are all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of
+400 boards (on the plain 7 x 9, before the board had a shape).
 
-The turn itself runs on a small state machine with guarded transitions: the end of a turn picks won, lost or idle
-from a table (won is listed before lost, so winning on the last move counts), instead of an if/else chain.
+A board can have holes, drawn in the level's shape (`src/model/shape.ts`). A koi can't swim over the bank, so a hole
+splits its column: koi only swim down within their own stretch of water, and new koi rise from the deep into the top
+of each stretch. For a notch at the top that means just below it, like the shaped boards in commercial match-3s.
+
+Turns are paced on one too: I timed a Candy Crush recording frame by frame (it was sped up, so I scaled it back), where
+a plain match gives the board back in about 0.7 s. Ours took 2 s; after retuning `src/config/timing.ts` it's about
+0.7 s, measured over real turns in a headless browser.
+
+The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded transitions and enter/exit hooks.
+The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),
+and entering won or lost shows the end card.
+
+The layout is worked out from the screen, not fixed (`src/layout/gameLayout.ts`, values in `src/config/layout.ts`):
+the stage is at least 360 x 640 and grows to cover the whole screen with no letterboxing, then the HUD goes at the
+top, the specials bar at the bottom (inside the phone's notch and home bar), and the board takes the biggest cell
+that fits between them. Paddings, gaps, the space between koi, the water around the board and the room for the
+shore are all config. The border follows the pond's outline and the moon is pinned to its corner, so the scene keeps
+its shape on any phone, tablet or desktop. Phones play upright; turned sideways they get a notice.
+
+The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
+I modelled the HUD on the casual match-3s I studied: moves big in a glass orb (it warns when they run low), the
+score, a goal chip that ticks down to a check, and a star bar. The stars are the prototype's rating (one for the
+goal, two or three for moves left over, `starsFor`); the bar is a meter where each star owns a third
+(`starMeter`), so they sit evenly however the rule is tuned. Under the pond, the booster bar uses the prototype's
+icons with count badges. It's all small components on a little CSS kit (glass panel, orb, chip, badge, track, button)
+that only reads theme tokens (`src/theme`), with the same tokens used by the Pixi side, so a new look is a change of
+tokens, not of components. The rounded font (Nunito) is bundled, so it's the same on every phone.
+
+Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the score
+popups (`ScorePopups`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes
+(`KoiLife`, `KoiWaterline`), outside the turn logic.
 
 ## Code standards
 
-I'd rather have the linter enforce the rules than rely on remembering them, so most of these fail the build:
+ESLint enforces them, so I don't have to remember them:
 
-- **Naming:** camelCase for variables and functions, PascalCase for types and classes, UPPER_CASE only for top-level
-  constants.
-- **Layout:** the public API sits at the top of a file, private helpers below it. In classes: fields, constructor,
-  public methods, then private ones.
-- **Size:** functions over 40 lines, nesting deeper than 3 and high complexity are flagged, so long functions get
-  split into named steps.
-- **Module boundaries:** `src/model` and `src/core` can't import Pixi, GSAP or any presentation folder. It works
-  like an assembly definition: the rules stay engine-free and testable.
-- **No singletons:** objects get what they need through their constructor, and `main.ts` is the one place that
-  wires everything together.
-- **Errors:** try/catch only at the edges where things can really fail (boot and asset loading, reading the save,
-  audio), not around everything.
-- **Assets:** the koi are baked into textures once at startup and reused, never rebuilt mid-game.
-- **Patterns only where they pay off:** each one used here is explained below or in the code where it lives.
+- Strict type-checked TypeScript rules, type-only imports, `===`.
+- Naming: camelCase values and functions, PascalCase types, UPPER_CASE only for top-level constants.
+- Class layout: fields, constructor, public methods, then private ones.
+- `src/model` and `src/core` can't import Pixi, GSAP or any presentation folder, like an assembly definition.
+- Warnings for functions over 40 lines, nesting deeper than 3 and complexity over 10.
+
+Beyond lint: no singletons (`main.ts` is the one place that creates objects and hands each one what it needs), tuning
+numbers live in `src/config`, and try/catch only at the edges (boot, and a failed turn animation). The one file lint
+skips is `src/art/koiBank.ts`, the AI-written koi painter.
 
 ## Workflow
 
-I split the work the way I'd run it on a team:
+Feature branches go into `develop` through pull requests, and `develop` goes into `main` when a milestone is done.
+`ci.yml` runs the typecheck, lint, tests and build on every push to a working branch and on every pull request.
+`deploy.yml` runs the same checks on `main` and publishes to GitHub Pages. A pre-commit hook runs ESLint and
+Prettier on the staged files.
 
-```
-feature/<task>  ->  develop  ->  main
-```
+Milestones:
 
-- **feature branches:** one per task (`feature/animation`, `feature/game-scene`...). Small commits, one idea each.
-- **develop:** where finished tasks come together. A task gets merged through a pull request with a short note on
-  what changed and how I checked it.
-- **main:** only finished milestones. Merging into `main` is what deploys the playable build, so the public link
-  never shows half-done work.
+1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
+2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece. Done.
+3. Juice: dives, swims, ripples, the water shader, sound. Done except sound and screen shake.
+4. Specials: special koi from bigger matches, and their combos.
+5. Boosters.
+6. Screens and content: title, tutorial, hint, handmade levels, an endless mode.
 
-Two GitHub Actions workflows back this up: `ci.yml` runs the typecheck, lint, tests and a build on every working
-branch and every pull request, and `deploy.yml` runs the same checks and publishes to GitHub Pages, only from `main`.
+## Tests
 
-The milestones, in order:
-
-1. **Playable core:** board, swipe, swap/clear/fall animations, turn flow, moves and win/lose
-2. **Goal system:** lily pads and lotus buds that bloom, with the goal as a swappable piece
-3. **Juice:** splashes, ripples, squash and stretch, shake, the water shader, sound
-4. **Specials:** the special koi made by bigger matches, and their combos
-5. **Boosters**
-6. **Screens and content:** title, tutorial, hint, handmade levels and an endless mode
-
-## Tests and why I have them
-
-`tests/rules.test.ts` was written by AI. I asked for it because the match-3 rules are the one part where a bug is
-easy to miss by playing: a board that starts with a ready-made match, a swap that should be refused, a cascade that
-leaves a hole. Those are hard to spot by eye and easy to break later when I add specials. So the tests check:
-
-- a new board has no matches and at least one move
-- the same seed gives the same board
-- rows, columns and T shapes are found
-- invalid swaps (no match, diagonal, too far) are refused and change nothing
-- a cascade always settles with a full board and pieces only fall down
-
-They run on every commit and on every push, so if I break the rules while working on the feel, I find out right away
-instead of in the middle of a playtest.
+32 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
+new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole. The rest
+cover scoring, the lily pads and goals, the state machine's guards and hooks, and how a swipe picks its cell. They
+run in CI on every push, so when I work on the feel I find out right away if I broke the rules.
 
 ## AI usage
 
-I used Claude (AI) as a helper during the project. So far:
+I used Claude throughout. AI wrote the code:
 
-- Prototype: before starting this repo I had AI build a quick throwaway prototype to test the idea and the feel
-  (koi on water, splashes, the lotus goal). This repo is a clean rebuild with a proper structure.
+- the project setup and tooling (Vite, TypeScript, ESLint, Prettier, the CI and deploy workflows)
+- the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
+- the model and its tests
+- the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
+- the water and the effects (simulation, shaders, dives and swims, wakes, shadows, ripples, waterline foam)
 
-- Project setup and tooling config (Vite, TypeScript, ESLint/Prettier, the CI and deploy workflows): AI-written.
-- `src/art/koiBank.ts` (the koi painter and varieties): AI-written.
-- `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
-- `tests/`: AI-written.
-- The water shader (`src/view/shaders/`, `src/view/PondWater.ts`): AI-written; I picked the look and tuned it.
-- `src/view/` (board rendering, swipe input, animations, HUD, end card), `src/game/` (the game scene) and
-  `src/config/`: AI-written, step by step from my plan,
-  reviewed and tested by me on desktop and phone.
-- `src/core/StateMachine.ts`: the guarded-transition design with enter/exit hooks is mine; AI wrote the code and
-  its tests.
-- Run-time notes in `src/model/rules.ts`: I used AI as a second opinion on performance, to go over each method's
-  cost and decide where a note is worth having (the non-obvious ones, not every getter).
-- Lint rules for the code standards above: I decided the standards, AI helped me turn them into ESLint config.
-- This README: I used AI to help me write it.
+My part:
+
+- I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
+  standards into ESLint config.
+- I designed the state machine: guarded transitions in a table, with enter/exit hooks.
+- I planned the lotus goal: the rules, a goal interface so a level can swap goals, and every number in config (hits
+  to bloom, lotuses, moves).
+- I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
+  for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
+- I reviewed the code and play-tested it on desktop and on my phone.
+
+AI also built a throwaway prototype before this repo, and helped me write this README.
 
 ## Next steps
 
-(to fill in at the end)
+- The same preset approach as the UI theme for the effects.
+- Specials from bigger matches, and the boosters themselves (the bar, icons and counts are in place).
+- A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
+- A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
+- Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

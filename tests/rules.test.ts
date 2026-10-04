@@ -3,6 +3,7 @@ import { Random } from '../src/core/Random';
 import { Board } from '../src/model/Board';
 import { createBoard, findMatches, findMove, resetBoard, swapMakesMatch, trySwap } from '../src/model/rules';
 import type { BoardSpec } from '../src/model/rules';
+import { parseShape } from '../src/model/shape';
 
 const SPEC: BoardSpec = { cols: 7, rows: 9, kinds: 5 };
 
@@ -122,7 +123,7 @@ describe('trySwap', () => {
         // every cleared cell is refilled: the piece count stays the same
         expect(step.spawns.length).toBe(step.cleared.length);
         for (const fall of step.falls) expect(fall.to.row).toBeGreaterThan(fall.from.row);
-        for (const spawn of step.spawns) expect(spawn.from.row).toBeLessThan(0);
+        for (const spawn of step.spawns) expect(spawn.order).toBeGreaterThanOrEqual(0);
       }
     }
   });
@@ -159,5 +160,81 @@ describe('trySwap', () => {
         { col: 2, row: 1 },
       ],
     ]);
+  });
+});
+
+describe('blocked cells (lily pads)', () => {
+  const pads = [
+    { col: 2, row: 3 },
+    { col: 5, row: 6 },
+  ];
+
+  it('places the pads first: no koi on a pad, every other cell filled', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const board = createBoard(SPEC, new Random(seed), pads);
+      for (const cell of board.cells()) {
+        if (pads.some((p) => p.col === cell.col && p.row === cell.row)) expect(board.get(cell)).toBeNull();
+        else expect(board.get(cell)).not.toBeNull();
+      }
+      expect(findMatches(board)).toEqual([]);
+    }
+  });
+
+  it('keeps cascades off the pads: koi fall past them and never land on them', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const rng = new Random(seed);
+      const board = createBoard(SPEC, rng, pads);
+      const move = findMove(board);
+      if (!move) throw new Error('no move');
+      const result = trySwap(board, move[0], move[1], SPEC, rng);
+      if (!result.valid) throw new Error('a found move was refused');
+      for (const pad of pads) expect(board.get(pad)).toBeNull();
+      for (const step of result.steps) {
+        for (const move of [...step.falls, ...step.spawns]) {
+          expect(pads.some((p) => p.col === move.to.col && p.row === move.to.row)).toBe(false);
+        }
+      }
+    }
+  });
+});
+
+describe('a shaped board (holes)', () => {
+  // a notch at the top, a bay on the right that splits column 6, the bottom corners cut off
+  const shaped: BoardSpec = {
+    ...parseShape(['##...##', '#######', '#######', '######.', '######.', '#######', '#######', '.#####.']),
+    kinds: 5,
+  };
+  const holes = shaped.holes ?? [];
+  const isHole = (cell: { col: number; row: number }): boolean =>
+    holes.some((h) => h.col === cell.col && h.row === cell.row);
+
+  it('fills every cell of the shape and none of the holes', () => {
+    const board = createBoard(shaped, new Random(2));
+    for (const cell of board.cells()) expect(board.get(cell) === null).toBe(isHole(cell));
+  });
+
+  it('never moves a koi across a hole: each falls within its own stretch of water', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const rng = new Random(seed);
+      const board = createBoard(shaped, rng);
+      const move = findMove(board);
+      if (!move) throw new Error('no move');
+      const result = trySwap(board, move[0], move[1], shaped, rng);
+      if (!result.valid) throw new Error('a found move was refused');
+      for (const step of result.steps) {
+        for (const fall of step.falls) {
+          for (let row = fall.from.row; row <= fall.to.row; row++)
+            expect(isHole({ col: fall.to.col, row })).toBe(false);
+        }
+        for (const spawn of step.spawns) expect(isHole(spawn.to)).toBe(false);
+      }
+      for (const cell of board.cells()) expect(board.get(cell) === null).toBe(isHole(cell));
+    }
+  });
+
+  it('does not count a run across a hole as a match', () => {
+    const board = new Board(5, 1, [{ col: 2, row: 0 }]);
+    for (const col of [0, 1, 3, 4]) board.set({ col, row: 0 }, board.createPiece(1));
+    expect(findMatches(board)).toEqual([]);
   });
 });

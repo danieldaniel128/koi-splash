@@ -8,7 +8,7 @@ function round(count: number): CascadeStep {
     piece: { id: i, kind: 0 },
     at: { col: i, row: 0 },
   }));
-  return { matches: [], cleared, falls: [], spawns: [] };
+  return { matches: [], cleared, padEvents: [], falls: [], spawns: [] };
 }
 
 describe('scoreSwap', () => {
