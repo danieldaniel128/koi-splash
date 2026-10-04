@@ -19,7 +19,7 @@ export const WATER = {
   // --- koi disturbing the water (pushes are in water-height units, -1..1; radius in px)
   /** A moving koi pushes the water at its tail every this many px of travel, so the pushes line up into a wake. */
   wakeSpacing: 7,
-  wakePush: 0.035,
+  wakePush: 0.05,
   wakeRadius: 8,
   /** Speed (px/s) at which the wake is at full strength. */
   wakeFullSpeed: 400,
@@ -31,9 +31,9 @@ export const WATER = {
   diveRadius: 9,
   surfacePush: 0.07,
   /** A swap shoves the water apart between the two koi (push, radius), and each koi settles with a smaller push. */
-  swapPush: 0.2,
-  swapRadius: 12,
-  swapSettlePush: 0.08,
+  swapPush: 0.32,
+  swapRadius: 15,
+  swapSettlePush: 0.1,
 
   // --- water body (under the koi): indigo-teal, lighter in the shallows by the shore, darkest in the middle
   shallow: '#195669',
@@ -77,7 +77,7 @@ export const WATER = {
    * A clean bright rim along strong fronts only: the slope where it starts and where it's full, its strength under
    * the koi, and over them (faint, so the koi stay clear).
    */
-  rimGate: [0.12, 0.3],
+  rimGate: [0.1, 0.24],
   rimStrength: 0.55,
   rimOverKoi: 0.2,
 
