@@ -5,7 +5,7 @@ import './ui/kit.css';
 import './ui/hud.css';
 import './ui/bar.css';
 import './ui/overlay.css';
-import type { PointData } from 'pixi.js';
+import type { PointData, Sprite } from 'pixi.js';
 import { bakeLotusPad } from './art/pondProps';
 import { SHORE_STYLES } from './art/shoreStyles';
 import { BOARD, SHAPE } from './config/board';
@@ -71,15 +71,9 @@ async function boot(host: HTMLElement): Promise<void> {
 
   const stage = new Container();
   putUnderWater(app, boardView, pond, board);
-  const backdrop = createBackdrop(
-    { width: layout.stage.width, horizon: layout.scene.height, open: layout.hud.y + layout.hud.height },
-    THEME.scene.backdrop,
-    app.renderer.resolution * layout.stage.scale,
-    POND.shore.seed,
-  );
   stage.addChild(
     pond.bank,
-    backdrop,
+    createGarden(app, layout),
     pond.bottom,
     boardView,
     pads, // over the koi: a koi swimming past a pad goes under the leaf
@@ -213,6 +207,27 @@ function createBorder(shore: readonly Outline[], resolution: number): ShoreRing 
   const rng = new Random(seed);
   const pieces = ringAlongShore(shore, POND.shore, () => rng.next());
   return new ShoreRing(pieces, SHORE_STYLES[style], seed, resolution);
+}
+
+/**
+ * The garden around the pond (see art/backdrop), baked once at exactly the screen's pixels per stage px: above the
+ * pond on a tall phone, beside it on a wide screen.
+ */
+function createGarden(app: Application, layout: GameLayout): Sprite {
+  const { stage, hud, pond, scene } = layout;
+  const shore = LAYOUT.shoreWidth;
+  return createBackdrop(
+    {
+      width: stage.width,
+      height: stage.height,
+      open: hud.y + hud.height,
+      sceneBottom: scene.height,
+      pond: { left: pond.x - shore, right: pond.x + pond.width + shore },
+    },
+    THEME.scene.backdrop,
+    app.renderer.resolution * stage.scale,
+    POND.shore.seed,
+  );
 }
 
 /** The lotus in the HUD's goal: painted by the same painter as the lotuses on the board. */

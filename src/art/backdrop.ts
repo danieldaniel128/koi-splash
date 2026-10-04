@@ -1,8 +1,9 @@
 /**
- * backdrop.ts - the scene above the pond, painted once on a canvas: a night sky with stars and the moon, hills going
- * back into the mist, a pagoda on the far hill, and a maple branch with a paper lantern hanging from it. Every
- * element sits on the horizon (the bottom of the scene) at a fixed size in px, and is left out when the scene is
- * too short for it, so a tall phone gets the whole garden and a desktop a strip of sky.
+ * backdrop.ts - the scene around the pond, painted once on a canvas: a night sky with stars and the moon, hills going
+ * back into the mist, a pagoda on the far hill, and a maple branch with a paper lantern hanging from it. On a tall
+ * phone it fills the open sky above the pond; on a wide screen the horizon drops to mid-screen and the garden stands
+ * in the room beside the pond, with a stone lantern and grass on the ground. Elements are a fixed size in px and are
+ * left out where there's no room for them.
  *
  * No framework code: the view bakes it into one texture.
  */
@@ -28,50 +29,154 @@ export interface BackdropLook {
   readonly hills: readonly { readonly color: string; readonly height: number; readonly roll: number }[];
   readonly rim: string;
   readonly trees: string;
+  /** Grass on the bank beside the pond (a wide screen): a little lighter than the ground, to show on it. */
+  readonly grass: string;
   readonly mist: string;
   /** The pagoda, the branch and the trunk are one ink colour; the lit windows and the lantern are warm. */
   readonly ink: string;
   readonly window: string;
   readonly leaves: string;
   readonly lantern: { readonly paper: string; readonly glow: string };
+  /** On a wide screen, where the horizon lies (share of the screen's height). */
+  readonly wideHorizon: number;
+}
+
+/** Where the scene goes on the stage (px): the pond's sides, and where the sky comes out from under the HUD. */
+export interface BackdropFrame {
+  readonly width: number;
+  readonly height: number;
+  /** The bottom of the HUD: on a tall phone the moon and the branch hang below it. */
+  readonly open: number;
+  /** The open ground above the pond ends here (the top of its shore). */
+  readonly sceneBottom: number;
+  readonly pond: { readonly left: number; readonly right: number };
+}
+
+/** How the scene is laid out for a frame: tall (above the pond) or wide (beside it), the horizon and its height. */
+export interface BackdropPlan {
+  readonly wide: boolean;
+  readonly horizon: number;
+  /** How tall the painting is: down to the horizon, or the whole screen when the ground beside the pond is dressed. */
+  readonly height: number;
+}
+
+/** With this much room on both sides of the pond (px), the garden moves beside it. */
+const WIDE_ROOM = 120;
+
+/** Tall or wide, for this frame. O(1). */
+export function planBackdrop(frame: BackdropFrame, look: BackdropLook): BackdropPlan {
+  const room = Math.min(frame.pond.left, frame.width - frame.pond.right);
+  if (room < WIDE_ROOM) return { wide: false, horizon: frame.sceneBottom, height: frame.sceneBottom };
+  return {
+    wide: true,
+    horizon: Math.max(frame.sceneBottom, frame.height * look.wideHorizon),
+    height: frame.height,
+  };
 }
 
 /** Below this much open sky under the HUD (px), the pagoda, the branch and the lantern are left out. */
-const GARDEN_MIN = 110;
+const GARDEN_MIN = 70;
+/** The hills are their full height in a sky this tall (px); in a shorter one they shrink with it. */
+const FULL_SKY = 170;
 /** The bottom of the scene fades out over this many px, so the bank shows through and the two meet softly. */
 const FADE = 28;
 
-/**
- * Paints the whole scene into `width` x `horizon` px (the canvas is already scaled to px). `open` is where the sky
- * comes out from under the HUD: the moon and the branch hang below it, so they are never hidden.
- */
+/** Paints the whole scene for a frame (the canvas is already scaled to px). */
 export function paintBackdrop(
   ctx: Ctx,
-  width: number,
-  sky: { horizon: number; open: number },
+  frame: BackdropFrame,
   look: BackdropLook,
   random: () => number,
 ): void {
-  const { horizon, open } = sky;
-  paintSky(ctx, width, horizon, look);
-  paintStars(ctx, width, horizon - (look.hills[0]?.height ?? 0), look, random);
-  // just under the HUD; low in a short sky, it rises from behind the hills
-  const moonY = Math.max(open + look.moon.radius + 8, open + (horizon - open) * look.moon.at[1]);
-  if (moonY < horizon - 12) paintMoon(ctx, width * look.moon.at[0], moonY, look);
-  const garden = horizon - open >= GARDEN_MIN;
-  const [far, ...near] = look.hills;
+  const plan = planBackdrop(frame, look);
+  const { horizon } = plan;
+  const spots = plan.wide ? wideSpots(frame, horizon) : tallSpots(frame, horizon, look);
+  const hills = fitHills(look.hills, plan.wide ? 1 : (horizon - frame.open) / FULL_SKY);
+  paintSky(ctx, frame.width, horizon, look);
+  paintStars(ctx, frame.width, horizon - (hills[0]?.height ?? 0), look, random);
+  if (spots.moon[1] < horizon - 12) paintMoon(ctx, spots.moon[0], spots.moon[1], look);
+  paintLandscape(ctx, { width: frame.width, horizon, hills, spots }, look, random);
+  fadeOut(ctx, frame.width, horizon);
+  if (plan.wide) paintGround(ctx, frame, horizon, look, random);
+}
+
+/** In a short strip of sky the hills shrink with it (down to 40%), so the moon and the garden still show above them. */
+function fitHills(hills: BackdropLook['hills'], room: number): BackdropLook['hills'] {
+  const shrink = Math.min(1, Math.max(0.4, room));
+  return hills.map((hill) => ({ ...hill, height: hill.height * shrink, roll: hill.roll * shrink }));
+}
+
+/** The hills from the back, the pagoda on the far one, mist in the valley, trees on the near ones, then the maple. */
+function paintLandscape(
+  ctx: Ctx,
+  scene: { width: number; horizon: number; hills: BackdropLook['hills']; spots: Spots },
+  look: BackdropLook,
+  random: () => number,
+): void {
+  const { width, horizon, spots } = scene;
+  const [far, ...near] = scene.hills;
   if (far) {
     const ridge = paintHill(ctx, width, horizon, far, random, look.rim);
-    if (garden)
-      paintPagoda(ctx, width * 0.5, ridge(width * 0.5) + 3, look, Math.min(1.25, (horizon - open) / 150));
+    if (spots.garden) paintPagoda(ctx, spots.pagoda.x, ridge(spots.pagoda.x) + 3, look, spots.pagoda.scale);
   }
   paintMist(ctx, width, horizon, look);
   for (const hill of near) {
     const ridge = paintHill(ctx, width, horizon, hill, random);
-    if (garden) paintTrees(ctx, width, ridge, look.trees, random);
+    if (spots.garden) paintTrees(ctx, width, ridge, look.trees, random);
   }
-  if (garden) paintBranch(ctx, width, open + 10, look, random);
-  fadeOut(ctx, width, horizon);
+  if (spots.garden) paintBranch(ctx, spots.branch, look, random);
+}
+
+/** Where things stand in the scene. */
+interface Spots {
+  readonly garden: boolean;
+  readonly moon: readonly [number, number];
+  readonly pagoda: { readonly x: number; readonly scale: number };
+  readonly branch: { readonly top: number; readonly reach: number };
+}
+
+/** A tall phone: everything in the strip of sky between the HUD and the pond. */
+function tallSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): Spots {
+  const { open, width } = frame;
+  // just under the HUD; low in a short sky, it rises from behind the hills
+  const moonY = Math.max(open + look.moon.radius + 8, open + (horizon - open) * look.moon.at[1]);
+  return {
+    garden: horizon - open >= GARDEN_MIN,
+    moon: [width * look.moon.at[0], moonY],
+    pagoda: { x: width * 0.5, scale: Math.min(1.25, (horizon - open) / 140) },
+    branch: { top: open + 10, reach: Math.min(width * 0.42, 170) },
+  };
+}
+
+/** A wide screen: the moon over the room right of the pond, the pagoda and the maple in the room left of it. */
+function wideSpots(frame: BackdropFrame, horizon: number): Spots {
+  const right = frame.pond.right + (frame.width - frame.pond.right) / 2;
+  return {
+    garden: true,
+    moon: [right, horizon * 0.34],
+    pagoda: { x: frame.pond.left * 0.55, scale: 1.5 },
+    branch: { top: 16, reach: Math.min(frame.pond.left * 0.8, 230) },
+  };
+}
+
+/** The ground beside the pond on a wide screen: a stone lantern glowing on the right, tufts of grass on both sides. */
+function paintGround(
+  ctx: Ctx,
+  frame: BackdropFrame,
+  horizon: number,
+  look: BackdropLook,
+  random: () => number,
+): void {
+  const ground = frame.height - horizon;
+  const rightRoom = frame.width - frame.pond.right;
+  paintStoneLantern(ctx, frame.pond.right + Math.min(rightRoom * 0.35, 150), horizon + ground * 0.62, look);
+  for (let i = 0; i < 10; i++) {
+    const left = i % 2 === 0;
+    const x = left
+      ? frame.pond.left * (0.15 + random() * 0.7)
+      : frame.pond.right + rightRoom * (0.15 + random() * 0.7);
+    paintGrass(ctx, x, horizon + ground * (0.3 + random() * 0.6), look, random);
+  }
 }
 
 function paintSky(ctx: Ctx, width: number, horizon: number, look: BackdropLook): void {
@@ -235,9 +340,9 @@ function roof(ctx: Ctx, y: number, half: number): void {
 }
 
 /** A maple branch reaching in from the left edge just under `top`, leaves along it, and a paper lantern hanging from it. */
-function paintBranch(ctx: Ctx, width: number, top: number, theme: BackdropLook, random: () => number): void {
-  const y = top + 30;
-  const reach = Math.min(width * 0.42, 170);
+function paintBranch(ctx: Ctx, spot: Spots['branch'], theme: BackdropLook, random: () => number): void {
+  const y = spot.top + 30;
+  const { reach } = spot;
   ctx.strokeStyle = theme.ink;
   ctx.lineCap = 'round';
   ctx.lineWidth = 6;
@@ -304,6 +409,49 @@ function paintLantern(ctx: Ctx, x: number, from: number, theme: BackdropLook): v
   ctx.fillStyle = theme.ink;
   ctx.fillRect(x - 5, y - 13, 10, 3);
   ctx.fillRect(x - 5, y + 10, 10, 3);
+}
+
+/**
+ * A stone lantern (a tōrō) standing on (x, base): a footing, a post, the light box with its window glowing warm, a
+ * wide cap with turned-up corners and a knob on top.
+ */
+function paintStoneLantern(ctx: Ctx, x: number, base: number, theme: BackdropLook): void {
+  ctx.save();
+  ctx.translate(x, base);
+  ctx.scale(1.6, 1.6);
+  const glow = ctx.createRadialGradient(0, -44, 3, 0, -44, 50);
+  glow.addColorStop(0, theme.lantern.glow);
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(-50, -94, 100, 100);
+  ctx.fillStyle = theme.ink;
+  ctx.fillRect(-14, -6, 28, 6); // the footing
+  ctx.fillRect(-5, -30, 10, 24); // the post
+  ctx.fillRect(-13, -34, 26, 5); // the shelf under the light
+  ctx.fillRect(-10, -54, 20, 20); // the light box
+  ctx.fillStyle = theme.lantern.paper;
+  ctx.fillRect(-5, -49, 10, 11); // its window, lit
+  ctx.fillStyle = theme.ink;
+  roof(ctx, -54, 15);
+  ctx.beginPath();
+  ctx.arc(0, -68, 3.5, 0, Math.PI * 2); // the knob on top
+  ctx.fill();
+  ctx.restore();
+}
+
+/** A tuft of grass blades fanning up from (x, base). */
+function paintGrass(ctx: Ctx, x: number, base: number, theme: BackdropLook, random: () => number): void {
+  ctx.strokeStyle = theme.grass;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 7; i++) {
+    const lean = (i - 3) * 0.22 + (random() - 0.5) * 0.2;
+    const tall = 10 + random() * 12;
+    ctx.beginPath();
+    ctx.moveTo(x + (i - 3) * 1.5, base);
+    ctx.quadraticCurveTo(x + lean * tall * 0.4, base - tall * 0.6, x + lean * tall, base - tall);
+    ctx.stroke();
+  }
 }
 
 /** Erases the last stretch above the horizon gradually, so the bank's pattern shows through where they meet. */

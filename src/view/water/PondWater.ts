@@ -272,7 +272,9 @@ function quadGeometry({ x, y, width, height }: SimArea): Geometry {
  * wet band on the bank.
  */
 function pondShape(layout: PondLayout): PondShapeResources {
-  const reach = POND.wetBand + POND.shoreWobble + FIELD_MARGIN;
+  // far enough out for the wet band and the raked rings round the shore
+  const { rake } = THEME.scene;
+  const reach = Math.max(POND.wetBand, rake.period * (rake.rings + 1)) + POND.shoreWobble + FIELD_MARGIN;
   const { pond } = layout;
   const area = {
     x: pond.x - reach,
@@ -301,7 +303,7 @@ function pondShape(layout: PondLayout): PondShapeResources {
   };
 }
 
-/** The distance field: one texel every this many px, and how far past the bank's wet band it reaches (px). */
+/** The distance field: one texel every this many px, and how far past the ground's rings it reaches (px). */
 const FIELD_TEXEL = 2;
 const FIELD_MARGIN = 8;
 
@@ -309,10 +311,12 @@ function bankLook(layout: PondLayout): UniformDefs {
   const halfWidth = layout.stageWidth / 2;
   const halfHeight = layout.stageHeight / 2;
   const { stretch, strength, from, to } = THEME.scene.vignette;
+  const { rake } = THEME.scene;
   return {
-    uBank: { value: color(THEME.scene.bank), type: 'vec3<f32>' },
-    uBankPattern: { value: color(THEME.scene.bankPattern), type: 'vec3<f32>' },
-    uPatternSize: { value: THEME.scene.patternSize, type: 'f32' },
+    uGround: { value: color(THEME.scene.bank), type: 'vec3<f32>' },
+    uRidge: { value: color(THEME.scene.ridge), type: 'vec3<f32>' },
+    uGroove: { value: color(THEME.scene.groove), type: 'vec3<f32>' },
+    uRake: { value: [rake.period, rake.rings, rake.wobble], type: 'vec3<f32>' },
     uWetBand: { value: POND.wetBand, type: 'f32' },
     uFrame: {
       value: [halfWidth, halfHeight, halfWidth * stretch[0], halfHeight * stretch[1]],
