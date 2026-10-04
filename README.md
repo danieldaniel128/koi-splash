@@ -38,7 +38,12 @@ cells (round notches, bays and islands of bank), pushes it out by the margins an
 is baked once into a distance field (`bakeDistanceField`), so every water shader knows how far it is from the shore
 of any shape with a single texture read. The border is a ring of pieces along the same outline. Where they go is
 plain math (`ringAlongShore`: random sizes round each loop, scaled to close with no seam); what they look like is a
-painter. The tracer, the field, the ring and the atlas packing are all unit tested. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
+painter. The tracer, the field, the ring and the atlas packing are all unit tested.
+
+Above the pond, the layout leaves an open scene (the pond sits low, like the art over the board in commercial
+match-3s), and a moonlit garden is painted into it once (`src/art/backdrop.ts`): sky, stars and the moon, misty
+hills, a pagoda, a tree line and a maple with a paper lantern. Each element stands on the horizon at a fixed size and
+is left out when there's no room for it, so a tall phone gets the whole garden and a desktop a strip of sky. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
 screen's real pixel density, so the whole border is one texture and one draw call.
 
 Changing the look is meant to be config, not surgery:
@@ -52,8 +57,8 @@ Changing the look is meant to be config, not surgery:
   takes the pond's rect from the layout can replace it.
 - **Rocks in the water:** `POND.props`. They stop the ripples and get the same shore foam as the pond's edge.
 - **Water and bank:** colours, waves and foam in `src/config/water.ts` and `src/config/pond.ts`.
-- **UI and background:** colours, type, spacing, motion and the scene around the pond are one theme in `src/theme`,
-  read by the CSS and by Pixi.
+- **UI and background:** colours, type, spacing, motion, the bank and the garden above the pond are one theme in
+  `src/theme`, read by the CSS and by Pixi. A new look is a new theme file.
 
 ## How it's built
 
