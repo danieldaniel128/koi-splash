@@ -43,8 +43,8 @@ export class KoiTextures {
   private readonly ripples: Texture[];
 
   /**
-   * O(kinds x frames) canvas paints plus GPU uploads: the heavy part of boot, done once (5 kinds x 12 poses, each
-   * painted in two parts and outlined, take well under a hundred ms on a phone).
+   * O(kinds x frames) canvas paints, twice: the inked poses and their blurred contact masks, plus one ripple ring
+   * and one shadow per kind, then GPU uploads. The heavy part of boot, done once (about 0.7 s on a desktop at 2.5x).
    */
   constructor(varietyIds: readonly string[], bake: KoiBake) {
     this.poses = varietyIds.map((id) => bakePoses(id, bake));

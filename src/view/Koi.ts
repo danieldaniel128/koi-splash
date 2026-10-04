@@ -39,7 +39,7 @@ export class Koi extends Sprite {
     this.rotation = this.facing;
   }
 
-  /** How many tail beats the koi has made: each one sends a small ripple out (see BoardView). */
+  /** How many tail beats the koi has made: each one sends a small ripple out (see KoiWaterline). */
   get beats(): number {
     return this.beatCount;
   }

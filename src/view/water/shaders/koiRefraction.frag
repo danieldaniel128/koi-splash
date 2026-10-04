@@ -2,7 +2,7 @@
 // - what's under each pixel shifts with the wave slope there, and every ripple visibly passes over the koi (and
 //   their shadows on the bottom)
 // - they take on a little of the water colour, so they sit in the water instead of on top of it
-// No outline: foam only forms where something breaks the surface (the shore, stones, pads), not around a koi.
+// No foam here: the foam around each koi is drawn above them by surface.frag (koiFoam), from the KoiContact mask.
 // common.glsl and waves.glsl are prepended to this file.
 
 in vec2 vTextureCoord;
