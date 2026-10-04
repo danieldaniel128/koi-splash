@@ -36,34 +36,41 @@ export interface BackdropLook {
   readonly lantern: { readonly paper: string; readonly glow: string };
 }
 
-/** Below this much open sky (px), the pagoda, the branch and the lantern are left out. */
-const GARDEN_MIN = 120;
+/** Below this much open sky under the HUD (px), the pagoda, the branch and the lantern are left out. */
+const GARDEN_MIN = 110;
 /** The bottom of the scene fades out over this many px, so the bank shows through and the two meet softly. */
 const FADE = 28;
 
-/** Paints the whole scene into `width` x `horizon` px (the canvas is already scaled to px). */
+/**
+ * Paints the whole scene into `width` x `horizon` px (the canvas is already scaled to px). `open` is where the sky
+ * comes out from under the HUD: the moon and the branch hang below it, so they are never hidden.
+ */
 export function paintBackdrop(
   ctx: Ctx,
   width: number,
-  horizon: number,
+  sky: { horizon: number; open: number },
   look: BackdropLook,
   random: () => number,
 ): void {
+  const { horizon, open } = sky;
   paintSky(ctx, width, horizon, look);
   paintStars(ctx, width, horizon - (look.hills[0]?.height ?? 0), look, random);
-  paintMoon(ctx, width * look.moon.at[0], Math.max(look.moon.radius + 6, horizon * look.moon.at[1]), look);
-  const garden = horizon >= GARDEN_MIN;
+  // just under the HUD; low in a short sky, it rises from behind the hills
+  const moonY = Math.max(open + look.moon.radius + 8, open + (horizon - open) * look.moon.at[1]);
+  if (moonY < horizon - 12) paintMoon(ctx, width * look.moon.at[0], moonY, look);
+  const garden = horizon - open >= GARDEN_MIN;
   const [far, ...near] = look.hills;
   if (far) {
     const ridge = paintHill(ctx, width, horizon, far, random, look.rim);
-    if (garden) paintPagoda(ctx, width * 0.5, ridge(width * 0.5) + 3, look, Math.min(1.25, horizon / 190));
+    if (garden)
+      paintPagoda(ctx, width * 0.5, ridge(width * 0.5) + 3, look, Math.min(1.25, (horizon - open) / 150));
   }
   paintMist(ctx, width, horizon, look);
   for (const hill of near) {
     const ridge = paintHill(ctx, width, horizon, hill, random);
     if (garden) paintTrees(ctx, width, ridge, look.trees, random);
   }
-  if (garden) paintBranch(ctx, width, horizon, look, random);
+  if (garden) paintBranch(ctx, width, open + 10, look, random);
   fadeOut(ctx, width, horizon);
 }
 
@@ -227,15 +234,9 @@ function roof(ctx: Ctx, y: number, half: number): void {
   ctx.fill();
 }
 
-/** A maple branch reaching in from the left edge, leaves along it, and a paper lantern hanging from its tip. */
-function paintBranch(
-  ctx: Ctx,
-  width: number,
-  horizon: number,
-  theme: BackdropLook,
-  random: () => number,
-): void {
-  const y = Math.max(78, horizon * 0.42);
+/** A maple branch reaching in from the left edge just under `top`, leaves along it, and a paper lantern hanging from it. */
+function paintBranch(ctx: Ctx, width: number, top: number, theme: BackdropLook, random: () => number): void {
+  const y = top + 30;
   const reach = Math.min(width * 0.42, 170);
   ctx.strokeStyle = theme.ink;
   ctx.lineCap = 'round';

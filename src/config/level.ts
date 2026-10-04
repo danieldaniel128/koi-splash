@@ -18,6 +18,8 @@ export const LEVEL = {
   shape: ['##...##', '#######', '#######', '#######', '#####..', '#####..', '#######', '#######', '.#####.'],
   /** The lotus goal: bloom every bud. Swap for { type: 'score', target: 1500 } to play for points instead. */
   goal: { type: 'lotus', count: 3 } as GoalDef,
+  /** The win rating (as in the prototype): 2 stars with 15% of the moves left, 3 with 35%. */
+  stars: { two: 0.15, three: 0.35 },
   pads: {
     /** One bud per lotus in the goal (keep these two equal for a lotus goal). */
     buds: 3,

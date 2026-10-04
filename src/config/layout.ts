@@ -11,8 +11,8 @@ export const LAYOUT = {
   rows: BOARD.rows,
   designWidth: 360,
   designHeight: 640,
-  hudHeight: 58,
-  barHeight: 66,
+  hudHeight: 80,
+  barHeight: 76,
   sidePadding: 8,
   sectionGap: 6,
   /** The stones around the pond reach this far out from the water (see POND.shore). */

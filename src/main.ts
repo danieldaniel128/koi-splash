@@ -1,4 +1,6 @@
 import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
+import '@fontsource/nunito/latin-700.css';
+import '@fontsource/nunito/latin-900.css';
 import './ui/kit.css';
 import './ui/hud.css';
 import './ui/bar.css';
@@ -13,7 +15,7 @@ import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
 import type { PondProp } from './config/pond';
-import { GOAL_TRAY, POWER_BAR } from './config/ui';
+import { BOOSTERS, GOAL_TRAY } from './config/ui';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
@@ -37,7 +39,7 @@ import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 import { Hud } from './ui/Hud';
-import { placePowerBar } from './ui/PowerBar';
+import { BoosterBar } from './ui/BoosterBar';
 import { ResultCard } from './ui/ResultCard';
 import { RotateNotice } from './ui/RotateNotice';
 import { THEME, applyTheme } from './theme/theme';
@@ -46,14 +48,15 @@ import { UiLayer } from './ui/UiLayer';
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
 async function boot(host: HTMLElement): Promise<void> {
   applyTheme(document.documentElement);
+  await loadFonts(); // the Pixi labels are drawn once with whatever font is ready, so make sure it's Nunito
   await new RotateNotice(document.body).upright(); // lay out for the phone held upright
   const app = await createApp(host);
   const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
   const { board } = layout;
   const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
-  const hud = new Hud(ui, layout.hud, lotusIcon(app));
-  placePowerBar(ui, layout.bar, POWER_BAR.slots);
+  const hud = new Hud(ui, layout.hud, { lotusIcon: lotusIcon(app), stars: LEVEL.stars });
+  new BoosterBar(ui, layout.bar, BOOSTERS);
 
   const textures = createTextures(app, board.piece);
   const pond = createPond(app, layout, shore);
@@ -69,7 +72,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const stage = new Container();
   putUnderWater(app, boardView, pond, board);
   const backdrop = createBackdrop(
-    { width: layout.stage.width, horizon: layout.scene.height },
+    { width: layout.stage.width, horizon: layout.scene.height, open: layout.hud.y + layout.hud.height },
     THEME.scene.backdrop,
     app.renderer.resolution * layout.stage.scale,
     POND.shore.seed,
@@ -314,6 +317,11 @@ function fitStage(
   const scale = Math.min(screen.width / size.width, screen.height / size.height);
   stage.scale.set(scale);
   stage.position.set((screen.width - size.width * scale) / 2, (screen.height - size.height * scale) / 2);
+}
+
+/** Waits for the bundled font's weights the game draws with (a missing one just falls back, it never throws). */
+async function loadFonts(): Promise<void> {
+  await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
 }
 
 function showBootError(host: HTMLElement, error: unknown): void {

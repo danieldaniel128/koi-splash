@@ -96,9 +96,13 @@ shore are all config. The border follows the pond's outline and the moon is pinn
 its shape on any phone, tablet or desktop. Phones play upright; turned sideways they get a notice.
 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
-It's built from small components (moves, score, goal, specials bar, end card) and a little CSS kit (panel, number,
-label, track, button) that only reads theme tokens (`src/theme`). The same tokens are used by the Pixi side,
-so a new look is a change of tokens, not of components.
+I modelled the HUD on the casual match-3s I studied: moves big in a glass orb (it warns when they run low), the
+score, a goal chip that ticks down to a check, and a star bar. The stars are the prototype's rating (one for the
+goal, two or three for moves left over, `starsFor`); the bar is a meter where each star owns a third
+(`starMeter`), so they sit evenly however the rule is tuned. Under the pond, the booster bar uses the prototype's
+icons with count badges. It's all small components on a little CSS kit (glass panel, orb, chip, badge, track, button)
+that only reads theme tokens (`src/theme`), with the same tokens used by the Pixi side, so a new look is a change of
+tokens, not of components. The rounded font (Nunito) is bundled, so it's the same on every phone.
 
 Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the score
 popups (`ScorePopups`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes
@@ -167,7 +171,7 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 ## Next steps
 
 - The same preset approach as the UI theme for the effects.
-- Specials from bigger matches (the bar already has their slots), and boosters.
+- Specials from bigger matches, and the boosters themselves (the bar, icons and counts are in place).
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 - Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

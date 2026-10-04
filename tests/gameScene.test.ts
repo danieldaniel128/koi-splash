@@ -20,6 +20,7 @@ function stubScene(): { scene: GameScene; statuses: GameStatus[]; pads: Pad[]; n
       pointsPerPiece: 10,
       goal: { type: 'lotus', count: 1 },
       pads: { buds: 1, emptyPads: 0, hitsToBloom: 2, hitsToDrift: 1, spacing: 2 },
+      stars: { two: 0.15, three: 0.35 },
     },
     rng: new Random(3),
     view: { render: () => undefined },

@@ -1,66 +1,46 @@
-import { GOAL_TRAY, HUD_MOTION } from '../config/ui';
+import { HUD_MOTION } from '../config/ui';
 import type { GoalProgress } from '../model/goals';
+import { CHECK, STAR, setIcon } from './icons';
 import { bump, el } from './UiLayer';
 
 /**
- * The level's goal. A lotus goal shows one slot per lotus that fills as each one blooms (or a count, for a big
- * goal); a score goal shows a bar filling toward the target. Rebuilt only when the goal itself changes.
+ * The level's goal as a chip: its icon and how many are still to go (lotuses to bloom, or points to score), which
+ * ticks down with a pop and turns into a check once the goal is met.
  */
 export class GoalTray {
   readonly element = el('div', 'goal');
-  private slots: HTMLImageElement[] = [];
-  private count: HTMLElement | null = null;
-  private bar: HTMLElement | null = null;
-  private shape = '';
-  private done = 0;
+  /** The goal's icon: a bloomed lotus flies here. */
+  readonly icon = el('span', 'chip__icon');
+  private readonly count = el('span', 'number chip__count');
+  private readonly chip = el('div', 'chip', this.icon, this.count);
+  private kind = '';
+  private left = -1;
 
-  constructor(private readonly lotusIcon: string) {}
+  constructor(private readonly lotusIcon: string) {
+    this.element.append(this.chip, el('span', 'label', 'goal'));
+  }
 
   update(goal: GoalProgress): void {
-    const shape = `${goal.kind}:${goal.target}`;
-    if (shape !== this.shape) this.build(goal, shape);
-    else if (goal.done < this.done) this.build(goal, shape); // a restart
-    this.show(goal);
+    if (goal.kind !== this.kind) this.showKind(goal.kind);
+    const left = Math.max(0, goal.target - goal.done);
+    if (left === this.left) return;
+    const first = this.left < 0 || left > this.left; // the first show, or a restart
+    this.left = left;
+    const done = left === 0;
+    this.chip.classList.toggle('chip--done', done);
+    if (done) setIcon(this.count, CHECK);
+    else this.count.textContent = `${left}`;
+    if (!first) bump(this.chip, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
   }
 
-  private show(goal: GoalProgress): void {
-    if (this.bar) this.bar.style.width = `${Math.min(1, goal.done / goal.target) * 100}%`;
-    if (this.count) this.count.textContent = `${goal.done} / ${goal.target}`;
-    this.slots.forEach((slot, i) => {
-      const filled = i < goal.done;
-      if (filled && slot.classList.contains('goal__slot--empty')) {
-        slot.classList.remove('goal__slot--empty');
-        bump(slot, HUD_MOTION.slotBump, HUD_MOTION.slotSettle);
-      }
-    });
-    this.done = goal.done;
-  }
-
-  private build(goal: GoalProgress, shape: string): void {
-    this.shape = shape;
-    this.done = 0;
-    this.slots = [];
-    this.count = null;
-    this.bar = null;
-    if (goal.kind === 'score') {
-      this.bar = el('span', 'goal__fill');
-      this.element.replaceChildren(el('span', 'track', this.bar), el('span', 'label', `goal ${goal.target}`));
-    } else if (goal.target <= GOAL_TRAY.maxSlots) {
-      this.slots = Array.from({ length: goal.target }, () => this.lotus('goal__slot goal__slot--empty'));
-      this.element.replaceChildren(el('span', 'goal__slots', ...this.slots), el('span', 'label', 'lotus'));
-    } else {
-      this.count = el('span', 'number goal__count');
-      this.element.replaceChildren(
-        el('span', 'goal__slots', this.lotus('goal__slot'), this.count),
-        el('span', 'label', 'lotus'),
-      );
-    }
-  }
-
-  private lotus(className: string): HTMLImageElement {
-    const image = el('img', className);
-    image.src = this.lotusIcon;
-    image.alt = '';
-    return image;
+  private showKind(kind: GoalProgress['kind']): void {
+    this.kind = kind;
+    this.left = -1;
+    if (kind === 'lotus') {
+      const image = el('img', 'chip__image');
+      image.src = this.lotusIcon;
+      image.alt = '';
+      this.icon.replaceChildren(image);
+    } else setIcon(this.icon, STAR);
   }
 }

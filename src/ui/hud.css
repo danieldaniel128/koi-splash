@@ -1,29 +1,63 @@
-/* The HUD above the pond: the moves drop, then the score and goal panel. */
+/* The HUD above the pond: the moves orb, then a glass panel with the score, the goal chip and the star bar. */
 
 .hud {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
 }
 
 .moves {
+  position: relative;
+  z-index: 1; /* over the panel's left end */
   flex: none;
-  width: 54px;
-  height: 54px;
-  padding-top: 6px;
+  width: 78px;
+  height: 78px;
+  transition: box-shadow var(--time-normal);
 }
 
 .moves__value {
-  font-size: var(--text-lg);
+  font-size: 34px;
+}
+
+.moves .label {
+  margin-top: 1px;
+}
+
+.moves--low {
+  box-shadow:
+    inset 0 0 0 2px var(--color-coral),
+    inset 0 2px 1px rgba(255, 255, 255, 0.28),
+    inset 0 -8px 14px rgba(0, 10, 20, 0.45),
+    0 0 14px rgba(255, 143, 158, 0.45);
+}
+
+.moves--low .moves__value {
+  color: var(--color-coral);
+}
+
+.moves--last {
+  animation: moves-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes moves-pulse {
+  50% {
+    transform: scale(1.07);
+  }
 }
 
 .hud__panel {
   flex: 1;
-  height: 50px;
+  height: 70px;
+  margin-left: -26px; /* tucked under the orb */
+  padding: var(--space-sm) var(--space-md) var(--space-sm) 34px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.hud__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-lg) 0 var(--space-xl);
 }
 
 .score {
@@ -38,32 +72,85 @@
 
 .goal {
   display: grid;
-  justify-items: end;
-  gap: 2px;
-  min-width: 96px;
+  justify-items: center;
+  gap: 1px;
 }
 
-.goal .track {
+.chip__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--color-gold);
+}
+
+.chip__image {
+  width: 38px;
+  height: 38px;
+  margin: -5px; /* the baked lotus has room around it for its shadow */
+}
+
+.chip__count {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 22px;
+  font-size: var(--text-lg);
+}
+
+.chip__count svg {
+  width: 20px;
+  height: 20px;
+}
+
+.chip--done {
+  box-shadow:
+    inset 0 0 0 1.5px var(--color-gold),
+    0 0 12px rgba(255, 215, 106, 0.45);
+}
+
+.chip--done .chip__count {
+  color: var(--color-gold);
+}
+
+.stars {
+  position: relative;
+  height: 18px;
+  margin-top: var(--space-xs);
+}
+
+.stars__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 7px;
+}
+
+.stars__fill {
+  background: linear-gradient(90deg, var(--color-goldDeep), var(--color-goldLight));
+}
+
+.stars__star {
+  position: absolute;
+  top: -3px;
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  color: #33415e;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+  transition:
+    color var(--time-normal),
+    filter var(--time-normal);
+}
+
+.stars__star svg {
+  display: block;
   width: 100%;
+  height: 100%;
 }
 
-.goal__slots {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.goal__slot {
-  width: 34px;
-  height: 34px;
-  margin: -4px; /* the baked icon has room around the pad for its shadow */
-}
-
-.goal__slot--empty {
-  filter: grayscale(0.7);
-  opacity: 0.4;
-}
-
-.goal__count {
-  font-size: var(--text-md);
+.stars__star--lit {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 4px rgba(255, 215, 106, 0.75));
 }
