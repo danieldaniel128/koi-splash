@@ -118,13 +118,14 @@ export function sheenFrames(body: HTMLCanvasElement, frames: number): HTMLCanvas
 
 /**
  * A whirlpool's eddy, `size` px across: dark at its eye, three tapered arms in `colour` with white crests curling
- * into it, fading out at the rim. Turn the sprite to make it spin.
+ * counter-clockwise into it, fading out at the rim. Turned clockwise, the arms seem to draw in, down the drain.
  */
 export function paintWhirlpool(size: number, colour: string): HTMLCanvasElement {
   const canvas = blank(size);
   const ctx = context(canvas);
   const r = size / 2;
   ctx.translate(r, r);
+  ctx.scale(1, -1); // the arms below curl clockwise inward; mirrored, they curl counter-clockwise
   const eye = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
   eye.addColorStop(0, 'rgba(0, 5, 14, 0.96)');
   eye.addColorStop(0.22, 'rgba(2, 16, 34, 0.82)');
@@ -146,27 +147,77 @@ export function paintWhirlpool(size: number, colour: string): HTMLCanvasElement 
   return canvas;
 }
 
+/** How much of its own length a curled koi wraps round the ring (under 1: a little slimmer, head clear of tail). */
+const CURL_WRAP = 0.95;
+
 /**
- * A head-up koi curled round a ring of `radius` px, head leading clockwise, as if swept into a whirlpool's eye: the
- * koi is cut into thin strips along its length and each is laid along the ring.
+ * A head-up koi curled round a ring of `radius` px, head leading clockwise, as if swept into a whirlpool's eye. A
+ * polar warp, pixel by pixel: across the koi becomes out from the centre and along it becomes round the ring, so the
+ * outline stays one smooth line (cut into strips, the stretched outer edge broke up into seams).
  */
 export function curl(koi: HTMLCanvasElement, radius: number): HTMLCanvasElement {
   const size = koi.width;
+  const source = koi.getContext('2d')?.getImageData(0, 0, size, koi.height);
+  if (!source) throw new Error('specialKoi: 2D canvas not available');
   const canvas = blank(size);
   const ctx = context(canvas);
-  const strips = 48;
-  const strip = size / strips;
-  ctx.translate(size / 2, size / 2);
-  for (let k = strips - 1; k >= 0; k--) {
-    // tail first, so the head is drawn over it
-    const y = k * strip;
-    const along = size / 2 - (y + strip / 2); // + toward the head
-    ctx.save();
-    ctx.rotate(-(along / radius) * 0.95);
-    ctx.drawImage(koi, 0, y, size, strip + 0.6, radius - size / 2, -strip / 2, size, strip + 0.6);
-    ctx.restore();
+  const out = ctx.createImageData(size, size);
+  const centre = size / 2;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x + 0.5 - centre;
+      const dy = y + 0.5 - centre;
+      const across = Math.hypot(dx, dy) - radius; // + away from the centre
+      const along = (Math.atan2(dy, dx) * radius) / CURL_WRAP; // + clockwise, toward the head
+      sample(source, { x: centre + across - 0.5, y: centre - along - 0.5 }, out.data, (y * size + x) * 4);
+    }
   }
+  ctx.putImageData(out, 0, 0);
   return canvas;
+}
+
+/**
+ * Reads `image` at a point between pixels into `into` at `at`: bilinear, weighted by alpha so the dark water round
+ * a sprite's edge doesn't bleed in. Outside the image is clear.
+ */
+function sample(image: ImageData, point: PointLike, into: Uint8ClampedArray, at: number): void {
+  const x0 = Math.floor(point.x);
+  const y0 = Math.floor(point.y);
+  const fx = point.x - x0;
+  const fy = point.y - y0;
+  const sum = { r: 0, g: 0, b: 0, a: 0 };
+  addTexel(image, { x: x0, y: y0 }, (1 - fx) * (1 - fy), sum);
+  addTexel(image, { x: x0 + 1, y: y0 }, fx * (1 - fy), sum);
+  addTexel(image, { x: x0, y: y0 + 1 }, (1 - fx) * fy, sum);
+  addTexel(image, { x: x0 + 1, y: y0 + 1 }, fx * fy, sum);
+  if (sum.a <= 0) return;
+  into[at] = sum.r / sum.a;
+  into[at + 1] = sum.g / sum.a;
+  into[at + 2] = sum.b / sum.a;
+  into[at + 3] = sum.a;
+}
+
+/** Adds one pixel of `image`, by `weight`, to a running alpha-weighted sum (nothing if it's outside the image). */
+function addTexel(
+  image: ImageData,
+  pixel: PointLike,
+  weight: number,
+  sum: { r: number; g: number; b: number; a: number },
+): void {
+  if (pixel.x < 0 || pixel.y < 0 || pixel.x >= image.width || pixel.y >= image.height) return;
+  const i = (pixel.y * image.width + pixel.x) * 4;
+  const { data } = image;
+  const alpha = (data[i + 3] ?? 0) * weight;
+  sum.r += (data[i] ?? 0) * alpha;
+  sum.g += (data[i + 1] ?? 0) * alpha;
+  sum.b += (data[i + 2] ?? 0) * alpha;
+  sum.a += alpha;
+}
+
+/** A point in a canvas's pixels. */
+interface PointLike {
+  readonly x: number;
+  readonly y: number;
 }
 
 /** One tapered ribbon spiralling into the centre: wide in the middle, thin at both ends. */

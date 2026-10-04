@@ -149,15 +149,19 @@ class WhirlLook implements Look {
   private readonly eddy: Sprite;
   private readonly phase = Math.random() * Math.PI * 2;
 
-  constructor(koi: Koi, textures: SpecialTextures, layers: Layers) {
+  constructor(
+    private readonly koi: Koi,
+    textures: SpecialTextures,
+    layers: Layers,
+  ) {
     this.eddy = new Sprite(textures.eddy(koi.kind));
     this.eddy.anchor.set(0.5);
     layers.under.addChild(this.eddy);
+    koi.spin = SPECIAL_LOOK.whirl.koiSpin; // the curled koi turns in the eye, head first, with the water
   }
 
   follow(koi: Koi, time: number): void {
     const look = SPECIAL_LOOK.whirl;
-    koi.heading = time * look.koiSpin + this.phase; // the curled koi turns in the eye
     this.eddy.position.copyFrom(koi.position);
     this.eddy.rotation = time * look.spin + this.phase;
     this.eddy.setSize(koi.width * look.eddy);
@@ -165,6 +169,7 @@ class WhirlLook implements Look {
   }
 
   destroy(): void {
+    this.koi.spin = null;
     this.eddy.destroy();
   }
 }

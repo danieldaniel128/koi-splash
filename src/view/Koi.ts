@@ -13,6 +13,11 @@ export class Koi extends Sprite {
   heading: number;
   /** The scale it has at rest; lifts and dives are relative to it. */
   readonly restScale: number;
+  /**
+   * When set, the koi turns steadily at this rate (rad/s, clockwise) instead of swimming: no heading, no sway (a
+   * whirlpool's koi, curled in its eye).
+   */
+  spin: number | null = null;
   private facing: number;
   private tailPhase: number;
   private readonly swayPhase: number;
@@ -54,6 +59,11 @@ export class Koi extends Sprite {
     const phase = this.tailPhase + beat * deltaSeconds;
     this.tailPhase = phase % 1;
     this.texture = this.poses[this.pose] ?? this.texture;
+    if (this.spin !== null) {
+      this.rotation += this.spin * deltaSeconds;
+      this.facing = this.heading = this.rotation;
+      return;
+    }
 
     const turn = 1 - Math.exp(-KOI_SWIM.turnRate * deltaSeconds);
     this.facing += shortestTurn(this.facing, this.heading) * turn;
