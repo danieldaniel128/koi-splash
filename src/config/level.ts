@@ -15,7 +15,7 @@ export const LEVEL = {
    * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). Keep a notch or
    * bay at least 2 cells wide, so there is room for the stones on both of its sides.
    */
-  shape: ['##...##', '#######', '#######', '#######', '#####..', '#####..', '#######', '#######', '.#####.'],
+  shape: ['..###..', '.#####.', '#######', '#######', '.#####.', '#######', '#######', '.#####.', '..###..'],
   /** The lotus goal: bloom every bud. Swap for { type: 'score', target: 1500 } to play for points instead. */
   goal: { type: 'lotus', count: 3 } as GoalDef,
   /** The win rating (as in the prototype): 2 stars with 15% of the moves left, 3 with 35%. */
