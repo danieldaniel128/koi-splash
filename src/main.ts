@@ -6,7 +6,7 @@ import './ui/overlay.css';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad } from './art/pondProps';
 import { SHORE_STYLES } from './art/shoreStyles';
-import { BOARD } from './config/board';
+import { BOARD, SHAPE } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
 import { LAYOUT } from './config/layout';
@@ -18,6 +18,8 @@ import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
 import { placeOn } from './layout/anchor';
+import { traceShore } from './layout/outline';
+import type { Outline } from './layout/outline';
 import { ringAlongShore } from './layout/shore';
 import { layoutGame } from './layout/gameLayout';
 import type { GameLayout, Rect } from './layout/gameLayout';
@@ -47,12 +49,13 @@ async function boot(host: HTMLElement): Promise<void> {
   const app = await createApp(host);
   const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
   const { board } = layout;
+  const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, lotusIcon(app));
   placePowerBar(ui, layout.bar, POWER_BAR.slots);
 
   const textures = createTextures(app, board.piece);
-  const pond = createPond(app, layout);
+  const pond = createPond(app, layout, shore);
 
   const boardView = new BoardView(textures, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
   boardView.position.set(board.x, board.y);
@@ -71,7 +74,7 @@ async function boot(host: HTMLElement): Promise<void> {
     pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
     popups,
-    createScenery(app, layout),
+    createScenery(app, layout, shore),
   );
   app.stage.addChild(stage);
   keepFitted(app, { stage, ui }, layout.stage, boardView, pond);
@@ -166,10 +169,10 @@ function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayo
 }
 
 /** The pond's border and stones (painted once) and fireflies over the bank, on the app's clock. */
-function createScenery(app: Application, layout: GameLayout): Container {
+function createScenery(app: Application, layout: GameLayout, shore: readonly Outline[]): Container {
   const props = new PondProps(placeProps(layout.pond), app.renderer.resolution * KOI_LOOK.bakeResolution);
   // the ring is baked at exactly the screen's pixels per stage px (the layout is made for this screen)
-  const shore = createShore(layout.pond, app.renderer.resolution * layout.stage.scale);
+  const border = createBorder(shore, app.renderer.resolution * layout.stage.scale);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
   const fireflies = new Fireflies({
     spots: [
@@ -184,7 +187,7 @@ function createScenery(app: Application, layout: GameLayout): Container {
     fireflies.tick(ticker.deltaMS / 1000);
   });
   const scenery = new Container();
-  scenery.addChild(props, shore, fireflies);
+  scenery.addChild(props, border, fireflies);
   return scenery;
 }
 
@@ -193,11 +196,11 @@ function placeProps(pond: Rect): PondProp[] {
   return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
 }
 
-/** The border along this pond's shore, in the style the config picks. */
-function createShore(pond: Rect, resolution: number): ShoreRing {
+/** The border along the pond's shore, in the style the config picks. */
+function createBorder(shore: readonly Outline[], resolution: number): ShoreRing {
   const { style, seed } = POND.shore;
   const rng = new Random(seed);
-  const pieces = ringAlongShore(pond, { ...POND.shore, cornerRadius: POND.cornerRadius }, () => rng.next());
+  const pieces = ringAlongShore(shore, POND.shore, () => rng.next());
   return new ShoreRing(pieces, SHORE_STYLES[style], seed, resolution);
 }
 
@@ -233,12 +236,13 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
  * The bank, the water below and above the board, animated by the app's clock and repainted after a lost WebGL
  * context comes back.
  */
-function createPond(app: Application, layout: GameLayout): PondWater {
+function createPond(app: Application, layout: GameLayout, shore: readonly Outline[]): PondWater {
   const pond = new PondWater(app.renderer, {
     stageWidth: layout.stage.width,
     stageHeight: layout.stage.height,
     board: layout.board,
     pond: layout.pond,
+    shore,
     props: placeProps(layout.pond),
     moonAt: placeOn(layout.pond, POND.moonSpot),
   });

@@ -11,6 +11,11 @@ export const LEVEL = {
    * wins about 70% within 15; a player who ignores them wins about 10% even with 20.
    */
   moves: 15,
+  /**
+   * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). Keep a notch or
+   * bay at least 2 cells wide, so there is room for the stones on both of its sides.
+   */
+  shape: ['##...##', '#######', '#######', '#######', '#####..', '#####..', '#######', '#######', '.#####.'],
   /** The lotus goal: bloom every bud. Swap for { type: 'score', target: 1500 } to play for points instead. */
   goal: { type: 'lotus', count: 3 } as GoalDef,
   pads: {

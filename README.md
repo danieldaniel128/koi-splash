@@ -33,13 +33,18 @@ glints). The koi have a dark cartoon outline, and a broken foam line at their wa
 around the fins (drawn each frame from a mask of the koi, `KoiContact`).
 
 Every texture is painted in code, so nothing is a fixed asset: sizes and colours come from config, and a texture is
-baked once for the screen it will be shown on. The pond's border is a ring of pieces along the shore. Where they go
-is plain math (`ringAlongShore`: random sizes round the rounded outline, scaled to close with no seam, unit tested);
-what they look like is a painter. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
+baked once for the screen it will be shown on. The pond takes the board's shape. `traceShore` walks the edge of the
+cells (round notches, bays and islands of bank), pushes it out by the margins and rounds every corner; that outline
+is baked once into a distance field (`bakeDistanceField`), so every water shader knows how far it is from the shore
+of any shape with a single texture read. The border is a ring of pieces along the same outline. Where they go is
+plain math (`ringAlongShore`: random sizes round each loop, scaled to close with no seam); what they look like is a
+painter. The tracer, the field, the ring and the atlas packing are all unit tested. All the pieces are baked into one atlas (`bakeAtlas`, shelf-packed) at the
 screen's real pixel density, so the whole border is one texture and one draw call.
 
 Changing the look is meant to be config, not surgery:
 
+- **A different board shape:** draw it in `LEVEL.shape` (`#` a cell, `.` bank). The water, the stones and the
+  rules all follow; keep notches at least 2 cells wide so the stones fit.
 - **A different border** (planks, bushes, lanterns): write a painter for one piece in `src/art`, add it to
   `SHORE_STYLES` and set `POND.shore.style`. Piece sizes, spacing, how far they sit out on the bank and the corner
   pieces are in `POND.shore`; `LAYOUT.shoreWidth` keeps room for them on screen.
@@ -63,7 +68,15 @@ pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so n
 and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
 its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
 moves are all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of
-400 boards.
+400 boards (on the plain 7 x 9, before the board had a shape).
+
+A board can have holes, drawn in the level's shape (`src/model/shape.ts`). A koi can't swim over the bank, so a hole
+splits its column: koi only swim down within their own stretch of water, and new koi rise from the deep into the top
+of each stretch. For a notch at the top that means just below it, like the shaped boards in commercial match-3s.
+
+Turns are paced on one too: I timed a Candy Crush recording frame by frame (it was sped up, so I scaled it back), where
+a plain match gives the board back in about 0.7 s. Ours took 2 s; after retuning `src/config/timing.ts` it's about
+0.7 s, measured over real turns in a headless browser.
 
 The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded transitions and enter/exit hooks.
 The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),

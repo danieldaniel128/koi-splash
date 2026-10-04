@@ -126,9 +126,10 @@ function spacedCells(cells: readonly Cell[], spacing: number, count: number): Ce
 
 /** Every cell of the board in random order (Fisher-Yates). */
 function shuffledCells(board: BoardSpec, rng: Random): Cell[] {
+  const holes = new Set((board.holes ?? []).map(key));
   const cells: Cell[] = [];
   for (let row = 0; row < board.rows; row++) {
-    for (let col = 0; col < board.cols; col++) cells.push({ col, row });
+    for (let col = 0; col < board.cols; col++) if (!holes.has(key({ col, row }))) cells.push({ col, row });
   }
   for (let i = cells.length - 1; i > 0; i--) {
     const j = rng.int(0, i);

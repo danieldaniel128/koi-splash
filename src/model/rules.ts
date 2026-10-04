@@ -9,6 +9,8 @@ export interface BoardSpec {
   readonly rows: number;
   /** How many koi colours are in play. */
   readonly kinds: number;
+  /** The cells the board's shape doesn't have (see parseShape); none for a plain rectangle. */
+  readonly holes?: readonly Cell[];
 }
 
 const MIN_RUN = 3;
@@ -22,7 +24,7 @@ const MAX_CASCADE = 50;
  * first, so the koi only ever fill the free cells around them. O(N) per try, see fillSafely.
  */
 export function createBoard(spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): Board {
-  const board = new Board(spec.cols, spec.rows);
+  const board = new Board(spec.cols, spec.rows, spec.holes);
   for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
   return board;
@@ -209,43 +211,59 @@ function clearMatches(board: Board, matches: readonly Match[]): Cleared[] {
   return cleared;
 }
 
-/** Drops every piece straight down into the gaps below it, past blocked cells. */
+/**
+ * Drops every piece straight down into the gaps below it, past lily pads, within its stretch of water: a koi never
+ * crosses a hole (that would be swimming over the bank).
+ */
 function applyGravity(board: Board): Fall[] {
   const falls: Fall[] = [];
   for (let col = 0; col < board.cols; col++) {
-    const slots = openRows(board, col); // bottom to top
-    const pieces = slots
-      .map((row) => ({ piece: board.get({ col, row }), row }))
-      .filter((entry): entry is { piece: Piece; row: number } => entry.piece !== null);
-    slots.forEach((row, i) => {
-      const entry = pieces[i];
-      board.set({ col, row }, entry?.piece ?? null);
-      if (entry && entry.row !== row)
-        falls.push({ piece: entry.piece, from: { col, row: entry.row }, to: { col, row } });
-    });
+    for (const slots of stretches(board, col)) {
+      const pieces = slots
+        .map((row) => ({ piece: board.get({ col, row }), row }))
+        .filter((entry): entry is { piece: Piece; row: number } => entry.piece !== null);
+      slots.forEach((row, i) => {
+        const entry = pieces[i];
+        board.set({ col, row }, entry?.piece ?? null);
+        if (entry && entry.row !== row)
+          falls.push({ piece: entry.piece, from: { col, row: entry.row }, to: { col, row } });
+      });
+    }
   }
   return falls;
 }
 
-/** The rows of a column a piece can be in (not blocked), from the bottom up. */
-function openRows(board: Board, col: number): number[] {
-  const rows: number[] = [];
-  for (let row = board.rows - 1; row >= 0; row--) if (!board.isBlocked({ col, row })) rows.push(row);
-  return rows;
+/**
+ * A column's stretches of water, split by the holes: in each, the rows a piece can be in (not under a pad), from
+ * the bottom up. A plain column is one stretch.
+ */
+function stretches(board: Board, col: number): number[][] {
+  const result: number[][] = [];
+  let current: number[] = [];
+  for (let row = board.rows - 1; row >= 0; row--) {
+    const cell = { col, row };
+    if (board.isHole(cell)) {
+      if (current.length > 0) result.push(current);
+      current = [];
+    } else if (!board.isBlocked(cell)) current.push(row);
+  }
+  if (current.length > 0) result.push(current);
+  return result;
 }
 
-/** Fills the empty cells at the top of each column with new pieces that drop in from above the board. */
+/** Fills the empty cells at the top of each stretch of water with new koi rising from the deep, the lowest first. */
 function refill(board: Board, kinds: number, rng: Random): Spawn[] {
   const spawns: Spawn[] = [];
   for (let col = 0; col < board.cols; col++) {
-    const empty = openRows(board, col).filter((row) => !board.get({ col, row })); // bottom to top
-    empty.forEach((row, i) => {
-      const piece = board.createPiece(rng.int(0, kinds - 1));
-      const to = { col, row };
-      board.set(to, piece);
-      // the lowest new koi starts just above the board, the ones above it further up, in order
-      spawns.push({ piece, from: { col, row: -1 - (empty.length - 1 - i) }, to });
-    });
+    for (const slots of stretches(board, col)) {
+      const empty = slots.filter((row) => !board.get({ col, row })); // bottom to top
+      empty.forEach((row, order) => {
+        const piece = board.createPiece(rng.int(0, kinds - 1));
+        const to = { col, row };
+        board.set(to, piece);
+        spawns.push({ piece, to, order });
+      });
+    }
   }
   return spawns;
 }

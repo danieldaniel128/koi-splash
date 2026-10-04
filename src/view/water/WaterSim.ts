@@ -41,8 +41,8 @@ export class WaterSim {
   constructor(
     private readonly renderer: Renderer,
     private readonly area: SimArea,
-    /** The pond's outline (uPond, uPondShape in common.glsl): where the water ends. */
-    private readonly pondShape: UniformGroup,
+    /** The pond's shape (uShoreField and the pond uniforms in common.glsl): where the water ends. */
+    private readonly pondShape: PondShapeResources,
   ) {
     this.cols = Math.round(area.width / WATER.cellSize);
     this.rows = Math.round(area.height / WATER.cellSize);
@@ -138,7 +138,7 @@ export class WaterSim {
       gl: { vertex, fragment: withCommon(simFragment) },
       resources: {
         uState: this.front.source,
-        pond: this.pondShape,
+        ...this.pondShape,
         simUniforms: {
           uSimSize: { value: [cols, rows], type: 'vec2<f32>' },
           uSimArea: { value: [x, y, width, height], type: 'vec4<f32>' },
@@ -150,6 +150,12 @@ export class WaterSim {
       },
     });
   }
+}
+
+/** The pond's shape as shader resources: its uniforms and its baked distance field. */
+export interface PondShapeResources {
+  readonly pond: UniformGroup;
+  readonly uShoreField: TextureSource;
 }
 
 /**
