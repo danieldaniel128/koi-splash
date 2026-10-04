@@ -5,7 +5,7 @@ import { SCORE } from '../config/level';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
 import { scoreRound } from '../model/score';
-import type { CascadeStep, Cell, Match, Piece, Spawn } from '../model/types';
+import type { CascadeStep, Cell, Piece, Spawn } from '../model/types';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
 
@@ -15,21 +15,23 @@ export interface PlacedPiece {
   readonly at: Cell;
 }
 
-/** Something the koi can push at a point in global space (the pond's water), harder for a bigger `strength`. */
+/**
+ * Something the koi can push at a point in global space (the pond's water): `push` in water-height units (pressed
+ * down), over `radius` stage px.
+ */
 export interface RippleSurface {
-  ripple(globalPoint: PointData, strength: number): void;
+  ripple(globalPoint: PointData, push: number, radius: number): void;
 }
 
-/** The match effects over the water, in the board's space (rings, droplets, points). */
+/** The match effects over the water, in the board's space (one splash per match, points). */
 export interface MatchEffects {
-  splash(at: PointData): void;
+  splash(points: readonly PointData[]): void;
   points(at: PointData, amount: number): void;
 }
 
-/** A surfacing koi pushes the water this much less than a diving one. */
-const SURFACE_STRENGTH = WATER.surfacePush / WATER.divePush;
 const WHITE = 0xffffff;
-const DEEP = new Color(WATER.deep).toNumber();
+/** Diving koi take on this pale water-blue as they sink, keeping their own colour (a dark tint turns them muddy). */
+const UNDERWATER = new Color(TIMING.diveTint).toNumber();
 
 /**
  * Plays the model's results on the board view, koi-pond style: the dragged koi rises and passes over the other,
@@ -48,20 +50,28 @@ export class BoardAnimator {
     private readonly fx: MatchEffects,
   ) {}
 
-  /** Two koi trade places: the one the player dragged lifts toward the surface and passes over the other. */
+  /**
+   * Two koi trade places: the one the player dragged lifts toward the surface and passes over the other. They shove
+   * the water apart as they go, and each one settles into its new cell with a small push.
+   */
   async swap(first: PlacedPiece, second: PlacedPiece): Promise<void> {
     this.round = 0;
     const lifted = this.view.spriteOf(first.piece.id);
     this.view.bringToFront(lifted);
+    this.stir(first.at, second.at, 1);
     await Promise.all([
       this.slide(lifted, second.at, TIMING.swapLift),
       this.slide(this.view.spriteOf(second.piece.id), first.at, TIMING.swapSink),
     ]);
+    for (const cell of [first.at, second.at]) {
+      this.water.ripple(this.view.toGlobal(this.view.cellToPoint(cell)), WATER.swapSettlePush, WATER.swapRadius);
+    }
   }
 
-  /** A swap that makes no match: both koi lean toward each other and spring back. */
+  /** A swap that makes no match: both koi lean toward each other and spring back, with a smaller shove. */
   async invalidSwap(first: PlacedPiece, second: PlacedPiece): Promise<void> {
     this.view.bringToFront(this.view.spriteOf(first.piece.id));
+    this.stir(first.at, second.at, 0.6);
     await Promise.all([this.lean(first, second.at, TIMING.swapLift), this.lean(second, first.at, 1)]);
   }
 
@@ -79,25 +89,24 @@ export class BoardAnimator {
     this.round++;
   }
 
-  /** Points pop up over each match; a cell shared by two matches counts once. */
+  /** One splash per match, and its points pop up over it; a cell shared by two matches counts once. */
   private celebrate(step: CascadeStep): void {
     const perPiece = scoreRound(step, this.round, SCORE.pointsPerPiece) / Math.max(step.cleared.length, 1);
     const counted = new Set<string>();
     for (const match of step.matches) {
       const fresh = match.cells.filter((cell) => !counted.has(`${cell.col},${cell.row}`));
       for (const cell of fresh) counted.add(`${cell.col},${cell.row}`);
-      if (fresh.length > 0) this.fx.points(this.centreOf(match), Math.round(fresh.length * perPiece));
+      if (fresh.length === 0) continue;
+      const points = match.cells.map((cell) => this.view.cellToPoint(cell));
+      this.fx.splash(points);
+      this.fx.points(centreOf(points), Math.round(fresh.length * perPiece));
     }
   }
 
-  private centreOf(match: Match): Point {
-    const centre = new Point();
-    for (const cell of match.cells) {
-      const point = this.view.cellToPoint(cell);
-      centre.x += point.x / match.cells.length;
-      centre.y += point.y / match.cells.length;
-    }
-    return centre;
+  /** The water is shoved apart between two cells (a swap): a push at the midpoint, `strength` times the full one. */
+  private stir(from: Cell, to: Cell, strength: number): void {
+    const middle = centreOf([this.view.cellToPoint(from), this.view.cellToPoint(to)]);
+    this.water.ripple(this.view.toGlobal(middle), WATER.swapPush * strength, WATER.swapRadius);
   }
 
   /** Slides to a cell, growing to `peak` times its size halfway (lifted toward the surface) and back. */
@@ -136,12 +145,14 @@ export class BoardAnimator {
       .to(koi.scale, { x: size, y: size, duration: half, ease: 'sine.out', yoyo: true, repeat: 1 }, 0);
   }
 
-  /** A matched koi kicks (a quick squash), splashes and sinks away into the deep, turning as it goes. */
+  /**
+   * A matched koi kicks (a quick squash), pushes the water down and sinks away into the deep, turning as it goes.
+   * It keeps its colour, only cooling a little, and fades into the blue.
+   */
   private async dive(id: number, at: Cell): Promise<void> {
     const koi = this.view.spriteOf(id);
     const point = this.view.cellToPoint(at);
-    this.fx.splash(point);
-    this.water.ripple(this.view.toGlobal(point), 1);
+    this.water.ripple(this.view.toGlobal(point), WATER.divePush, WATER.diveRadius);
     koi.turnToward(koi.heading + TIMING.diveTurn, 1);
     const rest = koi.restScale;
     const sink = { depth: 0 };
@@ -159,10 +170,10 @@ export class BoardAnimator {
         {
           depth: 1,
           duration: TIMING.diveSink,
-          ease: 'power1.in',
+          ease: 'none',
           onUpdate: () => {
-            koi.alpha = 1 - sink.depth;
-            koi.tint = mixColor(WHITE, DEEP, sink.depth * 0.8);
+            koi.alpha = 1 - sink.depth * sink.depth;
+            koi.tint = mixColor(WHITE, UNDERWATER, sink.depth);
           },
         },
         '<',
@@ -194,8 +205,8 @@ export class BoardAnimator {
     const show = (): void => {
       const size = rest * (1 - (1 - TIMING.diveScale) * depth.amount);
       koi.scale.set(size);
-      koi.alpha = 1 - depth.amount;
-      koi.tint = mixColor(WHITE, DEEP, depth.amount * 0.8);
+      koi.alpha = 1 - depth.amount * depth.amount;
+      koi.tint = mixColor(WHITE, UNDERWATER, depth.amount);
     };
     show();
     const rowsAboveBoard = -spawn.from.row - 1;
@@ -204,12 +215,22 @@ export class BoardAnimator {
       .to(depth, { amount: 0, duration: TIMING.rise, ease: 'power2.out', onUpdate: show })
       .call(
         () => {
-          this.water.ripple(this.view.toGlobal(point), SURFACE_STRENGTH);
+          this.water.ripple(this.view.toGlobal(point), WATER.surfacePush, WATER.diveRadius);
         },
         [],
         TIMING.rise * TIMING.riseSurfaceAt,
       );
   }
+}
+
+/** The middle of some points. */
+function centreOf(points: readonly PointData[]): Point {
+  const centre = new Point();
+  for (const point of points) {
+    centre.x += point.x / points.length;
+    centre.y += point.y / points.length;
+  }
+  return centre;
 }
 
 /** Blends two 0xRRGGBB colours: `t` = 0 gives `from`, 1 gives `to`. */

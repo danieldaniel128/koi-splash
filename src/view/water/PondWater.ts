@@ -94,10 +94,10 @@ export class PondWater {
     this.sim.drop(stageX, stageY, radius, push);
   }
 
-  /** A push at a point in global (screen) space, scaled by `strength`: swaps and matches. */
-  ripple(globalPoint: PointData, strength: number): void {
+  /** Presses the surface down by `push` over `radius` px at a point in global (screen) space: swaps, matches. */
+  ripple(globalPoint: PointData, push: number, radius: number): void {
     const local = this.bottom.toLocal(globalPoint);
-    this.sim.drop(local.x, local.y, WATER.diveRadius, -WATER.divePush * strength);
+    this.sim.drop(local.x, local.y, radius, -push);
   }
 
   /**
@@ -233,9 +233,10 @@ function waterLook(board: SimArea): UniformDefs {
     uGlowUnderBoard: { value: WATER.glowUnderBoard, type: 'f32' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
     uRelief: {
-      value: [WATER.relief, WATER.crestHeight, WATER.crestLight, WATER.troughShade],
+      value: [WATER.slopeLight, WATER.slopeShade, WATER.crestHeight, WATER.crestLight],
       type: 'vec4<f32>',
     },
+    uTroughShade: { value: WATER.troughShade, type: 'f32' },
     uRim: { value: [...WATER.rimGate, WATER.rimStrength], type: 'vec3<f32>' },
     uMoon: { value: color(POND.moon), type: 'vec3<f32>' },
     uMoonAt: { value: [...POND.moonAt, POND.moonRadius], type: 'vec3<f32>' },

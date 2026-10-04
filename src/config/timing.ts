@@ -15,6 +15,8 @@ export const TIMING = {
   /** How small a diving koi gets before it's gone, and how far it turns (radians). */
   diveScale: 0.45,
   diveTurn: 0.9,
+  /** The pale water-blue a diving koi cools toward as it sinks (it fades out as it goes, so it melts into the blue). */
+  diveTint: '#a9cfe0',
   /** Falling starts at this share of the dive, so there is no dead pause between them. */
   fallStartAt: 0.55,
   /** Koi glide down into the gaps: base time plus time per row. */

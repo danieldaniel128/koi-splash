@@ -1,4 +1,5 @@
 import { Container, Sprite, Texture } from 'pixi.js';
+import { paintGlow } from '../art/glow';
 
 /** How a firefly wanders and glows (seconds, px). */
 export interface FireflyLook {
@@ -49,21 +50,4 @@ export class Fireflies extends Container {
       sprite.alpha = 0.15 + 0.85 * Math.pow(Math.max(0, Math.sin(t * blink + phase)), 2);
     }
   }
-}
-
-/** A soft round glow with a bright core, on a square canvas `size` px wide. */
-function paintGlow(color: string, size: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas not available');
-  const half = size / 2;
-  const glow = ctx.createRadialGradient(half, half, 0, half, half, half);
-  glow.addColorStop(0, '#ffffff');
-  glow.addColorStop(0.12, color);
-  glow.addColorStop(0.35, `${color}55`);
-  glow.addColorStop(1, `${color}00`);
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, size, size);
-  return canvas;
 }

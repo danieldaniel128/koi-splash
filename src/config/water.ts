@@ -30,6 +30,10 @@ export const WATER = {
   divePush: 0.16,
   diveRadius: 9,
   surfacePush: 0.07,
+  /** A swap shoves the water apart between the two koi (push, radius), and each koi settles with a smaller push. */
+  swapPush: 0.2,
+  swapRadius: 12,
+  swapSettlePush: 0.08,
 
   // --- water body (under the koi): indigo-teal, lighter in the shallows by the shore, darkest in the middle
   shallow: '#195669',
@@ -59,15 +63,21 @@ export const WATER = {
   // --- the simulated waves, drawn as soft relief (no lines)
   /** Moonlight colour on the waves. */
   ink: '#e3f0f2',
-  /** Light and shade on the slopes of the waves: brightness change per unit of slope. */
-  relief: 1.6,
+  /**
+   * Light and shade on the slopes of the waves, per unit of slope: moonlight added on the slopes facing the moon
+   * (added, so it shows on the dark water too), and shade on the far slopes (a share of the colour).
+   */
+  slopeLight: 1.1,
+  slopeShade: 2.2,
   /** Crests catch a little light and troughs darken: the height (water units) where it's at full, and how much. */
-  crestHeight: 0.035,
-  crestLight: 0.14,
-  troughShade: 0.18,
-  /** A clean bright rim along strong fronts only: the slope where it starts and where it's full, its strength
-   * under the koi, and over them (faint, so the koi stay clear). */
-  rimGate: [0.09, 0.2],
+  crestHeight: 0.02,
+  crestLight: 0.1,
+  troughShade: 0.12,
+  /**
+   * A clean bright rim along strong fronts only: the slope where it starts and where it's full, its strength under
+   * the koi, and over them (faint, so the koi stay clear).
+   */
+  rimGate: [0.12, 0.3],
   rimStrength: 0.55,
   rimOverKoi: 0.2,
 

@@ -1,21 +1,34 @@
-/** The match splash drawn over the water: thin ink rings, droplets and the points that pop up. Stage px, seconds. */
+/**
+ * One splash per match, drawn over the water: a bright flash where the koi break the surface, a broken crown of foam
+ * thrown out, and droplets of different sizes thrown up in arcs that land with small rings of their own. Stage px,
+ * seconds. The flash and crown stretch along the match: their size is this many px plus the match's length.
+ */
 export const SPLASH = {
-  /** Moonlight-white for the rings and droplets, matching the ripple lines. */
-  ink: '#eef6f6',
-  /** Rings per diving koi: how many, the delay between them, how long each lives. */
-  rings: 2,
-  ringGap: 0.09,
-  ringLife: 0.6,
-  /** A ring grows from this radius to that one, and thins from this line width to that one. */
-  ringFrom: 11,
-  ringTo: 34,
-  ringWidth: [1.8, 0.5],
-  /** Droplets thrown up per diving koi: they start this far out (px), land this far (px, random in this range). */
-  droplets: 5,
+  /** Moonlit white for the droplets, and the pale water-light of the flash. */
+  ink: '#eef8f8',
+  flash: '#bdeaf0',
+  /** The flash: size (px), how long it lasts, peak strength, and the share of it that's a solid white core. */
+  flashSize: 70,
+  flashLife: 0.34,
+  flashAlpha: 1,
+  flashCore: 0.3,
+  /** The crown of foam: size (px), how long it lasts, strength. */
+  crownSize: 60,
+  crownLife: 0.42,
+  crownAlpha: 0.9,
+  /** Droplets for a match of three, and how many more for each koi past three. */
+  droplets: 10,
+  dropletsPerExtraKoi: 3,
+  /** Droplet radius (px), how far from its koi it lands (px), how high it arcs (px) and how long it flies (s). */
+  dropletSize: [1.2, 3.2],
+  dropletReach: [12, 44],
+  dropletArc: [8, 26],
+  dropletLife: [0.36, 0.62],
+  /** Droplets leave from this far around a matched koi (px). */
   dropletStart: 8,
-  dropletReach: [18, 32],
-  dropletLife: 0.42,
-  dropletSize: 1.3,
+  /** Where a droplet lands it pushes the water (push in water-height units, radius in px): a small ring. */
+  landPush: 0.035,
+  landRadius: 8,
 } as const;
 
 /** The points that pop up over a match, then fly to the score. */

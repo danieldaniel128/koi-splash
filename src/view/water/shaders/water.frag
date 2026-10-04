@@ -28,8 +28,9 @@ uniform vec4 uGlowLook;
 // how much of the light bands and the shallows' glow is left under the board
 uniform float uGlowUnderBoard;
 uniform vec3 uInk;
-// relief: light on the slopes, crest height at full light, crest light, trough shade
+// relief: light and shade on the slopes, crest height at full light, crest light
 uniform vec4 uRelief;
+uniform float uTroughShade;
 // rim on strong fronts: slope where it starts and where it's full, strength
 uniform vec3 uRim;
 uniform vec3 uMoon;
@@ -89,9 +90,9 @@ vec3 moonlight(vec3 color, vec2 seen, float open) {
 // clean bright rim only along strong fronts.
 vec3 relief(vec3 color, vec3 w) {
     vec2 light = moonOnWaves(w, uLightDir, uRim.xy);
-    color *= 1.0 + light.x * uRelief.x;
-    color = mix(color, uInk, smoothstep(0.0, uRelief.y, w.x) * uRelief.z);
-    color *= 1.0 - smoothstep(0.0, uRelief.y, -w.x) * uRelief.w;
+    color += uInk * (max(light.x, 0.0) * uRelief.x + smoothstep(0.0, uRelief.z, w.x) * uRelief.w);
+    float shade = min(max(-light.x, 0.0) * uRelief.y, 0.5) + smoothstep(0.0, uRelief.z, -w.x) * uTroughShade;
+    color *= 1.0 - shade;
     return mix(color, uInk, light.y * uRim.z);
 }
 
