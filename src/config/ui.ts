@@ -17,3 +17,8 @@ export const GOAL_TRAY = {
   /** The lotus icon's radius (px), baked from the same painter as the pads on the board. */
   iconRadius: 13,
 } as const;
+
+/** The specials bar under the pond: a slot per power. Placeholders for now, locked until the powers exist. */
+export const POWER_BAR = {
+  slots: 3,
+} as const;

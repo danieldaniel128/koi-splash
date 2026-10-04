@@ -1,6 +1,7 @@
 import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
 import './ui/kit.css';
 import './ui/hud.css';
+import './ui/bar.css';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad } from './art/pondProps';
 import { BOARD } from './config/board';
@@ -10,7 +11,7 @@ import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
 import type { PondProp } from './config/pond';
-import { GOAL_TRAY } from './config/ui';
+import { GOAL_TRAY, POWER_BAR } from './config/ui';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
@@ -30,6 +31,7 @@ import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 import { Hud } from './ui/Hud';
+import { placePowerBar } from './ui/PowerBar';
 import { applyTheme } from './ui/theme';
 import { UiLayer } from './ui/UiLayer';
 
@@ -41,6 +43,7 @@ async function boot(host: HTMLElement): Promise<void> {
   applyTheme(document.documentElement);
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, lotusIcon(app));
+  placePowerBar(ui, layout.bar, POWER_BAR.slots);
 
   const textures = createTextures(app, board.piece);
   const pond = createPond(app, layout);
