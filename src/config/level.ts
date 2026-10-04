@@ -20,7 +20,10 @@ export const LEVEL = {
    * The goals, all to be reached to win. Mix and match: { type: 'lotus', count }, { type: 'score', target }, or
    * { type: 'koi', kind, count } to clear that many koi of one colour (kind 0 is the first of KOI_SET).
    */
-  goals: [{ type: 'lotus', count: 3 }] as readonly GoalDef[],
+  goals: [
+    { type: 'lotus', count: 3 },
+    { type: 'koi', kind: 0, count: 10 }, // 10 red koi
+  ] as readonly GoalDef[],
   /** The win rating (as in the prototype): 2 stars with 15% of the moves left, 3 with 35%. */
   stars: { two: 0.15, three: 0.35 },
   pads: {
