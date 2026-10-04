@@ -38,6 +38,11 @@ export class Koi extends Sprite {
     this.rotation = this.facing;
   }
 
+  /** Which of the baked poses the koi shows now (its place in the tail beat). */
+  get pose(): number {
+    return Math.floor(this.tailPhase * this.poses.length) % this.poses.length;
+  }
+
   /** Advances the swim by one frame. `speed` is how fast the animations move it (px/s). O(1). */
   swim(deltaSeconds: number, speed: number): void {
     this.time += deltaSeconds;
@@ -47,7 +52,7 @@ export class Koi extends Sprite {
       KOI_SWIM.maxBeat,
     );
     this.tailPhase = (this.tailPhase + beat * deltaSeconds) % 1;
-    this.texture = this.poses[Math.floor(this.tailPhase * this.poses.length)] ?? this.texture;
+    this.texture = this.poses[this.pose] ?? this.texture;
 
     const turn = 1 - Math.exp(-KOI_SWIM.turnRate * deltaSeconds);
     this.facing += shortestTurn(this.facing, this.heading) * turn;

@@ -14,6 +14,20 @@ export const KOI_LOOK = {
   /** Poses in one baked tail beat, and how far the tail swings in them (1 = the painter's widest). */
   swimFrames: 12,
   tailSwing: 0.55,
+  /**
+   * The cartoon outline: one even stroke of dark ink around each koi (px), so the shapes read crisply on a phone;
+   * softer around the fins and tail, which are under the water.
+   */
+  outline: '#050c1b',
+  outlineWidth: 1.3,
+  finOutlineAlpha: 0.7,
+  /**
+   * The fins and tail are under the surface: they take on this pale moonlit water colour (a dark one turns gold and
+   * red muddy), the fins by this share and the rear of the body by a smaller one.
+   */
+  underwater: '#9cc3d3',
+  finsUnder: 0.3,
+  tailUnder: 0.22,
 } as const;
 
 /** How the koi swim while they wait between moves (radians, seconds, px). */
