@@ -25,6 +25,7 @@ import { layoutGame } from './layout/gameLayout';
 import type { GameLayout, Rect } from './layout/gameLayout';
 import { readSafeInsets } from './layout/safeInsets';
 import { BoardAnimator } from './view/BoardAnimator';
+import { createBackdrop } from './view/Backdrop';
 import { BoardView } from './view/BoardView';
 import { Fireflies } from './view/Fireflies';
 import { PadView } from './view/PadView';
@@ -67,8 +68,15 @@ async function boot(host: HTMLElement): Promise<void> {
 
   const stage = new Container();
   putUnderWater(app, boardView, pond, board);
+  const backdrop = createBackdrop(
+    { width: layout.stage.width, horizon: layout.scene.height },
+    THEME.scene.backdrop,
+    app.renderer.resolution * layout.stage.scale,
+    POND.shore.seed,
+  );
   stage.addChild(
     pond.bank,
+    backdrop,
     pond.bottom,
     boardView,
     pads, // over the koi: a koi swimming past a pad goes under the leaf

@@ -1,3 +1,5 @@
+import type { BackdropLook } from '../art/backdrop';
+
 /**
  * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every colour, font, size
  * and timing the UI uses, and the look of the scene around the pond (the bank, the moon, the fireflies).
@@ -49,5 +51,22 @@ export const MOONLIT_GARDEN = {
     moonReflection: 19,
     /** The fireflies' glow. */
     firefly: '#f3f7b0',
+    /** The garden above the pond (see art/backdrop): night sky, moon, misty hills, a pagoda, a maple and a lantern. */
+    backdrop: {
+      sky: { top: '#050b20', horizon: '#1d3862' },
+      stars: { color: '#e3ecff', density: 7 },
+      moon: { color: '#f7ecc8', glow: 'rgba(247, 236, 200, 0.3)', radius: 22, at: [0.78, 0.36] },
+      hills: [
+        { color: '#22406c', height: 84, roll: 12 },
+        { color: '#132a4c', height: 40, roll: 7 },
+      ],
+      rim: 'rgba(200, 222, 250, 0.4)',
+      trees: '#0c1c38',
+      mist: 'rgba(170, 200, 240, 0.14)',
+      ink: '#060d1d',
+      window: '#ffcf73',
+      leaves: '#6a2140',
+      lantern: { paper: '#ffd38a', glow: 'rgba(255, 190, 90, 0.5)' },
+    } satisfies BackdropLook,
   },
 } as const;
