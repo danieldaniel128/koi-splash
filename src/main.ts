@@ -6,6 +6,9 @@ import './ui/hud.css';
 import './ui/bar.css';
 import './ui/overlay.css';
 import type { PointData, Sprite } from 'pixi.js';
+import { getVariety } from './art/koiBank';
+import { bakeInkedKoi } from './art/koiInk';
+import type { KoiInk } from './art/koiInk';
 import { bakeLotusPad } from './art/pondProps';
 import { SHORE_STYLES } from './art/shoreStyles';
 import { BOARD, SHAPE } from './config/board';
@@ -38,6 +41,7 @@ import { KoiTextures } from './view/KoiTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
+import type { GoalIcons } from './ui/GoalTray';
 import { Hud } from './ui/Hud';
 import { BoosterBar } from './ui/BoosterBar';
 import { ResultCard } from './ui/ResultCard';
@@ -55,7 +59,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const { board } = layout;
   const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
-  const hud = new Hud(ui, layout.hud, { lotusIcon: lotusIcon(app), stars: LEVEL.stars });
+  const hud = new Hud(ui, layout.hud, { goalIcons: goalIcons(app), stars: LEVEL.stars });
   new BoosterBar(ui, layout.bar, BOOSTERS);
 
   const textures = createTextures(app, board.piece);
@@ -230,10 +234,26 @@ function createGarden(app: Application, layout: GameLayout): Sprite {
   );
 }
 
-/** The lotus in the HUD's goal: painted by the same painter as the lotuses on the board. */
-function lotusIcon(app: Application): string {
+/** The goals' icons, painted by the same painters as the board: the lotus, and an inked koi of each colour. */
+function goalIcons(app: Application): GoalIcons {
   const resolution = app.renderer.resolution * KOI_LOOK.bakeResolution;
-  return bakeLotusPad(GOAL_TRAY.iconRadius, 1, 7, resolution).toDataURL();
+  const pose = { size: GOAL_TRAY.koiSize, resolution, build: KOI_LOOK.build, shadow: false };
+  return {
+    lotus: bakeLotusPad(GOAL_TRAY.iconRadius, 1, 7, resolution).toDataURL(),
+    koi: KOI_SET.map((id) => bakeInkedKoi(getVariety(id), pose, koiInk()).toDataURL()),
+  };
+}
+
+/** How the koi are inked: outline, fins and tail under the water. Shared by the board's koi and the HUD's. */
+function koiInk(): KoiInk {
+  return {
+    outline: KOI_LOOK.outline,
+    outlineWidth: KOI_LOOK.outlineWidth,
+    finOutlineAlpha: KOI_LOOK.finOutlineAlpha,
+    water: KOI_LOOK.underwater,
+    finsUnder: KOI_LOOK.finsUnder,
+    tailUnder: KOI_LOOK.tailUnder,
+  };
 }
 
 /** The koi (one tail beat of poses each) and their shadows, baked once at the screen's resolution. */
@@ -245,14 +265,7 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
     frames: KOI_LOOK.swimFrames,
     tailSwing: KOI_LOOK.tailSwing,
     shadowBlur: WATER.shadowBlur,
-    ink: {
-      outline: KOI_LOOK.outline,
-      outlineWidth: KOI_LOOK.outlineWidth,
-      finOutlineAlpha: KOI_LOOK.finOutlineAlpha,
-      water: KOI_LOOK.underwater,
-      finsUnder: KOI_LOOK.finsUnder,
-      tailUnder: KOI_LOOK.tailUnder,
-    },
+    ink: koiInk(),
     contact: { gap: WATER.contactGap, blur: WATER.contactBlur, finClear: WATER.contactFinClear },
     contactResolution: WATER.contactResolution,
   });

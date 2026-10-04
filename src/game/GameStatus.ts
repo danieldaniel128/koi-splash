@@ -7,5 +7,6 @@ export interface GameStatus {
   readonly moves: number;
   readonly stars: number;
   readonly score: number;
-  readonly goal: GoalProgress;
+  /** Each of the level's goals. */
+  readonly goals: readonly GoalProgress[];
 }

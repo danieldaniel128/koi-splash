@@ -1,5 +1,6 @@
 import { RESULT_CARD } from '../config/ui';
 import type { GameStatus } from '../game/GameStatus';
+import type { GoalProgress } from '../model/goals';
 import { STAR, setIcon } from './icons';
 import { el } from './UiLayer';
 
@@ -41,10 +42,8 @@ export class ResultCard {
   show(outcome: 'won' | 'lost', status: GameStatus): void {
     const won = outcome === 'won';
     this.title.textContent = won ? 'Pond complete!' : 'Out of moves';
-    const { goal } = status;
     this.score.textContent = `${status.score}`;
-    this.detail.textContent =
-      goal.kind === 'lotus' ? `lotus ${goal.done} / ${goal.target}` : `goal ${goal.target}`;
+    this.detail.textContent = status.goals.map(goalLine).join(' · ');
     this.starRow.hidden = !won;
     this.root.hidden = false;
     if (won) this.landStars(status.stars);
@@ -74,4 +73,10 @@ export class ResultCard {
       }, delay);
     });
   }
+}
+
+/** One goal on the card: how far it got. */
+function goalLine(goal: GoalProgress): string {
+  if (goal.kind === 'score') return `goal ${goal.target}`;
+  return `${goal.kind === 'lotus' ? 'lotus' : 'koi'} ${goal.done} / ${goal.target}`;
 }

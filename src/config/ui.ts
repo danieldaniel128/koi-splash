@@ -16,9 +16,10 @@ export const HUD_MOTION = {
   starLost: 1.5,
 } as const;
 
-/** The goal chip's lotus icon: its radius (px), baked from the same painter as the lotuses on the board. */
+/** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */
 export const GOAL_TRAY = {
   iconRadius: 13,
+  koiSize: 34,
 } as const;
 
 /**

@@ -18,7 +18,7 @@ function stubScene(): { scene: GameScene; statuses: GameStatus[]; pads: Pad[]; n
     level: {
       moves: 10,
       pointsPerPiece: 10,
-      goal: { type: 'lotus', count: 1 },
+      goals: [{ type: 'lotus', count: 1 }],
       pads: { buds: 1, emptyPads: 0, hitsToBloom: 2, hitsToDrift: 1, spacing: 2 },
       stars: { two: 0.15, three: 0.35 },
     },
