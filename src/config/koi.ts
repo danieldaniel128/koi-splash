@@ -19,7 +19,7 @@ export const KOI_LOOK = {
    * softer around the fins and tail, which are under the water.
    */
   outline: '#050c1b',
-  outlineWidth: 1.3,
+  outlineWidth: 1.9,
   finOutlineAlpha: 0.7,
   /**
    * The fins and tail are under the surface: they take on this pale moonlit water colour (a dark one turns gold and

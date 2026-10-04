@@ -38,6 +38,8 @@ const PAD = {
   vein: 'rgba(190, 235, 190, 0.35)',
   ink: '#0b2618',
 };
+/** The pads' ink outline (px): as bold as the koi's cartoon outline, so the board reads as one style. */
+const PAD_OUTLINE = 1.9;
 const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)', heart: '#f4cf4f' } as const;
 const REED = { blade: '#21503a', edge: 'rgba(170, 225, 190, 0.6)', head: '#6b4528' } as const;
 
@@ -133,7 +135,7 @@ function paintPad(ctx: Ctx, radius: number, random: () => number, lotus: boolean
   ctx.restore();
   leaf();
   ctx.strokeStyle = PAD.ink;
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = PAD_OUTLINE;
   ctx.stroke();
   if (lotus) paintLotus(ctx, radius * 0.62, random);
 }
