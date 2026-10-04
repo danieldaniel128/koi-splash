@@ -1,8 +1,12 @@
 import type { Cell, Kind, Piece } from './types';
 
-/** The grid of pieces. Only storage and bounds; the game rules live in rules.ts. */
+/**
+ * The grid of pieces. Only storage and bounds; the game rules live in rules.ts. A cell can be blocked (a lily pad
+ * sits there): it holds no piece, and pieces fall past it.
+ */
 export class Board {
   private readonly slots: (Piece | null)[];
+  private readonly blocked = new Set<number>();
   private nextId = 1;
 
   constructor(
@@ -16,6 +20,22 @@ export class Board {
     return cell.col >= 0 && cell.col < this.cols && cell.row >= 0 && cell.row < this.rows;
   }
 
+  isBlocked(cell: Cell): boolean {
+    return this.inBounds(cell) && this.blocked.has(this.index(cell));
+  }
+
+  /** Blocks a cell (removing any piece in it) or opens it again. */
+  setBlocked(cell: Cell, blocked: boolean): void {
+    if (!this.inBounds(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is off the board`);
+    const index = this.index(cell);
+    if (!blocked) {
+      this.blocked.delete(index);
+      return;
+    }
+    this.blocked.add(index);
+    this.slots[index] = null;
+  }
+
   get(cell: Cell): Piece | null {
     if (!this.inBounds(cell)) return null;
     return this.slots[this.index(cell)] ?? null;
@@ -23,6 +43,7 @@ export class Board {
 
   set(cell: Cell, piece: Piece | null): void {
     if (!this.inBounds(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is off the board`);
+    if (piece && this.isBlocked(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is blocked`);
     this.slots[this.index(cell)] = piece;
   }
 

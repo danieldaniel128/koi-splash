@@ -1,6 +1,6 @@
 import type { Random } from '../core/Random';
 import { Board } from './Board';
-import type { CascadeStep, Cell, Cleared, Fall, Kind, Match, Spawn, SwapResult } from './types';
+import type { CascadeStep, Cell, Cleared, Fall, Kind, Match, Piece, Spawn, SwapResult } from './types';
 import { isAdjacent } from './types';
 
 export interface BoardSpec {
@@ -16,18 +16,24 @@ const MAX_CASCADE = 50;
 
 // Run times below use N = cols * rows (63 cells on the 7 x 9 board).
 
-/** A full board with no ready-made matches and at least one valid move. O(N) per try, see fillSafely. */
-export function createBoard(spec: BoardSpec, rng: Random): Board {
+/**
+ * A full board with no ready-made matches and at least one valid move. Blocked cells (the lily pads) are placed
+ * first, so the koi only ever fill the free cells around them. O(N) per try, see fillSafely.
+ */
+export function createBoard(spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): Board {
   const board = new Board(spec.cols, spec.rows);
+  for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
   return board;
 }
 
 /**
- * Gives an existing board a fresh layout (for playing the level again). Piece ids keep counting up from where they
- * were, so the view never mistakes a new koi for an old sprite with the same id.
+ * Gives an existing board a fresh layout (for playing the level again), with the new blocked cells placed first.
+ * Piece ids keep counting up from where they were, so the view never mistakes a new koi for an old sprite.
  */
-export function resetBoard(board: Board, spec: BoardSpec, rng: Random): void {
+export function resetBoard(board: Board, spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): void {
+  for (const cell of board.cells()) board.setBlocked(cell, false);
+  for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
 }
 
@@ -101,7 +107,9 @@ export function trySwap(board: Board, a: Cell, b: Cell, spec: BoardSpec, rng: Ra
  */
 function fillSafely(board: Board, kinds: number, rng: Random): void {
   do {
-    for (const cell of board.cells()) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
+    for (const cell of board.cells()) {
+      if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
+    }
   } while (!hasAnyMove(board));
 }
 
@@ -182,37 +190,43 @@ function clearMatches(board: Board, matches: readonly Match[]): Cleared[] {
   return cleared;
 }
 
-/** Drops every piece straight down into the gaps below it. */
+/** Drops every piece straight down into the gaps below it, past blocked cells. */
 function applyGravity(board: Board): Fall[] {
   const falls: Fall[] = [];
   for (let col = 0; col < board.cols; col++) {
-    let target = board.rows - 1;
-    for (let row = board.rows - 1; row >= 0; row--) {
-      const piece = board.get({ col, row });
-      if (!piece) continue;
-      if (row !== target) {
-        board.set({ col, row: target }, piece);
-        board.set({ col, row }, null);
-        falls.push({ piece, from: { col, row }, to: { col, row: target } });
-      }
-      target--;
-    }
+    const slots = openRows(board, col); // bottom to top
+    const pieces = slots
+      .map((row) => ({ piece: board.get({ col, row }), row }))
+      .filter((entry): entry is { piece: Piece; row: number } => entry.piece !== null);
+    slots.forEach((row, i) => {
+      const entry = pieces[i];
+      board.set({ col, row }, entry?.piece ?? null);
+      if (entry && entry.row !== row)
+        falls.push({ piece: entry.piece, from: { col, row: entry.row }, to: { col, row } });
+    });
   }
   return falls;
+}
+
+/** The rows of a column a piece can be in (not blocked), from the bottom up. */
+function openRows(board: Board, col: number): number[] {
+  const rows: number[] = [];
+  for (let row = board.rows - 1; row >= 0; row--) if (!board.isBlocked({ col, row })) rows.push(row);
+  return rows;
 }
 
 /** Fills the empty cells at the top of each column with new pieces that drop in from above the board. */
 function refill(board: Board, kinds: number, rng: Random): Spawn[] {
   const spawns: Spawn[] = [];
   for (let col = 0; col < board.cols; col++) {
-    let empty = 0;
-    while (empty < board.rows && !board.get({ col, row: empty })) empty++;
-    for (let row = empty - 1; row >= 0; row--) {
+    const empty = openRows(board, col).filter((row) => !board.get({ col, row })); // bottom to top
+    empty.forEach((row, i) => {
       const piece = board.createPiece(rng.int(0, kinds - 1));
       const to = { col, row };
       board.set(to, piece);
-      spawns.push({ piece, from: { col, row: row - empty }, to });
-    }
+      // the lowest new koi starts just above the board, the ones above it further up, in order
+      spawns.push({ piece, from: { col, row: -1 - (empty.length - 1 - i) }, to });
+    });
   }
   return spawns;
 }
