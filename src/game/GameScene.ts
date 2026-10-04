@@ -16,6 +16,7 @@ import type { StarRule } from '../model/stars';
 import type { CascadeStep, Cell } from '../model/types';
 import type { BoardAnimator, PlacedPiece } from '../view/BoardAnimator';
 import type { BoardView } from '../view/BoardView';
+import type { GameEventBus } from './events';
 import type { GameStatus } from './GameStatus';
 
 type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
@@ -81,6 +82,8 @@ export interface GameSceneDeps {
   readonly status: StatusDisplay;
   readonly pads: PadDisplay;
   readonly result: ResultDisplay;
+  /** Where the scene says what happens (a swap, a match, the pads, the goals, the end): the sounds listen. */
+  readonly events: GameEventBus;
 }
 
 /**
@@ -103,11 +106,13 @@ export class GameScene {
       won: {
         onEnter: () => {
           deps.result.show('won', this.status());
+          deps.events.emit('won');
         },
       },
       lost: {
         onEnter: () => {
           deps.result.show('lost', this.status());
+          deps.events.emit('lost');
         },
       },
     });
@@ -198,12 +203,15 @@ export class GameScene {
     const { spec, rng, animator } = this.deps;
     const result = trySwap(this.board, first.at, second.at, spec, rng, this.pads);
     if (!result.valid) {
+      this.deps.events.emit('invalidSwap');
       await animator.invalidSwap(first, second);
       this.turn.transition('idle');
       return;
     }
 
     this.level.movesLeft--;
+    this.deps.events.emit('swap');
+    this.deps.events.emit('moveSpent', { movesLeft: this.level.movesLeft });
     this.deps.status.update(this.status());
     await animator.swap(first, second);
     await this.playCascade(result);
@@ -213,7 +221,10 @@ export class GameScene {
   private async playCascade(result: { steps: readonly CascadeStep[]; reshuffled: boolean }): Promise<void> {
     this.turn.transition('resolving');
     for (const [round, step] of result.steps.entries()) await this.playRound(step, round);
-    if (result.reshuffled) this.deps.view.render(this.board);
+    if (result.reshuffled) {
+      this.deps.view.render(this.board);
+      this.deps.events.emit('reshuffle');
+    }
     this.turn.next();
   }
 
@@ -222,6 +233,14 @@ export class GameScene {
    * cell too), and the goal counts it.
    */
   private async playRound(step: CascadeStep, round: number): Promise<void> {
+    const met = this.countRound(step, round);
+    this.announce(step, round, met);
+    await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
+    this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
+  }
+
+  /** Scores a round and feeds it to the goals. Returns the goals it met, numbered by when (0 = the first met). */
+  private countRound(step: CascadeStep, round: number): number[] {
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
     this.level.score += points;
     // a rainbow koi has no colour of its own: it counts toward no colour goal
@@ -230,10 +249,20 @@ export class GameScene {
       .map(({ piece }) => piece.kind);
     const metBefore = goalsMet(this.level.goal.progress());
     this.level.goal.record({ points, padEvents: step.padEvents, cleared });
-    // a goal met this round pays its bonus
-    this.level.score += (goalsMet(this.level.goal.progress()) - metBefore) * this.deps.level.goalBonus;
-    await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
-    this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
+    const metAfter = goalsMet(this.level.goal.progress());
+    this.level.score += (metAfter - metBefore) * this.deps.level.goalBonus; // a goal met this round pays its bonus
+    return Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
+  }
+
+  /** Says what a round did: its match, what happened to the lily pads (once each), and the goals it met. */
+  private announce(step: CascadeStep, round: number, met: readonly number[]): void {
+    const { events } = this.deps;
+    if (step.cleared.length > 0) events.emit('match', { round, size: step.cleared.length });
+    const pads = new Set(step.padEvents.map((event) => event.type));
+    if (pads.has('hit')) events.emit('budHit');
+    if (pads.has('bloom')) events.emit('bloom');
+    if (pads.has('drift')) events.emit('padDrift');
+    for (const n of met) events.emit('goalMet', { n });
   }
 
   private status(): GameStatus {

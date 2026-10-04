@@ -44,6 +44,7 @@ export interface BoosterSounds {
   cancel(): void;
   wrong(): void;
   lift(): void;
+  petals(): void;
 }
 
 /** One booster on the bar: how many the level gives, and the pill's tip. */
@@ -192,7 +193,7 @@ export class BoosterControl {
   private async choose(cell: Cell): Promise<void> {
     this.step.transition('choosing');
     this.deps.marks.lift(cell);
-    this.deps.sounds.lift();
+    this.deps.sounds.petals();
     const choice = await this.deps.picker.pick(cell);
     if (!this.step.is('choosing')) return; // cancelled while the petals were open
     if (!choice) {

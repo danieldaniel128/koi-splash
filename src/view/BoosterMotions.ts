@@ -7,6 +7,7 @@ import { WATER } from '../config/water';
 import type { Moved } from '../model/boosters';
 import type { Cell, Kind, Piece } from '../model/types';
 import type { BoardView } from './BoardView';
+import type { GameEventBus } from '../game/events';
 import { hitStop } from './hitStop';
 import type { Koi } from './Koi';
 import type { WaterSurface } from './water/PondWater';
@@ -33,14 +34,28 @@ interface Leap {
 export class BoosterMotions extends Container {
   private readonly pellet: Texture;
 
-  constructor(
-    private readonly view: BoardView,
-    private readonly water: WaterSurface,
-    private readonly cell: number,
-    private readonly sparkle: Texture,
-  ) {
+  private readonly view: BoardView;
+  private readonly water: WaterSurface;
+  private readonly cell: number;
+  private readonly sparkle: Texture;
+  private readonly events: GameEventBus;
+
+  constructor(deps: {
+    readonly view: BoardView;
+    readonly water: WaterSurface;
+    readonly cell: number;
+    /** The sparkle the special booster swirls in. */
+    readonly sparkle: Texture;
+    /** Where it says when each motion's moments happen (the sounds follow them). */
+    readonly events: GameEventBus;
+  }) {
     super();
-    this.pellet = Texture.from(paintPellet(Math.ceil(cell * BOOSTER_MOTION.feed.pellet)));
+    this.view = deps.view;
+    this.water = deps.water;
+    this.cell = deps.cell;
+    this.sparkle = deps.sparkle;
+    this.events = deps.events;
+    this.pellet = Texture.from(paintPellet(Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet)));
   }
 
   /** Two koi leap out of the water and land in each other's cells, crossing in the air. */
@@ -54,6 +69,7 @@ export class BoosterMotions extends Container {
     const b = this.koiOf(second.piece);
     const headingA = a.heading;
     const headingB = b.heading;
+    this.events.emit('koiLeapt', { duration });
     gsap.delayedCall(duration * 0.47, () => {
       hitStop(look.hitStop);
     });
@@ -81,6 +97,7 @@ export class BoosterMotions extends Container {
     const look = BOOSTER_MOTION.feed;
     const target = this.view.cellToPoint(food);
     this.throwPellets(thrownFrom, target);
+    this.events.emit('pelletsThrown');
     const school = moved.filter((move) => move.piece.kind === kind);
     for (const move of school) this.faceToward(this.koiOf(move.piece), target);
     const start = look.throw + look.turn * 0.5;
@@ -102,6 +119,7 @@ export class BoosterMotions extends Container {
     const home = this.view.cellToPoint(at);
     const heading = koi.heading;
     this.swirlSparkles(home, look.spin);
+    this.events.emit('koiMorphed');
     const k = { t: 0 };
     await gsap.to(k, {
       t: 1,
@@ -152,6 +170,7 @@ export class BoosterMotions extends Container {
     koi.position.copyFrom(to);
     koi.scale.set(rest);
     this.splash(move.to, WATER.bumpPush * 1.5);
+    this.events.emit('koiLanded', { low: leap.bow < 0 }); // the second koi bows the other way and plops lower
   }
 
   /** A koi swims to its new cell along a bowed path; a koi of the school turns to the food once it's there. */
@@ -181,7 +200,9 @@ export class BoosterMotions extends Container {
         koi.position.set(x, y);
       },
     });
-    if (food) this.faceToward(koi, food);
+    if (!food) return;
+    this.faceToward(koi, food);
+    this.events.emit('koiFed');
   }
 
   /** A handful of pellets thrown in a high lob, landing scattered round the food, floating a while, then gone. */

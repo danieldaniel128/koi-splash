@@ -87,7 +87,12 @@ browser.
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
 if it's complete, without knowing which goal it is. A goal can be lotuses to bloom, points to score or koi of one
 colour to clear, and a level lists as many as it likes: `createGoals` plays them as one (Composite), won when all are
-reached. This level asks for 3 lotuses and 10 red koi, and the HUD shows a chip per goal.
+reached. This level asks for 3 lotuses and 10 red koi, and the HUD shows a chip per goal. The lily pads
+(`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one, and koi
+fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees its cell
+for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the moves are
+all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of 400 boards
+(on the plain 7 x 9, before the board had a shape).
 
 The specials (`src/model/specials.ts`) are made from shapes: the matched runs are joined into groups first
 (`groupMatches`), so an L or a T is one shape. A run of 4 makes a striped koi, an L or T a whirlpool, a run of 5 a
@@ -100,12 +105,14 @@ The boosters (Swap any two koi, Feed a colour into lines, power a koi up into a 
 model plans what each does to the board (`src/model/boosters.ts`: the feed plans its lines nearest the food and
 always makes a match), the scene applies it and settles the board like after a swap (no move spent), and
 `BoosterControl` runs the arming flow (armed, picked, choosing, playing) on the same guarded state machine as the
-turn, with the bar, the pill, the board's marks, the petal menu and the sounds injected, so it's tested with fakes. The lily
-pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
-and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
-its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
-moves are all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of
-400 boards (on the plain 7 x 9, before the board had a shape).
+turn, with the bar, the pill, the board's marks, the petal menu and the sounds injected, so it's tested with fakes.
+
+The sound is the prototype's: no sound files, a small Web Audio synth (`src/audio/Synth.ts`) playing plucked notes on a
+pentatonic scale, water plips and soft noise splashes, ported recipe by recipe (`src/audio/recipes.ts`). The game
+doesn't know it exists. The scene, the animator and the effects say what happens on a typed event bus
+(`src/core/EventBus.ts`, Observer), each at the moment it happens (a beam landing, a whirlpool popping), and
+`SoundBoard` maps every event to its recipe in one place. A first touch starts the sound, and a toggle at the end of
+the booster bar mutes it (kept between visits).
 
 A board can have holes, drawn in the level's shape (`src/model/shape.ts`). A koi can't swim over the bank, so a hole
 splits its column: koi only swim down within their own stretch of water, and new koi rise from the deep into the top
@@ -164,7 +171,7 @@ Milestones:
 
 1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
 2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece. Done.
-3. Juice: dives, swims, ripples, the water shader, sound. Done except sound and screen shake.
+3. Juice: dives, swims, ripples, the water shader, sound. Done except screen shake.
 4. Specials: special koi from bigger matches, and their combos.
 5. Boosters.
 6. Screens and content: title, tutorial, hint, handmade levels, an endless mode.

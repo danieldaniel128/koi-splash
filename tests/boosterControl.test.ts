@@ -60,6 +60,7 @@ function setup(
       cancel: () => log.push('sound:cancel'),
       wrong: () => log.push('sound:wrong'),
       lift: () => undefined,
+      petals: () => undefined,
     },
     slots: [
       { type: 'swap', count: 1, tip: 'Pick two koi to swap' },

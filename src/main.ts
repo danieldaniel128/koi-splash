@@ -49,8 +49,15 @@ import { SwipeInput } from './view/SwipeInput';
 import { BoardMarks } from './view/BoardMarks';
 import { BoosterMotions } from './view/BoosterMotions';
 import { BoosterControl } from './game/BoosterControl';
+import type { BoosterSounds } from './game/BoosterControl';
 import { InstructionPill } from './ui/InstructionPill';
 import { SpecialMenu } from './ui/SpecialMenu';
+import { SoundToggle, storedSetting } from './ui/SoundToggle';
+import { SoundBoard } from './audio/SoundBoard';
+import { Synth } from './audio/Synth';
+import { AUDIO } from './config/audio';
+import { createGameEvents } from './game/events';
+import type { GameEventBus } from './game/events';
 import type { Cell, Special } from './model/types';
 import type { GoalIcons } from './ui/GoalTray';
 import { Hud } from './ui/Hud';
@@ -71,6 +78,8 @@ async function boot(host: HTMLElement): Promise<void> {
   const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, { goalIcons: goalIcons(app), stars: LEVEL.stars });
+  const events = createGameEvents(); // what happens in the game, for whoever listens (the sound)
+  startSound(app, events, { ui, layout });
 
   const bake = koiBake(app, board.piece);
   const textures = new KoiTextures(KOI_SET, bake); // the koi, baked once at the screen's resolution
@@ -79,31 +88,46 @@ async function boot(host: HTMLElement): Promise<void> {
 
   const boardView = createBoardView(textures, specials, board);
   const popups = createScorePopups(hud, board);
-  const result = new ResultCard(host);
+  const result = new ResultCard(host, events);
   const pads = createPads(app, pond, hud, board);
 
-  const effects = createSpecialEffects(boardView, specials, pond, board);
-  const boosterViews = createBoosterViews(app, boardView, specials, pond, board.cell);
-  const parts = { boardView, pond, popups, hud, pads, result, specials: effects, boosters: boosterViews };
+  const effects = createSpecialEffects({ boardView, textures: specials, pond, board, events });
+  const boosters = createBoosterViews(app, { boardView, specials, pond, cell: board.cell, events });
+  const parts = { boardView, pond, popups, hud, pads, result, specials: effects, boosters, events };
   startGame(parts, { ui, layout });
 
+  const stage = buildStage(app, parts, { layout, shore });
+  app.stage.addChild(stage);
+  keepFitted(app, { stage, ui }, layout.stage, boardView, pond);
+}
+
+/**
+ * The stage, back to front: the bank and the garden, the water under the koi, the boosters' marks, the koi, the
+ * lily pads over them, the water's surface, the specials' light, the boosters' pellets and sparkles, the points,
+ * and the stones and fireflies round the pond. The koi are set in the water here.
+ */
+function buildStage(
+  app: Application,
+  parts: GameParts,
+  scene: { layout: GameLayout; shore: readonly Outline[] },
+): Container {
+  const { boardView, pond, pads, specials, boosters, popups } = parts;
+  putUnderWater(app, boardView, pond, scene.layout.board);
   const stage = new Container();
-  putUnderWater(app, boardView, pond, board);
   stage.addChild(
     pond.bank,
-    createGarden(app, layout),
+    createGarden(app, scene.layout),
     pond.bottom,
-    boosterViews.marks, // under the koi: the gold ring round a picked koi
+    boosters.marks, // under the koi: the gold ring round a picked koi
     boardView,
     pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
-    effects.fx, // the specials' light, over the water
-    boosterViews.motions, // the feed's pellets and the special booster's sparkles
+    specials.fx, // the specials' light, over the water
+    boosters.motions, // the feed's pellets and the special booster's sparkles
     popups,
-    createScenery(app, layout, shore),
+    createScenery(app, scene.layout, scene.shore),
   );
-  app.stage.addChild(stage);
-  keepFitted(app, { stage, ui }, layout.stage, boardView, pond);
+  return stage;
 }
 
 /**
@@ -150,8 +174,15 @@ function startGame(parts: GameParts, screen: Screen): void {
     status: hud,
     pads,
     result,
+    events: parts.events,
   });
-  const control = createBoosterControl(scene, { bar, marks: parts.boosters.marks, screen, boardView });
+  const control = createBoosterControl(scene, {
+    bar,
+    marks: parts.boosters.marks,
+    screen,
+    boardView,
+    events: parts.events,
+  });
   result.onRestart(() => {
     scene.restart();
     control.reset();
@@ -176,10 +207,16 @@ function createAnimator(parts: GameParts, screen: Screen, bar: BoosterBar): Boar
     const at = screen.ui.centreOf(bar.buttonOf('feed') ?? screen.ui.root);
     return { x: at.x - board.x, y: at.y - board.y };
   };
-  const { boardView, pond, popups, specials, boosters } = parts;
-  return new BoardAnimator(boardView, board.cell, pond, popups, SCORE.pointsPerPiece, specials, {
-    motions: boosters.motions,
-    feedFrom,
+  const { boardView, pond, popups, specials, boosters, events } = parts;
+  return new BoardAnimator({
+    view: boardView,
+    cell: board.cell,
+    water: pond,
+    popups,
+    pointsPerPiece: SCORE.pointsPerPiece,
+    specials,
+    boosters: { motions: boosters.motions, feedFrom },
+    events,
   });
 }
 
@@ -193,6 +230,7 @@ interface GameParts {
   readonly result: ResultCard;
   readonly specials: { fx: SpecialFx; motions: SpecialMotions };
   readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
+  readonly events: GameEventBus;
 }
 
 /** Where the UI goes: its layer, and the layout. */
@@ -204,12 +242,22 @@ interface Screen {
 /** The boosters' views on the board: their motions (over the koi) and the marks while one is armed (under them). */
 function createBoosterViews(
   app: Application,
-  boardView: BoardView,
-  specials: SpecialTextures,
-  pond: PondWater,
-  cell: number,
+  on: {
+    boardView: BoardView;
+    specials: SpecialTextures;
+    pond: PondWater;
+    cell: number;
+    events: GameEventBus;
+  },
 ): { motions: BoosterMotions; marks: BoardMarks } {
-  const motions = new BoosterMotions(boardView, pond, cell, specials.sparkle);
+  const { boardView, cell, events } = on;
+  const motions = new BoosterMotions({
+    view: boardView,
+    water: on.pond,
+    cell,
+    sparkle: on.specials.sparkle,
+    events,
+  });
   const marks = new BoardMarks(boardView, cell);
   for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);
   app.ticker.add((ticker) => {
@@ -221,8 +269,9 @@ function createBoosterViews(
 /** The boosters' presenter, wired to the bar, the pill over the pond, the board's marks and the petal menu. */
 function createBoosterControl(
   scene: GameScene,
-  views: { bar: BoosterBar; marks: BoardMarks; screen: Screen; boardView: BoardView },
+  views: { bar: BoosterBar; marks: BoardMarks; screen: Screen; boardView: BoardView; events: GameEventBus },
 ): BoosterControl {
+  const { events } = views;
   const { ui, layout } = views.screen;
   const { board } = layout;
   const pillRect = { x: layout.hud.x, y: board.y - 52, width: layout.hud.width, height: 40 };
@@ -241,7 +290,7 @@ function createBoosterControl(
     pill,
     marks: views.marks,
     picker: new SpecialMenu(ui, menuBoard, SPECIAL_MENU.choices, board.cell),
-    sounds: { arm: () => undefined, cancel: () => undefined, wrong: () => undefined, lift: () => undefined },
+    sounds: boosterSounds(events),
     slots: BOOSTERS,
     feedLines: BOOSTER_MOTION.feed.lines,
     random: Math.random,
@@ -253,6 +302,54 @@ function createBoosterControl(
     control.cancel();
   });
   return control;
+}
+
+/**
+ * The sound: the prototype's synth, playing what each game event sounds like and a sparse background, with a toggle
+ * at the end of the booster bar (kept between visits). Browsers only allow sound after a touch, so the first touch
+ * (or key) starts it.
+ */
+function startSound(app: Application, events: GameEventBus, screen: Screen): void {
+  const setting = storedSetting(AUDIO.storageKey);
+  const synth = new Synth(setting.load());
+  const board = new SoundBoard(events, synth);
+  for (const gesture of ['pointerdown', 'keydown'] as const) {
+    window.addEventListener(gesture, () => {
+      synth.unlock();
+    });
+  }
+  app.ticker.add((ticker) => {
+    board.tick(ticker.deltaMS / 1000);
+  });
+  const { bar } = screen.layout;
+  const size = 36;
+  const rect = { x: bar.x + bar.width - size, y: bar.y + (58 - size) / 2, width: size, height: size };
+  new SoundToggle(screen.ui, rect, synth.enabled, (on) => {
+    synth.setEnabled(on);
+    setting.save(on);
+    events.emit('buttonClicked');
+  });
+}
+
+/** What the boosters sound like: they say what happened, and the sound board plays it. */
+function boosterSounds(events: GameEventBus): BoosterSounds {
+  return {
+    arm: (type) => {
+      events.emit('boosterArmed', { type, slot: BOOSTERS.findIndex((slot) => slot.type === type) });
+    },
+    cancel: () => {
+      events.emit('boosterCancelled');
+    },
+    wrong: () => {
+      events.emit('boosterRefused');
+    },
+    lift: () => {
+      events.emit('koiLifted');
+    },
+    petals: () => {
+      events.emit('petalsOpened');
+    },
+  };
 }
 
 /** The koi on the board, placed on the layout's board. */
@@ -267,13 +364,22 @@ function createBoardView(
 }
 
 /** The specials' light over the board, and the ways the koi leave around them. */
-function createSpecialEffects(
-  boardView: BoardView,
-  textures: SpecialTextures,
-  pond: PondWater,
-  board: GameLayout['board'],
-): { fx: SpecialFx; motions: SpecialMotions } {
-  const fx = new SpecialFx(boardView, textures, pond, board.cell, Math.max(board.width, board.height));
+function createSpecialEffects(on: {
+  boardView: BoardView;
+  textures: SpecialTextures;
+  pond: PondWater;
+  board: GameLayout['board'];
+  events: GameEventBus;
+}): { fx: SpecialFx; motions: SpecialMotions } {
+  const { board } = on;
+  const fx = new SpecialFx({
+    board: on.boardView,
+    textures: on.textures,
+    water: on.pond,
+    cell: board.cell,
+    length: Math.max(board.width, board.height),
+    events: on.events,
+  });
   fx.position.set(board.x, board.y);
   return { fx, motions: new SpecialMotions() };
 }

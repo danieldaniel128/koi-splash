@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
+import { createGameEvents } from '../src/game/events';
 import { GameScene } from '../src/game/GameScene';
 import type { GameSceneDeps } from '../src/game/GameScene';
 import type { GameStatus } from '../src/game/GameStatus';
@@ -36,6 +37,7 @@ function stubScene(): { scene: GameScene; statuses: GameStatus[]; pads: Pad[]; n
       },
     },
     result: { show: () => undefined, hide: () => undefined },
+    events: createGameEvents(),
   } as unknown as GameSceneDeps;
   return { scene: new GameScene(deps), statuses, pads, nudged };
 }

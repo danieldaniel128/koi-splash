@@ -1,3 +1,5 @@
+import { TIMING } from './timing';
+import { SPECIAL_MENU } from './ui';
 /**
  * How the special koi look and move (after the prototype's). Sizes are shares of a cell, times in seconds, speeds in
  * radians per second.
@@ -106,4 +108,16 @@ export const BOOSTER_MARKS = {
   lift: 0.14,
   gold: '#ffd76a',
   pink: '#ffb3d1',
+} as const;
+
+/**
+ * The timings the sounds follow (s), so they line up with what they go with: a whirlpool's spin and pull, the morph's
+ * spin, the petals' stagger, the lotus's unfolding, and how high a run of prism chimes climbs.
+ */
+export const SPECIALS_SOUND = {
+  whirl: TIMING.specials.whirlSpin + TIMING.specials.whirlPull,
+  morph: BOOSTER_MOTION.special.spin,
+  petalStagger: SPECIAL_MENU.stagger,
+  bloom: { unfold: 0.85, stagger: 0.04 },
+  chimeMax: 9,
 } as const;
