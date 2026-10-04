@@ -9,6 +9,12 @@ export const TIMING = {
   invalidSwap: 0.34,
   /** How far the koi travel toward each other before bouncing back, as a share of a cell. */
   invalidReach: 0.35,
+  /** A koi swiped into a lily pad: how far it darts (share of a cell), how fast, how long the swim back takes and how
+   * much it squashes on the bump. */
+  bumpReach: 0.3,
+  bumpIn: 0.09,
+  bumpOut: 0.3,
+  bumpSquash: 0.86,
   /** Matched koi dive: a quick squash as they kick, then they sink away into the deep, turning a little. */
   diveKick: 0.07,
   diveSink: 0.34,

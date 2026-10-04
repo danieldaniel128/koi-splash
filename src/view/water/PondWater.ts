@@ -33,6 +33,13 @@ export interface PondLayout {
 }
 
 /** Something the koi and the matches push: the pond's water. */
+/** A round thing floating on the water, in stage px. */
+export interface Circle {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+}
+
 export interface WaterSurface {
   /** Presses the surface down by `strength` (water-height units; negative lifts it) over `radius` px at a stage point. */
   push(at: PointData, strength: number, radius: number): void;
@@ -74,12 +81,15 @@ export class PondWater implements WaterSurface {
   private readonly contact: KoiContact;
   private readonly bankPainter: Mesh<Geometry, Shader>;
   private readonly shape: UniformGroup;
+  /** How many prop slots the pond's own stones and pads take; the board's pads go after them. */
+  private readonly fixedProps: number;
   private readonly bindings: StateBinding[] = [];
   private readonly koiUniforms: { uAreaOrigin: number[]; uStageTransform: number[] };
 
   constructor(renderer: Renderer, layout: PondLayout) {
     const water = waterArea(layout.board);
     this.shape = pondShape(layout);
+    this.fixedProps = waterShapes(layout.props).count;
     this.sim = new WaterSim(renderer, water, this.shape);
     this.contact = new KoiContact(renderer, koiArea(layout.board), layout.board, WATER.contactResolution);
     const stage = { x: 0, y: 0, width: layout.stageWidth, height: layout.stageHeight };
@@ -111,6 +121,21 @@ export class PondWater implements WaterSurface {
    */
   touch(shapes: Layer): void {
     this.contact.draw(shapes);
+  }
+
+  /**
+   * Puts floating round things (the lily pads on the board) into the water's shapes, after the pond's own props:
+   * the shore foam outlines them and the waves wrap around them, like the stones. Call whenever they move.
+   * O(MAX_PROPS).
+   */
+  float(circles: readonly Circle[]): void {
+    const shapes = this.shape.uniforms.uProps as Float32Array;
+    const axes = this.shape.uniforms.uPropAxes as Float32Array;
+    for (let slot = this.fixedProps; slot < MAX_PROPS; slot++) {
+      const circle = circles[slot - this.fixedProps];
+      shapes.set(circle ? [circle.x, circle.y, circle.radius, circle.radius] : [0, 0, 0, 0], slot * 4);
+      axes.set([1, 0], slot * 2);
+    }
   }
 
   /** Wakes, tail flicks, swaps, dives and landing droplets all push the water here. */

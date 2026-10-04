@@ -1,8 +1,8 @@
 /**
  * The koi variety (from the koi bank) used for each piece kind. Kind 0 is the first entry. Five colours that never
- * share a hue with the indigo water: red, gold, white, jade (Midorigoi, a real green koi) and black.
+ * share a hue with the indigo water: red, gold, rose pink, jade (Midorigoi, a real green koi) and amethyst purple.
  */
-export const KOI_SET = ['m3-red', 'm3-gold', 'm3-white', 'dream-jade', 'm3-black'] as const;
+export const KOI_SET = ['m3-red', 'm3-gold', 'dream-rose-gold', 'dream-jade', 'dream-amethyst'] as const;
 
 export const KOI_LOOK = {
   /** Size of the square a koi is painted in, as a share of the cell. The fish fits a circle of ~0.43 of it. */
@@ -19,7 +19,7 @@ export const KOI_LOOK = {
    * softer around the fins and tail, which are under the water.
    */
   outline: '#050c1b',
-  outlineWidth: 1.3,
+  outlineWidth: 1.9,
   finOutlineAlpha: 0.7,
   /**
    * The fins and tail are under the surface: they take on this pale moonlit water colour (a dark one turns gold and

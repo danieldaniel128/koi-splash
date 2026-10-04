@@ -15,8 +15,8 @@ export interface BoardViewLayout {
 
 /**
  * Draws the board: one koi per piece, found by the piece id so a koi keeps its sprite while it moves. What the koi
- * cast into the water (shadows on the bottom, ripples from their tails, their shape at the waterline for the pond's
- * foam) follows them in a KoiWaterline; the shadows and ripples sit in their own layers under all the koi.
+ * cast into the water (shadows on the bottom, their shape at the waterline for the pond's foam) follows them in a
+ * KoiWaterline; the shadows sit in their own layer under all the koi.
  */
 export class BoardView extends Container {
   private readonly pieces = new Map<number, Koi>();
@@ -32,7 +32,7 @@ export class BoardView extends Container {
     // the whole board area takes pointer input, including the gaps between koi
     this.hitArea = new Rectangle(0, 0, layout.cols * layout.cellSize, layout.rows * layout.cellSize);
     this.waterline = new KoiWaterline(textures);
-    this.addChild(this.waterline.shadows, this.waterline.ripples, this.koiLayer);
+    this.addChild(this.waterline.shadows, this.koiLayer);
   }
 
   /** Where each koi meets the water, in the board's space: drawn by the pond into its mask, never shown. */
