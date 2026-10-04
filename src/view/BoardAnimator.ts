@@ -1,7 +1,6 @@
 import { gsap } from 'gsap';
 import { Color, Point } from 'pixi.js';
 import type { PointData } from 'pixi.js';
-import { SCORE } from '../config/level';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
 import { scoreRound } from '../model/score';
@@ -33,7 +32,10 @@ const UNDERWATER = new Color(TIMING.diveTint).toNumber();
  * the turn step by step instead of chaining callbacks.
  */
 export class BoardAnimator {
-  /** Cascade round within the current turn, for the points shown (later rounds are worth more). */
+  /**
+   * Cascade round within the current turn, for the points shown (later rounds are worth more). The scene doesn't
+   * pass the round in, so this counter mirrors its loop index; the scene passing the round's points would be cleaner.
+   */
   private round = 0;
 
   constructor(
@@ -41,6 +43,8 @@ export class BoardAnimator {
     private readonly cellSize: number,
     private readonly water: WaterSurface,
     private readonly fx: MatchEffects,
+    /** The level's points per piece, the same value the scene scores with. */
+    private readonly pointsPerPiece: number,
   ) {}
 
   /**
@@ -84,7 +88,7 @@ export class BoardAnimator {
 
   /** One splash per match, and its points pop up over it; a cell shared by two matches counts once. */
   private celebrate(step: CascadeStep): void {
-    const perPiece = scoreRound(step, this.round, SCORE.pointsPerPiece) / Math.max(step.cleared.length, 1);
+    const perPiece = scoreRound(step, this.round, this.pointsPerPiece) / Math.max(step.cleared.length, 1);
     const counted = new Set<string>();
     for (const match of step.matches) {
       const fresh = match.cells.filter((cell) => !counted.has(`${cell.col},${cell.row}`));

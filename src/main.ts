@@ -31,10 +31,6 @@ async function boot(host: HTMLElement): Promise<void> {
   const boardLeft = (STAGE.width - boardWidth) / 2;
 
   const pond = createPond(app, boardLeft);
-  // Pixi rebuilds the GL state in its own listener (added first, so it runs first); then the pond repaints its own
-  app.canvas.addEventListener('webglcontextrestored', () => {
-    pond.restore();
-  });
 
   const boardView = new BoardView(textures, { ...BOARD, koiSize });
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
@@ -48,12 +44,13 @@ async function boot(host: HTMLElement): Promise<void> {
   splashes.position.copyFrom(boardView.position);
   const result = new ResultOverlay(STAGE.width, STAGE.height);
 
+  const level = { ...LEVEL, ...SCORE };
   const scene = new GameScene({
     spec: BOARD,
-    level: { ...LEVEL, ...SCORE },
+    level,
     rng: new Random(),
     view: boardView,
-    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, splashes),
+    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, splashes, level.pointsPerPiece),
     status: hud,
     result,
   });
@@ -130,7 +127,10 @@ function createTextures(app: Application, koiSize: number): KoiTextures {
   });
 }
 
-/** The bank, the water below and above the board, animated by the app's clock. */
+/**
+ * The bank, the water below and above the board, animated by the app's clock and repainted after a lost WebGL
+ * context comes back.
+ */
 function createPond(app: Application, boardLeft: number): PondWater {
   const pond = new PondWater(app.renderer, {
     stageWidth: STAGE.width,
@@ -145,6 +145,10 @@ function createPond(app: Application, boardLeft: number): PondWater {
   });
   app.ticker.add((ticker) => {
     pond.tick(ticker.deltaMS / 1000);
+  });
+  // Pixi rebuilds the GL state in its own listener (added first, so it runs first); then the pond repaints its own
+  app.canvas.addEventListener('webglcontextrestored', () => {
+    pond.restore();
   });
   return pond;
 }
