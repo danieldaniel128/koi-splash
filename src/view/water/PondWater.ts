@@ -243,12 +243,14 @@ function pondShape(layout: PondLayout): UniformGroup {
 function bankLook(layout: PondLayout): UniformDefs {
   const halfWidth = layout.stageWidth / 2;
   const halfHeight = layout.stageHeight / 2;
+  const { stretch, strength, from, to } = POND.vignette;
   return {
     uBank: { value: color(POND.bank), type: 'vec3<f32>' },
     uBankPattern: { value: color(POND.bankPattern), type: 'vec3<f32>' },
     uPatternSize: { value: POND.patternSize, type: 'f32' },
     uWetBand: { value: POND.wetBand, type: 'f32' },
-    uFrame: { value: [halfWidth, halfHeight, halfWidth * 1.2, halfHeight * 1.1], type: 'vec4<f32>' },
+    uFrame: { value: [halfWidth, halfHeight, halfWidth * stretch[0], halfHeight * stretch[1]], type: 'vec4<f32>' },
+    uVignette: { value: [strength, from, to], type: 'vec3<f32>' },
   };
 }
 

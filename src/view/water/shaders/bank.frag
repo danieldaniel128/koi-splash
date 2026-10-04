@@ -9,8 +9,10 @@ uniform vec3 uBank;
 uniform vec3 uBankPattern;
 uniform float uPatternSize;
 uniform float uWetBand;
-// the stage's centre and half size, for the vignette
+// the vignette: the stage's centre (xy) and the size of its oval (zw: half the stage, stretched), then how much it
+// darkens (x) between which distances from the centre (y, z), in those sizes
 uniform vec4 uFrame;
+uniform vec3 uVignette;
 
 // Seigaiha: rows of overlapping circles, each row in front of the one above, every circle drawn as rings.
 float seigaiha(vec2 p, float size) {
@@ -35,6 +37,6 @@ void main() {
     vec3 color = mix(uBank, uBankPattern, seigaiha(p, uPatternSize) * 0.5);
     color *= mix(0.4, 1.0, smoothstep(0.0, uWetBand, edge)); // wet, shaded ground right at the water
     float fromCentre = length((p - uFrame.xy) / uFrame.zw);
-    color *= 1.0 - 0.4 * smoothstep(0.7, 1.5, fromCentre);
+    color *= 1.0 - uVignette.x * smoothstep(uVignette.y, uVignette.z, fromCentre);
     finalColor = vec4(color * paper(p), 1.0);
 }

@@ -31,6 +31,11 @@ export const POND = {
   patternSize: 34,
   /** Width (px) of the dark wet band on the bank along the water. */
   wetBand: 16,
+  /**
+   * The bank darkens toward the screen edges: an oval of half the stage stretched by `stretch` (x, y), darkening by
+   * up to `strength` from `from` to `to` (distance from the centre, in those half sizes).
+   */
+  vignette: { stretch: [1.2, 1.1], strength: 0.4, from: 0.7, to: 1.5 },
 
   // --- the moon's reflection on the open water below the board: centre (stage px) and radius (px)
   moonAt: [262, 582],
