@@ -48,7 +48,7 @@ export interface PadDisplay {
   nudge(cell: Cell): Promise<void>;
 }
 
-/** The end-of-level card. Implemented by the result overlay view. */
+/** The end-of-level card. Implemented by the UI's result card. */
 export interface ResultDisplay {
   show(outcome: 'won' | 'lost', status: GameStatus): void;
   hide(): void;

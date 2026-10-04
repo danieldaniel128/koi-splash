@@ -2,6 +2,7 @@ import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
 import './ui/kit.css';
 import './ui/hud.css';
 import './ui/bar.css';
+import './ui/overlay.css';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad } from './art/pondProps';
 import { BOARD } from './config/board';
@@ -23,7 +24,6 @@ import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
 import { Fireflies } from './view/Fireflies';
 import { PadView } from './view/PadView';
-import { ResultOverlay } from './view/ResultOverlay';
 import { ScorePopups } from './view/ScorePopups';
 import { KoiLife } from './view/KoiLife';
 import { KoiTextures } from './view/KoiTextures';
@@ -32,15 +32,18 @@ import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 import { Hud } from './ui/Hud';
 import { placePowerBar } from './ui/PowerBar';
+import { ResultCard } from './ui/ResultCard';
+import { RotateNotice } from './ui/RotateNotice';
 import { applyTheme } from './ui/theme';
 import { UiLayer } from './ui/UiLayer';
 
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
 async function boot(host: HTMLElement): Promise<void> {
+  applyTheme(document.documentElement);
+  await new RotateNotice(document.body).upright(); // lay out for the phone held upright
   const app = await createApp(host);
   const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
   const { board } = layout;
-  applyTheme(document.documentElement);
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, lotusIcon(app));
   placePowerBar(ui, layout.bar, POWER_BAR.slots);
@@ -51,7 +54,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const boardView = new BoardView(textures, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
   boardView.position.set(board.x, board.y);
   const popups = createScorePopups(hud, board);
-  const result = new ResultOverlay(layout.stage.width, layout.stage.height);
+  const result = new ResultCard(host);
   const pads = createPads(app, pond, hud, board);
 
   startGame({ boardView, pond, popups, hud, pads, result }, board.cell);
@@ -66,7 +69,6 @@ async function boot(host: HTMLElement): Promise<void> {
     pond.surface,
     popups,
     createScenery(app, layout),
-    result,
   );
   app.stage.addChild(stage);
   keepFitted(app, { stage, ui }, layout.stage, boardView, pond);
@@ -108,7 +110,7 @@ function startGame(
     popups: ScorePopups;
     hud: Hud;
     pads: PadView;
-    result: ResultOverlay;
+    result: ResultCard;
   },
   cell: number,
 ): void {
@@ -124,7 +126,7 @@ function startGame(
     pads,
     result,
   });
-  result.on('restart', () => {
+  result.onRestart(() => {
     scene.restart();
   });
   new SwipeInput(boardView, cell * INPUT.swipeThreshold, scene.handleSwipe);

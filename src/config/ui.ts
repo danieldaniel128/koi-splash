@@ -22,3 +22,14 @@ export const GOAL_TRAY = {
 export const POWER_BAR = {
   slots: 3,
 } as const;
+
+/** The end-of-level card fades in and pops (s). */
+export const RESULT_CARD = {
+  fadeIn: 0.3,
+  popIn: 0.45,
+} as const;
+
+/** Phones play upright: this media query is a phone (touch, short) held sideways. */
+export const PORTRAIT_LOCK = {
+  sidewaysPhone: '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)',
+} as const;
