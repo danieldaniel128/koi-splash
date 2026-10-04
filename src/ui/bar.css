@@ -1,52 +1,85 @@
-/* The specials bar under the pond: round power buttons with a tag. */
+/* The booster bar under the pond: round glass buttons with a count badge and a name, and a toast above them. */
 
-.powers {
+.boosters {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: var(--space-xl);
 }
 
-.power {
+.booster {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 58px;
   padding: 0;
-  display: grid;
-  place-items: center;
-  color: var(--color-muted);
+  border: 0;
+  background: none;
+  color: var(--color-ink);
   font: inherit;
+  cursor: pointer;
   pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--time-fast) cubic-bezier(0.2, 1.6, 0.4, 1);
 }
 
-.power:disabled {
-  cursor: default;
-  opacity: 0.75;
+.booster__orb {
+  width: 58px;
+  height: 58px;
 }
 
-.power__icon {
-  width: 22px;
-  height: 22px;
+.booster__orb svg {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 0 3px rgba(255, 220, 160, 0.35));
 }
 
-.power__icon svg {
+.booster .badge {
+  right: -4px;
+  top: -4px;
+}
+
+.booster__name {
   display: block;
-  width: 100%;
-  height: 100%;
+  margin-top: 3px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-ink);
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
-/* A small pill on a control's lower edge ("soon", a count). */
-.tag {
+@media (hover: hover) {
+  .booster:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.booster:active {
+  transform: scale(0.92);
+}
+
+/* A short message in a glass pill, popping up above whatever it belongs to. */
+.toast {
   position: absolute;
-  bottom: -7px;
   left: 50%;
-  transform: translateX(-50%);
-  padding: 1px var(--space-sm);
+  bottom: calc(100% + var(--space-sm));
+  padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-round);
-  background: var(--color-panelSolid);
-  border: var(--line) solid var(--color-rim);
-  font-size: var(--text-xs);
-  color: var(--color-gold);
-  letter-spacing: 0.06em;
+  background: var(--color-glass);
+  box-shadow:
+    inset 0 0 0 var(--line) var(--color-rim),
+    var(--shadow);
+  color: var(--color-goldLight);
+  font: 800 var(--text-md) var(--font-number);
   white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 6px) scale(0.94);
+  transition:
+    opacity var(--time-fast) ease,
+    transform var(--time-normal) cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.toast--shown {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }

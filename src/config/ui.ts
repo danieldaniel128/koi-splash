@@ -1,3 +1,5 @@
+import type { BoosterSlot } from '../ui/BoosterBar';
+
 /** How the HUD moves (s, scale). Its look is in the theme (src/theme). */
 export const HUD_MOTION = {
   /** The score counts up to a new value in this long, and swells while it does. */
@@ -19,10 +21,15 @@ export const GOAL_TRAY = {
   iconRadius: 13,
 } as const;
 
-/** The specials bar under the pond: a slot per power. Placeholders for now, locked until the powers exist. */
-export const POWER_BAR = {
-  slots: 3,
-} as const;
+/**
+ * The booster bar under the pond, left to right: which icon, its name, and how many the player starts with (the
+ * prototype gives one of each per pond). The boosters themselves come later.
+ */
+export const BOOSTERS = [
+  { icon: 'swap', name: 'Swap', count: 1 },
+  { icon: 'special', name: 'Special', count: 1 },
+  { icon: 'feed', name: 'Feed', count: 1 },
+] as const satisfies readonly BoosterSlot[];
 
 /** The end-of-level card fades in and pops (s). */
 export const RESULT_CARD = {

@@ -15,7 +15,7 @@ import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
 import type { PondProp } from './config/pond';
-import { GOAL_TRAY, POWER_BAR } from './config/ui';
+import { BOOSTERS, GOAL_TRAY } from './config/ui';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
@@ -39,7 +39,7 @@ import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
 import { Hud } from './ui/Hud';
-import { placePowerBar } from './ui/PowerBar';
+import { BoosterBar } from './ui/BoosterBar';
 import { ResultCard } from './ui/ResultCard';
 import { RotateNotice } from './ui/RotateNotice';
 import { THEME, applyTheme } from './theme/theme';
@@ -56,7 +56,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, { lotusIcon: lotusIcon(app), stars: LEVEL.stars });
-  placePowerBar(ui, layout.bar, POWER_BAR.slots);
+  new BoosterBar(ui, layout.bar, BOOSTERS);
 
   const textures = createTextures(app, board.piece);
   const pond = createPond(app, layout, shore);
