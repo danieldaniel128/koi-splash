@@ -261,3 +261,21 @@
   font: 700 var(--text-sm) var(--font-label);
   white-space: nowrap;
 }
+
+/* The sound toggle: a small glass orb at the end of the booster bar. */
+.sound-toggle {
+  padding: 0;
+  border: 0;
+  color: var(--color-ink);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.sound-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sound-toggle[aria-pressed='false'] {
+  color: var(--color-muted);
+}

@@ -7,6 +7,7 @@ import { scoreRound } from '../model/score';
 import type { BoosterChange, BoosterUse } from '../model/boosters';
 import type { CascadeStep, Cell, Cleared, Created, Piece, Spawn } from '../model/types';
 import type { BoosterMotions } from './BoosterMotions';
+import type { GameEventBus } from '../game/events';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
 import { planRound } from './specialTiming';
@@ -19,6 +20,24 @@ import type { WaterSurface } from './water/PondWater';
 export interface PlacedPiece {
   readonly piece: Piece;
   readonly at: Cell;
+}
+
+/** What the animator plays with: the board, the water, the effects and motions, and the game's events. */
+export interface AnimatorDeps {
+  readonly view: BoardView;
+  /** A cell's size (px): how far things travel. */
+  readonly cell: number;
+  readonly water: WaterSurface;
+  /** The points that pop up over the matches. */
+  readonly popups: MatchEffects;
+  /** The level's points per piece, the same value the scene scores with. */
+  readonly pointsPerPiece: number;
+  /** The specials' effects and the ways koi leave around them. */
+  readonly specials: { readonly fx: SpecialFx; readonly motions: SpecialMotions };
+  /** The boosters' motions, and where the feed's pellets are thrown from (board space). */
+  readonly boosters: { readonly motions: BoosterMotions; readonly feedFrom: () => PointData };
+  /** Where the animator says what happened (a koi diving, a special born), timed to the motion. */
+  readonly events: GameEventBus;
 }
 
 /** The match effects over the water, in the board's space (one splash per match, points). */
@@ -42,19 +61,25 @@ export class BoardAnimator {
    * pass the round in, so this counter mirrors its loop index; the scene passing the round's points would be cleaner.
    */
   private round = 0;
+  private readonly view: BoardView;
+  private readonly cellSize: number;
+  private readonly water: WaterSurface;
+  private readonly fx: MatchEffects;
+  private readonly pointsPerPiece: number;
+  private readonly specials: AnimatorDeps['specials'];
+  private readonly boosters: AnimatorDeps['boosters'];
+  private readonly events: GameEventBus;
 
-  constructor(
-    private readonly view: BoardView,
-    private readonly cellSize: number,
-    private readonly water: WaterSurface,
-    private readonly fx: MatchEffects,
-    /** The level's points per piece, the same value the scene scores with. */
-    private readonly pointsPerPiece: number,
-    /** The specials' effects and the ways koi leave around them. */
-    private readonly specials: { readonly fx: SpecialFx; readonly motions: SpecialMotions },
-    /** The boosters' motions, and where the feed's pellets are thrown from (board space). */
-    private readonly boosters: { readonly motions: BoosterMotions; readonly feedFrom: () => PointData },
-  ) {}
+  constructor(deps: AnimatorDeps) {
+    this.view = deps.view;
+    this.cellSize = deps.cell;
+    this.water = deps.water;
+    this.fx = deps.popups;
+    this.pointsPerPiece = deps.pointsPerPiece;
+    this.specials = deps.specials;
+    this.boosters = deps.boosters;
+    this.events = deps.events;
+  }
 
   /** A booster changed the board: the view plays it (a leap, a feeding, a koi powering up) before it settles. */
   async playBooster(use: BoosterUse, change: BoosterChange): Promise<void> {
@@ -69,6 +94,7 @@ export class BoardAnimator {
           motions.powerUp(piece, at, () => {
             this.view.makeSpecial(piece);
             this.specials.fx.birth(at, piece.kind, 0);
+            if (piece.special) this.events.emit('specialBorn', { type: piece.special.type });
           }),
         ),
       );
@@ -156,6 +182,7 @@ export class BoardAnimator {
     this.specials.fx.birth(made.at, made.piece.kind, merge);
     await gsap.to({}, { duration: merge });
     this.view.makeSpecial(made.piece);
+    if (made.piece.special) this.events.emit('specialBorn', { type: made.piece.special.type });
   }
 
   /** A koi leaves the board the way its round's plan says, then its sprite goes. */
@@ -261,6 +288,7 @@ export class BoardAnimator {
     const koi = this.view.spriteOf(id);
     gsap.delayedCall(delay, () => {
       this.water.push(this.onStage(this.view.cellToPoint(at)), WATER.divePush, WATER.diveRadius);
+      this.events.emit('dive');
     });
     const ahead = TIMING.diveGlide * this.cellSize;
     const deep = koi.restScale * TIMING.diveScale;
@@ -310,6 +338,7 @@ export class BoardAnimator {
       delay,
       ease: 'sine.inOut',
     });
+    this.events.emit('land');
   }
 
   /** A new koi rises from the deep into its cell, the lowest of a column first, and breaks the surface. */

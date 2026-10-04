@@ -7,6 +7,7 @@ import { TIMING } from '../config/timing';
 import type { Cell, Fired, Kind } from '../model/types';
 import type { BlastPlan } from './specialTiming';
 import type { SpecialTextures } from './SpecialTextures';
+import type { GameEventBus } from '../game/events';
 import { hitStop } from './hitStop';
 import type { WaterSurface } from './water/PondWater';
 
@@ -27,14 +28,30 @@ export interface FxBoard {
 export class SpecialFx extends Container {
   private readonly beamTexture = Texture.from(paintBeam(128, 32));
 
-  constructor(
-    private readonly board: FxBoard,
-    private readonly textures: SpecialTextures,
-    private readonly water: WaterSurface,
-    private readonly cell: number,
-    private readonly length: number,
-  ) {
+  private readonly board: FxBoard;
+  private readonly textures: SpecialTextures;
+  private readonly water: WaterSurface;
+  private readonly cell: number;
+  private readonly length: number;
+  private readonly events: GameEventBus;
+
+  constructor(deps: {
+    readonly board: FxBoard;
+    readonly textures: SpecialTextures;
+    readonly water: WaterSurface;
+    /** A cell's size, and the board's longest side (px): how far a beam reaches. */
+    readonly cell: number;
+    readonly length: number;
+    /** Where it says when each blast's moments happen (the sounds follow them). */
+    readonly events: GameEventBus;
+  }) {
     super();
+    this.board = deps.board;
+    this.textures = deps.textures;
+    this.water = deps.water;
+    this.cell = deps.cell;
+    this.length = deps.length;
+    this.events = deps.events;
   }
 
   /** A special was born at `at`: a flash of its glow and a ring in the water, `delay` s from now. */
@@ -78,6 +95,9 @@ export class SpecialFx extends Container {
     beam.rotation =
       fired.piece.special?.type === 'line' && fired.piece.special.along === 'col' ? Math.PI / 2 : 0;
     beam.alpha = 0;
+    gsap.delayedCall(at, () => {
+      this.events.emit('lineFired');
+    });
     const grow = { k: 0 };
     gsap.to(grow, {
       k: 1,
@@ -120,6 +140,7 @@ export class SpecialFx extends Container {
       ease: 'none',
       onStart: () => {
         this.splash(fired.at, look.pull, look.popRadius);
+        this.events.emit('whirlFired');
       },
       onUpdate: () => {
         const grow = easeOutBack(Math.min(1, time.t / whirlSpin));
@@ -134,6 +155,7 @@ export class SpecialFx extends Container {
     });
     gsap.delayedCall(at + stay, () => {
       this.splash(fired.at, look.pop, look.popRadius);
+      this.events.emit('whirlPopped');
       hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
   }
@@ -141,7 +163,11 @@ export class SpecialFx extends Container {
   /** Prism beams arc from the rainbow koi to every koi it takes, nearest first, each in a colour of the spectrum. */
   private prism({ fired, at }: BlastPlan): void {
     const { rainbowRise, rainbowStep } = TIMING.specials;
+    gsap.delayedCall(at, () => {
+      this.events.emit('rainbowRose');
+    });
     gsap.delayedCall(at + rainbowRise, () => {
+      this.events.emit('rainbowFired');
       hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
     fired.reach.forEach((cell, n) => {
@@ -184,6 +210,7 @@ export class SpecialFx extends Container {
     });
     gsap.delayedCall(delay + travel, () => {
       this.splash(target, look.push, look.pushRadius);
+      this.events.emit('prismHit', { n });
     });
   }
 
