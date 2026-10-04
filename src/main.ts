@@ -167,9 +167,9 @@ function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayo
 
 /** The pond's border and stones (painted once) and fireflies over the bank, on the app's clock. */
 function createScenery(app: Application, layout: GameLayout): Container {
-  const resolution = app.renderer.resolution * KOI_LOOK.bakeResolution;
-  const props = new PondProps(placeProps(layout.pond), resolution);
-  const shore = createShore(layout.pond, resolution);
+  const props = new PondProps(placeProps(layout.pond), app.renderer.resolution * KOI_LOOK.bakeResolution);
+  // the ring is baked at exactly the screen's pixels per stage px (the layout is made for this screen)
+  const shore = createShore(layout.pond, app.renderer.resolution * layout.stage.scale);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
   const fireflies = new Fireflies({
     spots: [
