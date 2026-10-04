@@ -18,7 +18,7 @@ import { LAYOUT } from './config/layout';
 import { LEVEL, SCORE } from './config/level';
 import { POND } from './config/pond';
 import type { PondProp } from './config/pond';
-import { BOOSTERS, GOAL_TRAY, SPECIAL_MENU } from './config/ui';
+import { BOOSTERS, GOAL_TRAY, SOUND_MENU, SPECIAL_MENU } from './config/ui';
 import { BOOSTER_MOTION } from './config/specials';
 import { WATER } from './config/water';
 import { Random } from './core/Random';
@@ -52,10 +52,19 @@ import { BoosterControl } from './game/BoosterControl';
 import type { BoosterSounds } from './game/BoosterControl';
 import { InstructionPill } from './ui/InstructionPill';
 import { SpecialMenu } from './ui/SpecialMenu';
-import { SoundToggle, storedSetting } from './ui/SoundToggle';
+import { SoundSettings } from './ui/SoundSettings';
+import { SOUND_ICONS } from './ui/icons';
+import { storedSetting } from './core/storedSetting';
+import { placeSoundMenu } from './layout/soundMenu';
+import { GardenMusic } from './audio/GardenMusic';
+import { byBus, Mixer } from './audio/Mixer';
+import { NightAmbience } from './audio/NightAmbience';
+import { SampleTrack } from './audio/SampleTrack';
 import { SoundBoard } from './audio/SoundBoard';
+import { Soundtrack } from './audio/Soundtrack';
 import { Synth } from './audio/Synth';
-import { AUDIO } from './config/audio';
+import type { Track } from './audio/Track';
+import { AMBIENCE, AUDIO, MUSIC } from './config/audio';
 import { createGameEvents } from './game/events';
 import type { GameEventBus } from './game/events';
 import type { Cell, Special } from './model/types';
@@ -305,30 +314,53 @@ function createBoosterControl(
 }
 
 /**
- * The sound: the prototype's synth, playing what each game event sounds like and a sparse background, with a toggle
- * at the end of the booster bar (kept between visits). Browsers only allow sound after a touch, so the first touch
- * (or key) starts it.
+ * The sound, on three channels: the effects (the prototype's synth playing what each game event sounds like), the
+ * music and the ambience (made as they play, or recorded loops when the config names files). A menu at the end of
+ * the booster bar switches each channel (kept between visits). Browsers only allow sound after a touch, so the first
+ * touch (or key) starts it; it sleeps while the page is hidden.
  */
 function startSound(app: Application, events: GameEventBus, screen: Screen): void {
-  const setting = storedSetting(AUDIO.storageKey);
-  const synth = new Synth(setting.load());
-  const board = new SoundBoard(events, synth);
+  const settings = byBus((bus) => storedSetting(`${AUDIO.storageKey}.${bus}`));
+  const mixer = new Mixer(byBus((bus) => settings[bus].load()));
+  new SoundBoard(events, new Synth(mixer, 'sfx'));
+  const soundtrack = new Soundtrack(events, [musicTrack(mixer), ambienceTrack(mixer)], mixer);
   for (const gesture of ['pointerdown', 'keydown'] as const) {
     window.addEventListener(gesture, () => {
-      synth.unlock();
+      mixer.unlock();
     });
   }
-  app.ticker.add((ticker) => {
-    board.tick(ticker.deltaMS / 1000);
+  document.addEventListener('visibilitychange', () => {
+    mixer.setAwake(!document.hidden);
   });
-  const { bar } = screen.layout;
-  const size = 36;
-  const rect = { x: bar.x + bar.width - size, y: bar.y + (58 - size) / 2, width: size, height: size };
-  new SoundToggle(screen.ui, rect, synth.enabled, (on) => {
-    synth.setEnabled(on);
-    setting.save(on);
-    events.emit('buttonClicked');
+  app.ticker.add(() => {
+    soundtrack.update();
   });
+  const { look, channels } = SOUND_MENU;
+  new SoundSettings(screen.ui, placeSoundMenu(screen.layout.bar, channels.length, look), {
+    channels: channels.map((channel) => ({ ...channel, icon: SOUND_ICONS[channel.id] })),
+    isOn: (bus) => mixer.isOn(bus),
+    onChange: (bus, on) => {
+      mixer.setOn(bus, on);
+      settings[bus].save(on);
+    },
+    onPress: () => {
+      events.emit('buttonClicked');
+    },
+  });
+}
+
+/** The music: composed as it plays, or the recorded loop the config names. */
+function musicTrack(mixer: Mixer): Track {
+  return MUSIC.file
+    ? new SampleTrack(mixer, 'music', MUSIC.file)
+    : new GardenMusic(new Synth(mixer, 'music'));
+}
+
+/** The ambience: the pond at night made as it plays, or the recorded loop the config names. */
+function ambienceTrack(mixer: Mixer): Track {
+  return AMBIENCE.file
+    ? new SampleTrack(mixer, 'ambience', AMBIENCE.file)
+    : new NightAmbience(new Synth(mixer, 'ambience'));
 }
 
 /** What the boosters sound like: they say what happened, and the sound board plays it. */

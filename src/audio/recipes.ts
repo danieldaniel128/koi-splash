@@ -249,10 +249,3 @@ export function press(v: Voice): void {
 export function click(v: Voice): void {
   v.tone(520, 0.06, 0.06, { type: 'triangle', glide: 720 });
 }
-
-/** A low koto note for the background, sometimes answered a third up. */
-export function musicNote(v: Voice): void {
-  const n = Math.floor(Math.random() * 8);
-  v.pluck(v.note(n) * 0.5, AUDIO.music.volume);
-  if (Math.random() < AUDIO.music.answer) v.pluck(v.note(n + 2) * 0.5, AUDIO.music.volume * 0.7, 0.28);
-}

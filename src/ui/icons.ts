@@ -42,3 +42,24 @@ export const BOOSTER_ICONS = {
 } as const;
 
 export type BoosterIcon = keyof typeof BOOSTER_ICONS;
+
+/** A speaker, with sound waves (on) or a cross (off). */
+export const SPEAKER_ON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
+  <path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.8"
+  stroke-linecap="round"/></svg>`;
+export const SPEAKER_OFF = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
+  <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
+/** The sound channels: a pair of notes (music), ripples under the moon (ambience), a sparkle (effects). */
+export const SOUND_ICONS = {
+  music: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="2.6" fill="currentColor"/>
+    <circle cx="16.5" cy="15.5" r="2.6" fill="currentColor"/></svg>`,
+  ambience: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5a5 5 0 1 0 5 6.2 4 4 0 0 1-5-6.2z"
+    fill="currentColor"/><path d="M3 16q2.5-2 5 0t5 0 5 0 3 0M5 20q2-1.6 4 0t4 0 4 0" fill="none" stroke="currentColor"
+    stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  sfx: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 6.1L20 11l-6.1 1.9L12 19l-1.9-6.1L4 11l6.1-1.9z"
+    fill="currentColor"/><circle cx="19" cy="4.5" r="1.4" fill="currentColor"/></svg>`,
+} as const;
+
+export type SoundIcon = keyof typeof SOUND_ICONS;

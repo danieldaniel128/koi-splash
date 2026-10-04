@@ -1,0 +1,142 @@
+import { describe, expect, it } from 'vitest';
+import { Composer, nearestTone, semitonesOf } from '../src/audio/composer';
+import type { BarMood, MusicNote } from '../src/audio/composer';
+import { GardenMusic } from '../src/audio/GardenMusic';
+import { NightAmbience } from '../src/audio/NightAmbience';
+import type { Bus } from '../src/audio/Mixer';
+import { Soundtrack } from '../src/audio/Soundtrack';
+import { noteOf } from '../src/audio/Synth';
+import type { Voice } from '../src/audio/Synth';
+import type { Mood, Track } from '../src/audio/Track';
+import { MUSIC } from '../src/config/audio';
+import { Random } from '../src/core/Random';
+import { createGameEvents } from '../src/game/events';
+
+const PENTATONIC = [0, 2, 4, 7, 9];
+
+/** A voice on a clock the test moves, counting what it was asked to play. */
+function clockedVoice(): Voice & { time: number | null; tones: number } {
+  const voice = {
+    time: 0 as number | null,
+    tones: 0,
+    tone: () => {
+      voice.tones++;
+    },
+    noise: () => undefined,
+    pluck: () => undefined,
+    plip: () => undefined,
+    note: (i: number) => noteOf(i, 293.66, PENTATONIC),
+    throttle: () => true,
+    now: () => voice.time,
+  };
+  return voice;
+}
+
+/** Bars from a seeded composer, one mood each. */
+function compose(moods: readonly BarMood[], seed = 7): MusicNote[][] {
+  const random = new Random(seed);
+  const composer = new Composer(() => random.next());
+  return moods.map((mood) => composer.next(mood));
+}
+
+const melodic = (bar: MusicNote[]): MusicNote[] => bar.filter((n) => n.part === 'koto' || n.part === 'flute');
+const inScale = (semitones: number): boolean => PENTATONIC.includes(((semitones % 12) + 12) % 12);
+
+describe('the composer', () => {
+  const bars = compose(Array<BarMood>(64).fill('calm'));
+
+  it('keeps the melody on the pentatonic scale and in its range', () => {
+    const pitches = bars.flatMap(melodic).flatMap((n) => n.pitches);
+    expect(pitches.length).toBeGreaterThan(64);
+    expect(pitches.every(inScale)).toBe(true);
+    const { low, high } = MUSIC.melody;
+    expect(Math.min(...pitches)).toBeGreaterThanOrEqual(semitonesOf(low));
+    expect(Math.max(...pitches)).toBeLessThanOrEqual(semitonesOf(high));
+  });
+
+  it('changes chord every few bars, with the pad, and keeps a bass under every bar', () => {
+    bars.forEach((bar, k) => {
+      expect(bar.some((n) => n.part === 'bass')).toBe(true);
+      expect(bar.some((n) => n.part === 'pad')).toBe(k % MUSIC.bars === 0);
+    });
+  });
+
+  it('closes the eight-bar cycle on the root of its chord, held long', () => {
+    for (let k = 7; k < bars.length; k += 8) {
+      const last = melodic(bars[k] ?? []).at(-1);
+      expect(last?.length).toBe(4);
+      expect((last?.pitches[0] ?? 1) % 12).toBe(7); // A: the root of the cycle's last chord (Asus4)
+    }
+  });
+
+  it('grows a heartbeat when tense, rests after a level, and climbs home to D for a win', () => {
+    const [tense, rest, cadence] = compose(['tense', 'rest', 'cadence']);
+    expect(tense?.filter((n) => n.part === 'drum').map((n) => n.step)).toEqual([0, 1]);
+    expect(rest?.every((n) => n.part === 'pad' || n.part === 'bass')).toBe(true);
+    expect((melodic(cadence ?? []).at(-1)?.pitches[0] ?? 1) % 12).toBe(0);
+  });
+
+  it('plays the same for the same seed', () => {
+    expect(compose(['calm', 'calm', 'tense'], 3)).toEqual(compose(['calm', 'calm', 'tense'], 3));
+  });
+});
+
+describe('nearestTone and semitonesOf', () => {
+  it('lands on the closest degree whose place in the scale is a chord tone', () => {
+    expect(nearestTone(6, [0, 2, 3], { low: 3, high: 10 })).toBe(5); // E5 -> D5 (F#5 is as near: the lower wins)
+    expect(nearestTone(4, [3], { low: 3, high: 10 })).toBe(3); // B4 -> A4
+    expect(semitonesOf(5)).toBe(12);
+    expect(semitonesOf(-1)).toBe(-3);
+  });
+});
+
+describe('GardenMusic', () => {
+  it('schedules a bar just before it is due, once, and nothing while it cannot play', () => {
+    const voice = clockedVoice();
+    const music = new GardenMusic(voice, () => 0.5);
+    voice.time = null;
+    music.update();
+    expect(voice.tones).toBe(0);
+    voice.time = 10;
+    music.update();
+    const first = voice.tones;
+    expect(first).toBeGreaterThan(0);
+    music.update();
+    expect(voice.tones).toBe(first); // the next bar isn't due yet
+    voice.time = 10 + (60 / MUSIC.tempo) * 4;
+    music.update();
+    expect(voice.tones).toBeGreaterThan(first);
+  });
+});
+
+describe('NightAmbience', () => {
+  it('keeps every layer going, each again after its own gap', () => {
+    const voice = clockedVoice();
+    const ambience = new NightAmbience(voice, () => 0.5);
+    for (let t = 0; t < 60; t += 0.1) {
+      voice.time = t;
+      ambience.update();
+    }
+    expect(voice.tones).toBeGreaterThan(100); // drops, crickets and chimes are tones; the water is noise
+  });
+});
+
+describe('Soundtrack', () => {
+  it('tells its tracks how the game goes and dips the music under the effects', () => {
+    const events = createGameEvents();
+    const moods: Mood[] = [];
+    const track: Track = { update: () => undefined, setMood: (mood) => void moods.push(mood) };
+    const dips: [Bus, number][] = [];
+    new Soundtrack(events, [track], { duck: (bus, depth) => void dips.push([bus, depth]) });
+    events.emit('moveSpent', { movesLeft: 9 });
+    events.emit('moveSpent', { movesLeft: 4 });
+    events.emit('won');
+    events.emit('match', { round: 0, size: 3 });
+    events.emit('whirlPopped');
+    expect(moods).toEqual(['calm', 'tense', 'won']);
+    expect(dips).toEqual([
+      ['music', MUSIC.duck.match],
+      ['music', MUSIC.duck.special],
+    ]);
+  });
+});

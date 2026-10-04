@@ -1,4 +1,5 @@
 import { AUDIO } from '../config/audio';
+import type { Bus, Mixer, Output } from './Mixer';
 
 /** What a sound recipe plays with: tones, noise bursts and the two small building blocks, on the game's scale. */
 export interface Voice {
@@ -14,19 +15,34 @@ export interface Voice {
   note(i: number): number;
   /** True at most once every `gap` s for `key`: keeps a burst of the same sound gentle. */
   throttle(key: string, gap: number): boolean;
+  /** The audio clock (s), or null while this voice can't play (no touch yet, its channel off, the page hidden). */
+  now(): number | null;
 }
 
-export interface ToneOptions {
+/** Where a sound sits: -1 (left) to 1 (right). */
+interface Placed {
+  readonly pan?: number;
+}
+
+export interface ToneOptions extends Placed {
   readonly type?: OscillatorType;
   readonly delay?: number;
   readonly glide?: number;
   readonly attack?: number;
+  /** Cents off the note (a pair a few cents apart makes a pad shimmer). */
+  readonly detune?: number;
+  /** A lowpass at this many Hz, to soften a bright wave. */
+  readonly filter?: number;
+  /** A slow wobble in pitch: `rate` Hz, `depth` Hz either way (a breathy flute). */
+  readonly vibrato?: { readonly rate: number; readonly depth: number };
 }
 
-export interface NoiseOptions {
+export interface NoiseOptions extends Placed {
   readonly delay?: number;
   readonly sweepTo?: number;
   readonly attack?: number;
+  /** A bandpass of this sharpness at `freq` instead of the lowpass: a breath on a note, an airy hiss. */
+  readonly band?: number;
 }
 
 /** Note `i` of a scale over a base frequency (semitones per octave in `scale`). Pure. */
@@ -38,69 +54,50 @@ export function noteOf(i: number, base: number, scale: readonly number[]): numbe
 }
 
 /**
- * The prototype's Web Audio synth, ported: every voice runs through its own gain envelope into a master gain and a
- * gentle compressor; noise comes from one second of softened white noise made once. The context is made on the
- * first touch (browsers only allow sound after one) and resumed when the page comes back; nothing plays while the
- * sound is off. A missing Web Audio just means silence.
+ * The prototype's Web Audio synth, ported, playing on one of the mixer's channels: every voice runs through its own
+ * gain envelope (and a filter and a pan when asked) into the channel. Nothing plays while the channel is off.
  */
 export class Synth implements Voice {
-  private ctx: AudioContext | null = null;
-  private out: GainNode | null = null;
-  private noiseBuffer: AudioBuffer | null = null;
   private readonly last = new Map<string, number>();
 
-  constructor(private on: boolean) {}
-
-  get enabled(): boolean {
-    return this.on;
-  }
-
-  /** Turns the sound on or off: the master volume fades, so sounds still ringing fade out with it. */
-  setEnabled(on: boolean): void {
-    this.on = on;
-    if (this.ctx && this.out)
-      this.out.gain.setTargetAtTime(on ? AUDIO.master : 0, this.ctx.currentTime, 0.03);
-  }
-
-  /** Makes (or resumes) the audio context. Call from a user gesture. */
-  unlock(): void {
-    this.init();
-    if (this.ctx?.state === 'suspended') void this.ctx.resume();
-  }
+  constructor(
+    private readonly mixer: Mixer,
+    private readonly bus: Bus,
+  ) {}
 
   tone(freq: number, dur: number, vol: number, opts: ToneOptions = {}): void {
-    const ready = this.ready();
-    if (!ready) return;
-    const { ctx, out } = ready;
+    const output = this.mixer.output(this.bus);
+    if (!output) return;
+    const { ctx } = output;
     const t = ctx.currentTime + (opts.delay ?? 0);
     const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
     osc.type = opts.type ?? 'sine';
     osc.frequency.setValueAtTime(freq, t);
     if (opts.glide) osc.frequency.exponentialRampToValueAtTime(opts.glide, t + dur);
-    envelope(gain, t, vol, opts.attack ?? 0.008, dur);
-    osc.connect(gain);
-    gain.connect(out);
+    if (opts.detune) osc.detune.value = opts.detune;
+    if (opts.vibrato) wobble(ctx, osc, opts.vibrato, { t, dur });
+    const shaped = opts.filter ? lowpass(ctx, osc, opts.filter, t) : osc;
+    playThrough(output, shaped, { t, vol, attack: opts.attack ?? 0.008, dur, pan: opts.pan });
     osc.start(t);
     osc.stop(t + dur + 0.03);
   }
 
   noise(dur: number, vol: number, freq: number, opts: NoiseOptions = {}): void {
-    const ready = this.ready();
-    if (!ready || !this.noiseBuffer) return;
-    const { ctx, out } = ready;
+    const output = this.mixer.output(this.bus);
+    const buffer = this.mixer.noise;
+    if (!output || !buffer) return;
+    const { ctx } = output;
     const t = ctx.currentTime + (opts.delay ?? 0);
     const source = ctx.createBufferSource();
     const filter = ctx.createBiquadFilter();
-    const gain = ctx.createGain();
-    source.buffer = this.noiseBuffer;
-    filter.type = 'lowpass';
+    source.buffer = buffer;
+    source.loop = dur > buffer.duration - 0.1; // a long swell reads round the second of noise
+    filter.type = opts.band ? 'bandpass' : 'lowpass';
+    if (opts.band) filter.Q.value = opts.band;
     filter.frequency.setValueAtTime(freq, t);
     if (opts.sweepTo) filter.frequency.exponentialRampToValueAtTime(opts.sweepTo, t + dur);
-    envelope(gain, t, vol, opts.attack ?? 0.02, dur);
     source.connect(filter);
-    filter.connect(gain);
-    gain.connect(out);
+    playThrough(output, filter, { t, vol, attack: opts.attack ?? 0.02, dur, pan: opts.pan });
     source.start(t, Math.random() * 0.1);
     source.stop(t + dur + 0.05);
   }
@@ -119,54 +116,71 @@ export class Synth implements Voice {
   }
 
   throttle(key: string, gap: number): boolean {
-    const now = this.ctx?.currentTime ?? 0;
+    const now = this.now() ?? 0;
     if (now - (this.last.get(key) ?? -Infinity) < gap) return false;
     this.last.set(key, now);
     return true;
   }
 
-  /** The context and the output, when sound can play now (made, running, and on). */
-  private ready(): { ctx: AudioContext; out: GainNode } | null {
-    if (!this.on || !this.ctx || !this.out || this.ctx.state !== 'running') return null;
-    return { ctx: this.ctx, out: this.out };
-  }
-
-  private init(): void {
-    if (this.ctx || typeof AudioContext === 'undefined') return;
-    try {
-      const ctx = new AudioContext();
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.value = -16;
-      compressor.ratio.value = 4;
-      const out = ctx.createGain();
-      out.gain.value = this.on ? AUDIO.master : 0;
-      out.connect(compressor);
-      compressor.connect(ctx.destination);
-      this.noiseBuffer = softNoise(ctx);
-      this.ctx = ctx;
-      this.out = out;
-    } catch (error) {
-      console.warn('sound is not available', error);
-    }
+  now(): number | null {
+    return this.mixer.output(this.bus)?.ctx.currentTime ?? null;
   }
 }
 
+/** How a sound is shaped on its way out: from `t`, up to `vol` over `attack`, gone at `dur`, placed at `pan`. */
+interface Shape {
+  readonly t: number;
+  readonly vol: number;
+  readonly attack: number;
+  readonly dur: number;
+  readonly pan?: number | undefined;
+}
+
+/** Sends a source through its envelope (and its pan) into the channel. */
+function playThrough(output: Output, source: AudioNode, shape: Shape): void {
+  const { ctx, out } = output;
+  const gain = ctx.createGain();
+  envelope(gain, shape);
+  source.connect(gain);
+  if (shape.pan === undefined) {
+    gain.connect(out);
+    return;
+  }
+  const panner = ctx.createStereoPanner();
+  panner.pan.value = shape.pan;
+  gain.connect(panner);
+  panner.connect(out);
+}
+
 /** A pluck's shape: from silence up to `vol` over `attack`, then down to silence at `dur` (both exponential). */
-function envelope(gain: GainNode, t: number, vol: number, attack: number, dur: number): void {
+function envelope(gain: GainNode, { t, vol, attack, dur }: Shape): void {
   gain.gain.setValueAtTime(0.0001, t);
   gain.gain.exponentialRampToValueAtTime(vol, t + attack);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
 }
 
-/** One second of white noise softened by a one-pole lowpass: a water hiss, not a radio hiss. */
-function softNoise(ctx: AudioContext): AudioBuffer {
-  const length = ctx.sampleRate;
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  let b = 0;
-  for (let i = 0; i < length; i++) {
-    b = b * 0.62 + (Math.random() * 2 - 1) * 0.38;
-    data[i] = b * 1.8;
-  }
-  return buffer;
+/** A lowpass after a source. */
+function lowpass(ctx: AudioContext, source: AudioNode, freq: number, t: number): AudioNode {
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(freq, t);
+  source.connect(filter);
+  return filter;
+}
+
+/** A slow oscillator nudging another's pitch, for as long as it plays. */
+function wobble(
+  ctx: AudioContext,
+  osc: OscillatorNode,
+  vibrato: { rate: number; depth: number },
+  span: { t: number; dur: number },
+): void {
+  const lfo = ctx.createOscillator();
+  const depth = ctx.createGain();
+  lfo.frequency.value = vibrato.rate;
+  depth.gain.value = vibrato.depth;
+  lfo.connect(depth);
+  depth.connect(osc.frequency);
+  lfo.start(span.t);
+  lfo.stop(span.t + span.dur + 0.03);
 }

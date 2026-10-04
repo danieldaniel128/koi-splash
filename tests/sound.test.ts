@@ -15,6 +15,7 @@ function fakeVoice(): Voice & { played: string[] } {
     plip: () => played.push('plip'),
     note: (i) => noteOf(i, 293.66, [0, 2, 4, 7, 9]),
     throttle: () => true,
+    now: () => 0,
   };
 }
 
