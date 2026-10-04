@@ -102,7 +102,7 @@ export const BOARD_PADS = {
    * The pond's shore foam outlines each pad like its own: the shape it follows (share of the pad's radius), and how
    * fast it lets go as a blooming lotus lifts out (per unit of extra scale).
    */
-  foamFit: 0.95,
+  foamFit: 0.8, // pulled in, so the foam hugs the pad's rim and never reaches a neighbouring koi's head or tail
   foamLetGo: 2.5,
   /** A koi bumps into the pad: it rocks this far (radians) and settles in this long. */
   nudgeTurn: 0.22,
