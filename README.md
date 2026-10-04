@@ -111,8 +111,25 @@ The sound is the prototype's: no sound files, a small Web Audio synth (`src/audi
 pentatonic scale, water plips and soft noise splashes, ported recipe by recipe (`src/audio/recipes.ts`). The game
 doesn't know it exists. The scene, the animator and the effects say what happens on a typed event bus
 (`src/core/EventBus.ts`, Observer), each at the moment it happens (a beam landing, a whirlpool popping), and
-`SoundBoard` maps every event to its recipe in one place. A first touch starts the sound, and a toggle at the end of
-the booster bar mutes it (kept between visits).
+`SoundBoard` maps every event to its recipe in one place.
+
+The sound plays on three channels, effects, music and ambience, each with its own volume and switch, mixed in
+`src/audio/Mixer.ts` into one compressor. The music dips for a moment under a match or a special so the effects come
+through (ducking). The music and the ambience are tracks (`src/audio/Track.ts`), and a track is either made as it
+plays or a recorded loop: naming a file in `src/config/audio.ts` swaps one in, with nothing else changing.
+
+The made ones are generative. `src/audio/composer.ts` writes the music a bar at a time, just before it plays: a slow
+D major piece at 68 bpm, with a pad and a bass on a four-chord loop, a quiet koto arpeggio, and a melody that wanders
+the pentatonic scale. It lands on the chord on the strong beats and closes each phrase on a long chord tone, and the
+answering phrases sometimes go to a breathy flute. It's in the same key as the effects, so a match always sounds in
+tune with it, and it's never the same twice. It follows the game through the event bus. With few moves left it grows a
+soft taiko heartbeat, a win plays a short climb home to D, and after a level the chords rest. The composer is pure
+and seeded, so it's tested: the scale, the range, the phrase endings, each mood. The ambience is the pond at night:
+water lapping at the stones, a drop now and then, crickets from either side, and a far wind chime, each on its own
+random gap. Both are scheduled a little ahead on the audio clock, so they keep time when a frame is late.
+
+A first touch starts the sound, and it sleeps while the tab is hidden. The speaker at the end of the booster bar opens
+a small menu with a switch per channel, and each choice is kept between visits.
 
 A board can have holes, drawn in the level's shape (`src/model/shape.ts`). A koi can't swim over the bank, so a hole
 splits its column: koi only swim down within their own stretch of water, and new koi rise from the deep into the top
