@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
+import { createGameEvents } from '../src/game/events';
 import { GameScene } from '../src/game/GameScene';
 import type { GameSceneDeps } from '../src/game/GameScene';
 import type { GameStatus } from '../src/game/GameStatus';
@@ -18,9 +19,10 @@ function stubScene(): { scene: GameScene; statuses: GameStatus[]; pads: Pad[]; n
     level: {
       moves: 10,
       pointsPerPiece: 10,
-      goal: { type: 'lotus', count: 1 },
+      goalBonus: 500,
+      goals: [{ type: 'lotus', count: 1 }],
       pads: { buds: 1, emptyPads: 0, hitsToBloom: 2, hitsToDrift: 1, spacing: 2 },
-      stars: { two: 0.15, three: 0.35 },
+      stars: { scores: [100, 200, 300] },
     },
     rng: new Random(3),
     view: { render: () => undefined },
@@ -35,6 +37,7 @@ function stubScene(): { scene: GameScene; statuses: GameStatus[]; pads: Pad[]; n
       },
     },
     result: { show: () => undefined, hide: () => undefined },
+    events: createGameEvents(),
   } as unknown as GameSceneDeps;
   return { scene: new GameScene(deps), statuses, pads, nudged };
 }

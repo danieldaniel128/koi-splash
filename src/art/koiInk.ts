@@ -27,11 +27,29 @@ const BODY_UNDER = [0.42, 0.74] as const;
 /**
  * A koi painted like a mobile casual game piece: an even, dark ink outline so the shape reads crisply at phone
  * size, the fins and tail tinted by the water they're under, and the body outlined over them. Head up, on a square
- * canvas like koiBank's bakeKoi. Several canvas passes: bake once, never during play.
+ * canvas like koiBank's bakeKoi. `dress` repaints the fins and the body before they're inked (see specialKoi).
+ * Several canvas passes: bake once, never during play.
  */
-export function bakeInkedKoi(variety: KoiVariety, bake: BakeOptions, ink: KoiInk): HTMLCanvasElement {
+export function bakeInkedKoi(
+  variety: KoiVariety,
+  bake: BakeOptions,
+  ink: KoiInk,
+  dress?: (part: HTMLCanvasElement) => void,
+): HTMLCanvasElement {
   const fins = bakeKoi(variety, { ...bake, parts: 'fins' });
   const body = bakeKoi(variety, { ...bake, parts: 'body' });
+  if (dress) {
+    // a special koi's look (stripes, rainbow) goes on its paint, under the water's tint and the ink outline; its eyes
+    // go back on top
+    dress(fins);
+    dress(body);
+    const eyes = bakeKoi(variety, { ...bake, parts: 'eyes' });
+    const ctx = context(body);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // the koi painter leaves its own scale on the canvas
+    ctx.drawImage(eyes, 0, 0);
+    ctx.restore();
+  }
   const scale = bake.resolution ?? 1;
   const width = ink.outlineWidth * scale;
   tint(fins, ink.water, ink.finsUnder);

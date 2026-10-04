@@ -76,6 +76,11 @@
   gap: 1px;
 }
 
+.goal__chips {
+  display: flex;
+  gap: var(--space-xs);
+}
+
 .chip__icon {
   display: grid;
   place-items: center;
@@ -90,6 +95,13 @@
   margin: -5px; /* the baked lotus has room around it for its shadow */
 }
 
+.chip__image--koi {
+  width: 34px;
+  height: 34px;
+  margin: -3px;
+  transform: rotate(-40deg); /* swimming across the chip, not standing up */
+}
+
 .chip__count {
   display: grid;
   place-items: center;
@@ -101,6 +113,20 @@
 .chip__count svg {
   width: 20px;
   height: 20px;
+}
+
+.chip {
+  position: relative; /* for the bonus rising out of it */
+}
+
+.chip__bonus {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  color: var(--color-gold);
+  font-size: var(--text-lg);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .chip--done {

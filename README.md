@@ -64,6 +64,18 @@ Changing the look is meant to be config, not surgery:
 - **UI and background:** colours, type, spacing, motion, the bank and the garden above the pond are one theme in
   `src/theme`, read by the CSS and by Pixi. A new look is a new theme file.
 
+The special koi come from the prototype, rebuilt in layers. Their art is painted from the board's own koi
+(`src/art/specialKoi.ts`): the koi painter takes a dressing that repaints the body and fins before they're inked, so
+a striped koi gets bands of its colour and white and a rainbow koi gets its scales recoloured with the spectrum (the
+'color' blend keeps their light and shade), under the same outline as every other koi. A whirlpool is a painted eddy
+with the koi curled into its eye. They're baked the first time a game makes one (`SpecialTextures`), so boot pays
+nothing for them. At rest each has its own look (`SpecialLooks`, one class per special): a striped koi faces along
+its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (a colour-matrix filter) over a
+prism glow with orbiting sparkles, a whirlpool's eddy turns. When they fire, `planRound` works out from the model's
+data when every koi goes and how (dive, spiral into the special that was made, drain into a whirlpool, zapped by a
+prism beam), the animator plays that plan, `SpecialFx` draws the light (beam, vortex, prism arcs, a flash at birth),
+and every effect also moves the water. The timings and sizes are in `TIMING.specials` and `SPECIAL_FX`.
+
 ## How it's built
 
 MVP with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. On a swipe it works out the
@@ -73,12 +85,51 @@ decides anything, so the board on screen can't drift from the real one, and the 
 browser.
 
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
-if it's complete, without knowing which goal it is. A level picks a lotus goal or a score goal in config. The lily
-pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
-and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
-its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
-moves are all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of
-400 boards (on the plain 7 x 9, before the board had a shape).
+if it's complete, without knowing which goal it is. A goal can be lotuses to bloom, points to score or koi of one
+colour to clear, and a level lists as many as it likes: `createGoals` plays them as one (Composite), won when all are
+reached. This level asks for 3 lotuses and 10 red koi, and the HUD shows a chip per goal. The lily pads
+(`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one, and koi
+fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees its cell
+for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the moves are
+all in `src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of 400 boards
+(on the plain 7 x 9, before the board had a shape).
+
+The specials (`src/model/specials.ts`) are made from shapes: the matched runs are joined into groups first
+(`groupMatches`), so an L or a T is one shape. A run of 4 makes a striped koi, an L or T a whirlpool, a run of 5 a
+rainbow koi, where the player swapped. A special fires when it's matched, swapped (even without a match) or caught in
+another's blast; what each one reaches is one entry in a Strategy map, and a queue fires the specials each blast
+catches, so chains just happen. Each round reports what was made, what fired and which blast took each koi, which is
+all the view needs to time it.
+
+The boosters (Swap any two koi, Feed a colour into lines, power a koi up into a Special) follow the same split. The
+model plans what each does to the board (`src/model/boosters.ts`: the feed plans its lines nearest the food and
+always makes a match), the scene applies it and settles the board like after a swap (no move spent), and
+`BoosterControl` runs the arming flow (armed, picked, choosing, playing) on the same guarded state machine as the
+turn, with the bar, the pill, the board's marks, the petal menu and the sounds injected, so it's tested with fakes.
+
+The sound is the prototype's: no sound files, a small Web Audio synth (`src/audio/Synth.ts`) playing plucked notes on a
+pentatonic scale, water plips and soft noise splashes, ported recipe by recipe (`src/audio/recipes.ts`). The game
+doesn't know it exists. The scene, the animator and the effects say what happens on a typed event bus
+(`src/core/EventBus.ts`, Observer), each at the moment it happens (a beam landing, a whirlpool popping), and
+`SoundBoard` maps every event to its recipe in one place.
+
+The sound plays on three channels, effects, music and ambience, each with its own volume and switch, mixed in
+`src/audio/Mixer.ts` into one compressor. The music dips for a moment under a match or a special so the effects come
+through (ducking). The music and the ambience are tracks (`src/audio/Track.ts`), and a track is either made as it
+plays or a recorded loop: naming a file in `src/config/audio.ts` swaps one in, with nothing else changing.
+
+The made ones are generative. `src/audio/composer.ts` writes the music a bar at a time, just before it plays: a slow
+D major piece at 68 bpm, with a pad and a bass on a four-chord loop, a quiet koto arpeggio, and a melody that wanders
+the pentatonic scale. It lands on the chord on the strong beats and closes each phrase on a long chord tone, and the
+answering phrases sometimes go to a breathy flute. It's in the same key as the effects, so a match always sounds in
+tune with it, and it's never the same twice. It follows the game through the event bus. With few moves left it grows a
+soft taiko heartbeat, a win plays a short climb home to D, and after a level the chords rest. The composer is pure
+and seeded, so it's tested: the scale, the range, the phrase endings, each mood. The ambience is the pond at night:
+water lapping at the stones, a drop now and then, crickets from either side, and a far wind chime, each on its own
+random gap. Both are scheduled a little ahead on the audio clock, so they keep time when a frame is late.
+
+A first touch starts the sound, and it sleeps while the tab is hidden. The speaker at the end of the booster bar opens
+a small menu with a switch per channel, and each choice is kept between visits.
 
 A board can have holes, drawn in the level's shape (`src/model/shape.ts`). A koi can't swim over the bank, so a hole
 splits its column: koi only swim down within their own stretch of water, and new koi rise from the deep into the top
@@ -101,9 +152,9 @@ its shape on any phone, tablet or desktop. Phones play upright; turned sideways 
 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
 I modelled the HUD on the casual match-3s I studied: moves big in a glass orb (it warns when they run low), the
-score, a goal chip that ticks down to a check, and a star bar. The stars are the prototype's rating (one for the
-goal, two or three for moves left over, `starsFor`); the bar is a meter where each star owns a third
-(`starMeter`), so they sit evenly however the rule is tuned. Under the pond, the booster bar uses the prototype's
+score, a chip per goal that ticks down to a check, and a star bar that fills with the score and unlocks a star at
+each of three scores (`starsFor`). A met goal pays a 500-point bonus, and the level plays to its last move, so
+meeting the goals early leaves moves to chase the stars. Under the pond, the booster bar uses the prototype's
 icons with count badges. It's all small components on a little CSS kit (glass panel, orb, chip, badge, track, button)
 that only reads theme tokens (`src/theme`), with the same tokens used by the Pixi side, so a new look is a change of
 tokens, not of components. The rounded font (Nunito) is bundled, so it's the same on every phone.
@@ -137,7 +188,7 @@ Milestones:
 
 1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
 2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece. Done.
-3. Juice: dives, swims, ripples, the water shader, sound. Done except sound and screen shake.
+3. Juice: dives, swims, ripples, the water shader, sound. Done except screen shake.
 4. Specials: special koi from bigger matches, and their combos.
 5. Boosters.
 6. Screens and content: title, tutorial, hint, handmade levels, an endless mode.
@@ -175,7 +226,9 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 ## Next steps
 
 - The same preset approach as the UI theme for the effects.
-- Specials from bigger matches, and the boosters themselves (the bar, icons and counts are in place).
+- The prototype's combos (two specials swapped together: cross, giant current, rainbow wave, maelstrom). Swapping
+  two specials already fires both.
+- Earning more boosters (a level gives one of each for now).
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 - Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

@@ -16,10 +16,19 @@ export const LEVEL = {
    * bay at least 2 cells wide, so there is room for the stones on both of its sides.
    */
   shape: ['..###..', '.#####.', '#######', '#######', '.#####.', '#######', '#######', '.#####.', '..###..'],
-  /** The lotus goal: bloom every bud. Swap for { type: 'score', target: 1500 } to play for points instead. */
-  goal: { type: 'lotus', count: 3 } as GoalDef,
-  /** The win rating (as in the prototype): 2 stars with 15% of the moves left, 3 with 35%. */
-  stars: { two: 0.15, three: 0.35 },
+  /**
+   * The goals, all to be reached to win. Mix and match: { type: 'lotus', count }, { type: 'score', target }, or
+   * { type: 'koi', kind, count } to clear that many koi of one colour (kind 0 is the first of KOI_SET).
+   */
+  goals: [
+    { type: 'lotus', count: 3 },
+    { type: 'koi', kind: 0, count: 10 }, // 10 red koi
+  ] as readonly GoalDef[],
+  /**
+   * The rating: a star at each of these scores (see starsFor). Tuned on whole levels played in a browser by a simple
+   * bot (scores 2340 to 4480, median 3070): a plain win earns one or two stars, a great one three.
+   */
+  stars: { scores: [1500, 2800, 4000] },
   pads: {
     /** One bud per lotus in the goal (keep these two equal for a lotus goal). */
     buds: 3,
@@ -34,4 +43,6 @@ export const LEVEL = {
 
 export const SCORE = {
   pointsPerPiece: 10,
+  /** Paid for each goal as it's met, on top of the points of the round that met it. */
+  goalBonus: 500,
 } as const;

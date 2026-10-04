@@ -2,11 +2,13 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoal } from '../model/goals';
+import { createGoals, goalsMet } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
-import { createBoard, resetBoard, trySwap } from '../model/rules';
+import { applyBooster, canTarget } from '../model/boosters';
+import type { BoosterType, BoosterUse } from '../model/boosters';
+import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
 import { starsFor } from '../model/stars';
@@ -14,6 +16,7 @@ import type { StarRule } from '../model/stars';
 import type { CascadeStep, Cell } from '../model/types';
 import type { BoardAnimator, PlacedPiece } from '../view/BoardAnimator';
 import type { BoardView } from '../view/BoardView';
+import type { GameEventBus } from './events';
 import type { GameStatus } from './GameStatus';
 
 type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
@@ -25,12 +28,15 @@ interface LevelState {
   readonly goal: Goal;
 }
 
-/** Table order is the priority: 'won' is checked before 'lost', so reaching the goal on the last move wins. */
+/**
+ * The level plays to its last move: met goals early and the player keeps scoring toward the stars. It ends when the
+ * moves run out, won if every goal is met by then. Table order is the priority: 'won' is checked before 'lost'.
+ */
 const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'idle', to: 'swapping', when: (level) => level.movesLeft > 0 },
   { from: 'swapping', to: 'resolving' },
   { from: 'swapping', to: 'idle' }, // the swap made no match and went back
-  { from: 'resolving', to: 'won', when: (level) => level.goal.isComplete() },
+  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goal.isComplete() },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
   { from: 'won', to: 'idle' }, // play again
@@ -59,7 +65,10 @@ export interface ResultDisplay {
 export interface LevelRules {
   readonly moves: number;
   readonly pointsPerPiece: number;
-  readonly goal: GoalDef;
+  /** Points paid for each goal as it is met. */
+  readonly goalBonus: number;
+  /** The level's goals: it's won when every one is reached. */
+  readonly goals: readonly GoalDef[];
   readonly pads: PadSpec;
   readonly stars: StarRule;
 }
@@ -73,12 +82,14 @@ export interface GameSceneDeps {
   readonly status: StatusDisplay;
   readonly pads: PadDisplay;
   readonly result: ResultDisplay;
+  /** Where the scene says what happens (a swap, a match, the pads, the goals, the end): the sounds listen. */
+  readonly events: GameEventBus;
 }
 
 /**
  * The presenter: takes swipes from the view, asks the model for the result and plays it back through the animator.
  * The turn state machine keeps one turn at a time and decides, at the end of each turn, whether the level is won,
- * lost or goes on.
+ * lost or goes on (it goes on until the last move).
  */
 export class GameScene {
   private readonly board: Board;
@@ -90,16 +101,18 @@ export class GameScene {
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
-    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoal(deps.level.goal) };
+    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoals(deps.level.goals) };
     this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
       won: {
         onEnter: () => {
           deps.result.show('won', this.status());
+          deps.events.emit('won');
         },
       },
       lost: {
         onEnter: () => {
           deps.result.show('lost', this.status());
+          deps.events.emit('lost');
         },
       },
     });
@@ -113,6 +126,33 @@ export class GameScene {
     if (!this.turn.can('swapping')) return;
     void this.playTurn(from, to);
   };
+
+  /** True when a booster can be used: the board is still and the level is on. */
+  get canBoost(): boolean {
+    return this.turn.can('swapping');
+  }
+
+  /** Whether a booster can be used on this cell (see canTarget). */
+  canTarget(type: BoosterType, cell: Cell): boolean {
+    return canTarget(this.board, type, cell);
+  }
+
+  /**
+   * Uses a booster: the board changes as it says, the view plays it, then the board settles like after a swap. No
+   * move is spent. Resolves false (and changes nothing) when it can't be used now or has nothing to do.
+   */
+  async useBooster(use: BoosterUse): Promise<boolean> {
+    if (!this.canBoost) return false;
+    const change = applyBooster(this.board, use);
+    if (!change) return false;
+    await this.runTurn(async () => {
+      await this.deps.animator.playBooster(use, change);
+      const swap = use.type === 'swap' ? [use.b, use.a] : []; // a special made by it forms where the first koi lands
+      const result = settle(this.board, this.deps.spec, this.deps.rng, { pads: this.pads, swap });
+      await this.playCascade(result);
+    });
+    return true;
+  }
 
   /** Starts the level over with a fresh board. Only allowed once the level has ended. */
   restart(): void {
@@ -160,20 +200,31 @@ export class GameScene {
   }
 
   private async resolveSwap([first, second]: readonly [PlacedPiece, PlacedPiece]): Promise<void> {
-    const { spec, rng, view, animator } = this.deps;
+    const { spec, rng, animator } = this.deps;
     const result = trySwap(this.board, first.at, second.at, spec, rng, this.pads);
     if (!result.valid) {
+      this.deps.events.emit('invalidSwap');
       await animator.invalidSwap(first, second);
       this.turn.transition('idle');
       return;
     }
 
     this.level.movesLeft--;
+    this.deps.events.emit('swap');
+    this.deps.events.emit('moveSpent', { movesLeft: this.level.movesLeft });
     this.deps.status.update(this.status());
     await animator.swap(first, second);
+    await this.playCascade(result);
+  }
+
+  /** Plays a settled board's rounds, then ends the turn (won, lost or on to the next). */
+  private async playCascade(result: { steps: readonly CascadeStep[]; reshuffled: boolean }): Promise<void> {
     this.turn.transition('resolving');
     for (const [round, step] of result.steps.entries()) await this.playRound(step, round);
-    if (result.reshuffled) view.render(this.board);
+    if (result.reshuffled) {
+      this.deps.view.render(this.board);
+      this.deps.events.emit('reshuffle');
+    }
     this.turn.next();
   }
 
@@ -182,17 +233,42 @@ export class GameScene {
    * cell too), and the goal counts it.
    */
   private async playRound(step: CascadeStep, round: number): Promise<void> {
-    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
-    this.level.score += points;
-    this.level.goal.record({ points, padEvents: step.padEvents });
+    const met = this.countRound(step, round);
+    this.announce(step, round, met);
     await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
+  }
+
+  /** Scores a round and feeds it to the goals. Returns the goals it met, numbered by when (0 = the first met). */
+  private countRound(step: CascadeStep, round: number): number[] {
+    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+    this.level.score += points;
+    // a rainbow koi has no colour of its own: it counts toward no colour goal
+    const cleared = step.cleared
+      .filter(({ piece }) => piece.special?.type !== 'rainbow')
+      .map(({ piece }) => piece.kind);
+    const metBefore = goalsMet(this.level.goal.progress());
+    this.level.goal.record({ points, padEvents: step.padEvents, cleared });
+    const metAfter = goalsMet(this.level.goal.progress());
+    this.level.score += (metAfter - metBefore) * this.deps.level.goalBonus; // a goal met this round pays its bonus
+    return Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
+  }
+
+  /** Says what a round did: its match, what happened to the lily pads (once each), and the goals it met. */
+  private announce(step: CascadeStep, round: number, met: readonly number[]): void {
+    const { events } = this.deps;
+    if (step.cleared.length > 0) events.emit('match', { round, size: step.cleared.length });
+    const pads = new Set(step.padEvents.map((event) => event.type));
+    if (pads.has('hit')) events.emit('budHit');
+    if (pads.has('bloom')) events.emit('bloom');
+    if (pads.has('drift')) events.emit('padDrift');
+    for (const n of met) events.emit('goalMet', { n });
   }
 
   private status(): GameStatus {
     const { movesLeft, score, goal } = this.level;
     const { moves, stars } = this.deps.level;
-    return { movesLeft, moves, stars: starsFor(movesLeft, moves, stars), score, goal: goal.progress() };
+    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goal.progress() };
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */

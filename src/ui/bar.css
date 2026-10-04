@@ -58,6 +58,80 @@
   transform: scale(0.92);
 }
 
+/* The armed booster lifts and glows gold and pink, breathing. */
+.booster--armed {
+  transform: translateY(-8px) scale(1.07);
+}
+
+.booster--armed .booster__orb {
+  animation: arm-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes arm-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255, 236, 180, 0.85),
+      0 0 0 3px rgba(255, 216, 115, 0.7),
+      0 0 22px 4px rgba(255, 150, 200, 0.5);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1.5px rgba(255, 236, 180, 0.95),
+      0 0 0 4px rgba(255, 216, 115, 0.85),
+      0 0 30px 8px rgba(255, 150, 200, 0.62);
+  }
+}
+
+/* A spent booster: its icon fades under a check, its badge goes, its name greys. */
+.booster__orb {
+  position: relative;
+}
+
+.booster__check {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 30px;
+  height: 30px;
+  color: #cfe9ff;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity var(--time-normal) ease,
+    transform var(--time-normal) cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.booster__check svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.booster--used .booster__orb > svg {
+  opacity: 0.22;
+}
+
+.booster--used .booster__check {
+  opacity: 0.9;
+  transform: none;
+}
+
+.booster--used .badge {
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+.booster--used .booster__name {
+  color: var(--color-muted);
+}
+
+.booster .badge {
+  transition:
+    opacity var(--time-fast) ease,
+    transform var(--time-normal) ease;
+}
+
 /* A short message in a glass pill, popping up above whatever it belongs to. */
 .toast {
   position: absolute;
@@ -82,4 +156,192 @@
 .toast--shown {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+/* The pill over the pond while a booster is armed: what to do, and an X to cancel. Taps pass through its text. */
+.pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.94);
+  transition:
+    opacity 0.2s ease,
+    transform 0.25s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.pill--shown {
+  opacity: 1;
+  transform: none;
+}
+
+.pill__text {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 18px;
+  border-radius: 20px 0 0 20px;
+  background: var(--color-glass);
+  box-shadow:
+    inset 0 0 0 var(--line) var(--color-rim),
+    0 0 18px rgba(255, 150, 200, 0.18),
+    var(--shadow);
+  color: var(--color-goldLight);
+  font: 900 var(--text-md) var(--font-number);
+  white-space: nowrap;
+}
+
+.pill__close {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 20px 20px 0;
+  background: var(--color-glass);
+  box-shadow:
+    inset 0 0 0 var(--line) var(--color-rim),
+    var(--shadow);
+  color: #dff2ff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.pill--shown .pill__close {
+  pointer-events: auto;
+}
+
+.pill:not(.pill--shown) .pill__close {
+  pointer-events: none;
+}
+
+.pill__close svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* The special booster's petals round the picked koi, over a soft dim; a tap on the dim closes them. */
+.petals {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  background: radial-gradient(circle at 50% 50%, rgba(4, 12, 28, 0.25), rgba(4, 12, 28, 0.45));
+}
+
+.petal {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+  background: var(--color-glassRound);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(225, 246, 255, 0.8),
+    inset 0 -10px 14px rgba(255, 150, 200, 0.25),
+    0 6px 16px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.petal__koi {
+  width: 92%;
+  height: 92%;
+  transform: rotate(-35deg);
+}
+
+.petal__name {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: var(--radius-round);
+  background: rgba(4, 14, 30, 0.85);
+  color: var(--color-goldLight);
+  font: 700 var(--text-sm) var(--font-label);
+  white-space: nowrap;
+}
+
+/* The sound button: a small glass orb at the end of the booster bar; the speaker dims when every channel is off. */
+.sound-button {
+  padding: 0;
+  border: 0;
+  color: var(--color-ink);
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--time-fast) ease-out;
+}
+
+.sound-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sound-button--muted {
+  color: var(--color-muted);
+}
+
+.sound-button[aria-expanded='true'] {
+  color: var(--color-gold);
+}
+
+.sound-button:active {
+  transform: scale(0.92);
+}
+
+/* The sound menu: a glass panel over the button, a row per channel; it grows out of the button's corner. */
+.sound-menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xs); /* SOUND_MENU.look.padding: the layout sizes the panel by it */
+  opacity: 0;
+  transform: translateY(6px) scale(0.92);
+  transform-origin: 100% 100%;
+  transition:
+    opacity var(--time-fast) ease,
+    transform var(--time-normal) cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.sound-menu--open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.sound-menu__row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-muted);
+  font: 700 var(--text-md) var(--font-label);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--time-fast) ease;
+}
+
+.sound-menu__row[aria-checked='true'] {
+  color: var(--color-ink);
+}
+
+.sound-menu__row:focus-visible {
+  outline: var(--line) solid var(--color-gold);
+}
+
+.sound-menu__icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+}
+
+.sound-menu__name {
+  flex: 1;
+  text-align: left;
 }

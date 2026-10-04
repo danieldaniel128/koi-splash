@@ -1,10 +1,12 @@
 import { Container, Point, Rectangle } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import type { Board } from '../model/Board';
-import type { Cell, Piece } from '../model/types';
+import type { Cell, Piece, Special } from '../model/types';
 import { Koi } from './Koi';
 import type { KoiTextures } from './KoiTextures';
 import { KoiWaterline } from './KoiWaterline';
+import { SpecialLooks } from './SpecialLooks';
+import type { SpecialTextures } from './SpecialTextures';
 
 export interface BoardViewLayout {
   readonly cols: number;
@@ -21,10 +23,12 @@ export interface BoardViewLayout {
 export class BoardView extends Container {
   private readonly pieces = new Map<number, Koi>();
   private readonly waterline: KoiWaterline;
+  private readonly looks: SpecialLooks;
   private readonly koiLayer = new Container();
 
   constructor(
     private readonly textures: KoiTextures,
+    private readonly specials: SpecialTextures,
     private readonly layout: BoardViewLayout,
     private readonly random: () => number = Math.random,
   ) {
@@ -32,7 +36,8 @@ export class BoardView extends Container {
     // the whole board area takes pointer input, including the gaps between koi
     this.hitArea = new Rectangle(0, 0, layout.cols * layout.cellSize, layout.rows * layout.cellSize);
     this.waterline = new KoiWaterline(textures);
-    this.addChild(this.waterline.shadows, this.koiLayer);
+    this.looks = new SpecialLooks(specials);
+    this.addChild(this.waterline.shadows, this.looks.under, this.koiLayer, this.looks.over);
   }
 
   /** Where each koi meets the water, in the board's space: drawn by the pond into its mask, never shown. */
@@ -50,7 +55,8 @@ export class BoardView extends Container {
       const piece = board.get(cell);
       if (!piece) continue;
       seen.add(piece.id);
-      const koi = this.pieces.get(piece.id) ?? this.createKoi(piece.id, piece.kind);
+      const koi = this.pieces.get(piece.id) ?? this.createKoi(piece);
+      if (piece.special && !this.looks.has(koi)) this.makeSpecial(piece);
       koi.position.copyFrom(this.cellToPoint(cell));
     }
     this.removeSpritesNotIn(seen);
@@ -63,6 +69,26 @@ export class BoardView extends Container {
     return koi;
   }
 
+  /** The koi resting in a cell, or null (an empty or blocked cell). O(koi): it's found by where the koi are. */
+  koiAt(cell: Cell): Koi | null {
+    for (const koi of this.pieces.values()) {
+      const at = this.cellOf(koi);
+      if (at?.col === cell.col && at.row === cell.row) return koi;
+    }
+    return null;
+  }
+
+  /** A picture of the koi in a cell as a special (the special booster's petals). */
+  previewAt(cell: Cell, type: Special['type']): string {
+    const koi = this.koiAt(cell);
+    return this.specials.preview(type, koi?.kind ?? 0);
+  }
+
+  /** The cell a koi rests in (nearest to where it is now), or null when it's off the board. */
+  cellOf(koi: Koi): Cell | null {
+    return this.pointToCell(koi.position);
+  }
+
   /** Every koi on the board, for the effects that follow the fish (swimming, wakes). O(K) to walk. */
   *koi(): IterableIterator<Koi> {
     yield* this.pieces.values();
@@ -71,11 +97,20 @@ export class BoardView extends Container {
   /** What the koi cast into the water follows them. Call once per frame after the koi moved, before the pond draws. */
   follow(deltaSeconds: number): void {
     this.waterline.follow(deltaSeconds);
+    this.looks.follow(deltaSeconds);
+  }
+
+  /** A koi became a special koi: it takes the special's poses and look. */
+  makeSpecial(piece: Piece): void {
+    if (!piece.special) return;
+    const koi = this.spriteOf(piece.id);
+    koi.setPoses(this.specials.poses(piece.special, piece.kind));
+    this.looks.add(koi, piece.special);
   }
 
   /** Adds a koi for a new piece at a cell. */
   addPiece(piece: Piece, at: Cell): Koi {
-    const koi = this.createKoi(piece.id, piece.kind);
+    const koi = this.createKoi(piece);
     koi.position.copyFrom(this.cellToPoint(at));
     return koi;
   }
@@ -84,6 +119,7 @@ export class BoardView extends Container {
     const koi = this.pieces.get(id);
     if (!koi) return;
     this.waterline.remove(koi);
+    this.looks.remove(koi);
     koi.destroy();
     this.pieces.delete(id);
   }
@@ -107,12 +143,15 @@ export class BoardView extends Container {
     return onBoard ? { col, row } : null;
   }
 
-  /** Creates a piece's koi, which the animations move, and sets it in the water. */
-  private createKoi(id: number, kind: number): Koi {
-    const koi = new Koi(kind, this.textures.swim(kind), this.layout.koiSize, this.random);
+  /** Creates a piece's koi (a special one in its look), which the animations move, and sets it in the water. */
+  private createKoi(piece: Piece): Koi {
+    const { id, kind, special } = piece;
+    const poses = special ? this.specials.poses(special, kind) : this.textures.swim(kind);
+    const koi = new Koi(kind, poses, this.layout.koiSize, this.random);
     this.pieces.set(id, koi);
     this.koiLayer.addChild(koi);
     this.waterline.add(koi);
+    if (special) this.looks.add(koi, special);
     return koi;
   }
 

@@ -135,10 +135,11 @@ export interface PaintOptions {
   /** Body width override (0.12 slim .. 0.28 chubby); default: the variety's own build, else DEFAULT_BUILD. */
   build?: number;
   /**
-   * Which parts to paint: the whole fish (default), only the fins and tail, or only the body (with the dorsal fin
-   * and the head). Painting them apart lets a game outline each part or tint the fins as if under water.
+   * Which parts to paint: the whole fish (default), only the fins and tail, only the body (with the dorsal fin and
+   * the head), or only the eyes. Painting them apart lets a game outline each part, tint the fins as if under water,
+   * or repaint the body and put the eyes back on top.
    */
-  parts?: 'all' | 'fins' | 'body';
+  parts?: 'all' | 'fins' | 'body' | 'eyes';
 }
 
 export interface BakeOptions extends PaintOptions {
@@ -1377,14 +1378,18 @@ export function paintKoi(ctx: Ctx, variety: KoiVariety, opts: PaintOptions): voi
 
   const parts = opts.parts ?? 'all';
   if (opts.shadow !== false && parts === 'all') paintDropShadow(ctx, body);
-  if (parts !== 'body') {
-    paintFins(ctx, look.fins, body, wag);
-    paintTail(ctx, look.fins, body, wag);
-  }
-  if (parts !== 'fins') {
-    paintBody(ctx, look, body, plan);
-    paintDorsalFin(ctx, look.fins, body);
-    paintHeadDetails(ctx, look, body);
+  if (parts === 'eyes') {
+    paintEyes(ctx, look, body);
+  } else {
+    if (parts !== 'body') {
+      paintFins(ctx, look.fins, body, wag);
+      paintTail(ctx, look.fins, body, wag);
+    }
+    if (parts !== 'fins') {
+      paintBody(ctx, look, body, plan);
+      paintDorsalFin(ctx, look.fins, body);
+      paintHeadDetails(ctx, look, body);
+    }
   }
 
   ctx.restore();
@@ -1890,7 +1895,13 @@ function paintHeadDetails(ctx: Ctx, look: KoiLook, body: Body): void {
       ctx.stroke();
     }
   }
-  // eyes: a golden iris ring, dark pupil and a glint
+  paintEyes(ctx, look, body);
+}
+
+/** The eyes: a golden iris ring, dark pupil and a glint. */
+function paintEyes(ctx: Ctx, look: KoiLook, body: Body): void {
+  const { L } = body;
+  const dark = luminance(look.body.color) < 0.2;
   const r = Math.max(0.9, 0.024 * L);
   for (const side of [-1, 1]) {
     const e = body.point(0.1, side * 0.8);

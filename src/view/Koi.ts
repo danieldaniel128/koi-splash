@@ -13,6 +13,11 @@ export class Koi extends Sprite {
   heading: number;
   /** The scale it has at rest; lifts and dives are relative to it. */
   readonly restScale: number;
+  /**
+   * When set, the koi turns steadily at this rate (rad/s, clockwise) instead of swimming: no heading, no sway (a
+   * whirlpool's koi, curled in its eye).
+   */
+  spin: number | null = null;
   private facing: number;
   private tailPhase: number;
   private readonly swayPhase: number;
@@ -21,7 +26,7 @@ export class Koi extends Sprite {
 
   constructor(
     readonly kind: Kind,
-    private readonly poses: readonly Texture[],
+    private poses: readonly Texture[],
     size: number,
     random: () => number,
   ) {
@@ -54,11 +59,23 @@ export class Koi extends Sprite {
     const phase = this.tailPhase + beat * deltaSeconds;
     this.tailPhase = phase % 1;
     this.texture = this.poses[this.pose] ?? this.texture;
+    if (this.spin !== null) {
+      this.rotation += this.spin * deltaSeconds;
+      this.facing = this.heading = this.rotation;
+      return;
+    }
 
     const turn = 1 - Math.exp(-KOI_SWIM.turnRate * deltaSeconds);
     this.facing += shortestTurn(this.facing, this.heading) * turn;
     const sway = Math.sin(this.time * KOI_SWIM.swaySpeed + this.swayPhase) * KOI_SWIM.sway;
     this.rotation = this.facing + sway;
+  }
+
+  /** Swaps the koi's baked poses (it became a special koi), keeping its place in the tail beat. */
+  setPoses(poses: readonly Texture[]): void {
+    if (poses.length === 0) throw new Error('a koi needs at least one pose');
+    this.poses = poses;
+    this.texture = poses[this.pose] ?? this.texture;
   }
 
   /** A tail flick: turns the koi by `turn` radians and beats the tail hard for a moment. */

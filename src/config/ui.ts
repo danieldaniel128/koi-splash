@@ -1,4 +1,7 @@
+import type { Bus } from '../audio/Mixer';
+import type { SoundMenuLook } from '../layout/soundMenu';
 import type { BoosterSlot } from '../ui/BoosterBar';
+import type { PetalChoice } from '../ui/SpecialMenu';
 
 /** How the HUD moves (s, scale). Its look is in the theme (src/theme). */
 export const HUD_MOTION = {
@@ -13,23 +16,46 @@ export const HUD_MOTION = {
   /** The goal chip pops when its count ticks down, and a star pops as it's lost. */
   goalBump: 1.3,
   goalSettle: 0.4,
-  starLost: 1.5,
+  starEarned: 1.7,
+  /** A met goal's bonus rises out of its chip for this long (s). */
+  bonusRise: 1.3,
 } as const;
 
-/** The goal chip's lotus icon: its radius (px), baked from the same painter as the lotuses on the board. */
+/** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */
 export const GOAL_TRAY = {
   iconRadius: 13,
+  koiSize: 34,
 } as const;
 
 /**
- * The booster bar under the pond, left to right: which icon, its name, and how many the player starts with (the
- * prototype gives one of each per pond). The boosters themselves come later.
+ * The booster bar under the pond, left to right (the prototype's): which booster, its name, how many a level gives,
+ * and what the pill over the pond says while it's armed.
  */
 export const BOOSTERS = [
-  { icon: 'swap', name: 'Swap', count: 1 },
-  { icon: 'special', name: 'Special', count: 1 },
-  { icon: 'feed', name: 'Feed', count: 1 },
+  { type: 'swap', name: 'Swap', count: 1, tip: 'Pick two koi to swap' },
+  { type: 'special', name: 'Special', count: 1, tip: 'Pick a koi to power up' },
+  { type: 'feed', name: 'Feed', count: 1, tip: 'Tap a colour to feed' },
 ] as const satisfies readonly BoosterSlot[];
+
+/**
+ * The special booster's petals (after the prototype): one per special, left to right, on an arc `reach` cells out and
+ * `spread` rad apart, fanned down for a koi in the top `topRows` rows; each `petal` cells across, blooming over
+ * `open` s, `stagger` s apart, and kept `edge` px inside the screen.
+ */
+export const SPECIAL_MENU = {
+  choices: [
+    { type: 'line', name: 'Striped koi' },
+    { type: 'whirl', name: 'Whirlpool' },
+    { type: 'rainbow', name: 'Rainbow koi' },
+  ],
+  reach: 1.7,
+  spread: 1.25,
+  petal: 1.25,
+  open: 0.3,
+  stagger: 0.06,
+  topRows: 3,
+  edge: 44,
+} as const satisfies { choices: readonly PetalChoice[] } & Record<string, unknown>;
 
 /** The end-of-level card fades in and pops (s). */
 export const RESULT_CARD = {
@@ -44,4 +70,17 @@ export const RESULT_CARD = {
 /** Phones play upright: this media query is a phone (touch, short) held sideways. */
 export const PORTRAIT_LOCK = {
   sidewaysPhone: '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)',
+} as const;
+
+/**
+ * The sound menu (stage px): the speaker button at the bar's right end, lined up with the boosters' orbs, opens a
+ * small panel above it with a switch per channel, top to bottom.
+ */
+export const SOUND_MENU = {
+  look: { button: 36, barOrb: 58, width: 176, row: 44, padding: 4, gap: 10 } satisfies SoundMenuLook,
+  channels: [
+    { id: 'music', name: 'Music' },
+    { id: 'ambience', name: 'Ambience' },
+    { id: 'sfx', name: 'Effects' },
+  ] as const satisfies readonly { id: Bus; name: string }[],
 } as const;
