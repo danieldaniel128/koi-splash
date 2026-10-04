@@ -30,7 +30,18 @@ const SHADOW = 'rgba(2, 8, 18, 0.5)';
 /** How soft the shadow is (px): the same on every screen. */
 const SHADOW_BLUR = 1.5;
 
-const STONE = { lit: '#8ea2c2', top: '#56647f', mid: '#2b364d', dark: '#121928', ink: '#060a13' } as const;
+/** Pale river stone in moonlight: a cream top face, a darker side, a bold warm-dark outline like the koi's. */
+const STONE = {
+  top: '#e4dccd',
+  topShade: '#bfb3a0',
+  side: '#8d8273',
+  sideShade: '#6d6458',
+  shine: 'rgba(255, 252, 240, 0.7)',
+  ink: '#241f26',
+} as const;
+/** The stones' outline (px) and how thick a stone stands (share of its half height): chunky, like toy blocks. */
+const STONE_OUTLINE = 2.2;
+const STONE_DEPTH = 0.42;
 const PAD = {
   rim: '#86c595',
   centre: '#4f9a63',
@@ -64,45 +75,65 @@ export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement
 
 // ---------------------------------------------------------------------------- stones
 
+/**
+ * A chunky stone seen from above and a little in front, like the shore of a cartoon pond: a rounded slab whose top
+ * face catches the light, standing on a darker side band, all in one bold outline. Always drawn upright (the light
+ * comes from above), so stones along any side of the pond read the same.
+ */
 function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random: () => number): void {
-  const outline = blob(rx, ry, random);
+  const depth = ry * STONE_DEPTH;
+  const face = slab(rx, ry - depth / 2, random);
+  const lift = -depth / 2; // the top face sits up, the side shows below it
+  const extrude = (paint: () => void): void => {
+    for (let step = 0; step <= 6; step++) {
+      ctx.save();
+      ctx.translate(0, lift + (depth * step) / 6);
+      trace(ctx, face);
+      paint();
+      ctx.restore();
+    }
+  };
   paintShadow(ctx, () => {
-    trace(ctx, outline);
+    ctx.beginPath();
+    ctx.ellipse(0, depth * 0.3, rx, ry - depth * 0.2, 0, 0, TAU);
   });
-  // moonlit rim: fill with the light, then cover all but a crescent on the upper right with the body
-  trace(ctx, outline);
-  ctx.fillStyle = STONE.lit;
-  ctx.fill();
+  // the outline: the whole stone stroked fat, then filled over so only the outer edge stays
+  extrude(() => {
+    ctx.strokeStyle = STONE.ink;
+    ctx.lineWidth = STONE_OUTLINE * 2;
+    ctx.stroke();
+  });
+  const side = ctx.createLinearGradient(0, lift, 0, ry);
+  side.addColorStop(0, STONE.side);
+  side.addColorStop(1, STONE.sideShade);
+  extrude(() => {
+    ctx.fillStyle = side;
+    ctx.fill();
+  });
   ctx.save();
-  ctx.clip();
-  const body = ctx.createLinearGradient(rx * 0.6, -ry, -rx * 0.5, ry);
-  body.addColorStop(0, STONE.top);
-  body.addColorStop(0.45, STONE.mid);
-  body.addColorStop(1, STONE.dark);
-  ctx.translate(-2.2, 2.2);
-  trace(ctx, outline);
-  ctx.fillStyle = body;
-  ctx.fill();
-  ctx.translate(2.2, -2.2);
-  dryBrush(ctx, rx, ry, random);
+  ctx.translate(0, lift);
+  paintFace(ctx, face, rx, ry - depth / 2);
   ctx.restore();
-  trace(ctx, outline);
-  ctx.strokeStyle = STONE.ink;
-  ctx.lineWidth = 1.3;
-  ctx.stroke();
 }
 
-/** A few dark dry-brush strokes across the stone, the way ink prints texture rock. */
-function dryBrush(ctx: Ctx, rx: number, ry: number, random: () => number): void {
-  ctx.strokeStyle = 'rgba(6, 10, 20, 0.4)';
-  for (let i = 0; i < 4; i++) {
-    const y = (random() - 0.3) * ry;
-    ctx.lineWidth = 0.8 + random() * 1.2;
-    ctx.beginPath();
-    ctx.moveTo(-rx * (0.3 + random() * 0.5), y);
-    ctx.quadraticCurveTo(0, y - ry * 0.25 * random(), rx * (0.2 + random() * 0.5), y + ry * 0.2);
-    ctx.stroke();
-  }
+/** The stone's top face: cream, shading away from the light, with a soft shine near the top edge. */
+function paintFace(ctx: Ctx, face: readonly Pt[], rx: number, ry: number): void {
+  const fill = ctx.createLinearGradient(rx * 0.3, -ry, -rx * 0.4, ry);
+  fill.addColorStop(0, STONE.top);
+  fill.addColorStop(0.55, STONE.top);
+  fill.addColorStop(1, STONE.topShade);
+  trace(ctx, face);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(36, 31, 38, 0.35)'; // a soft line where the top face turns into the side
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(rx * 0.15, -ry * 0.45, rx * 0.45, ry * 0.18, -0.08, Math.PI * 1.1, Math.PI * 1.9);
+  ctx.strokeStyle = STONE.shine;
+  ctx.lineWidth = Math.max(1.2, ry * 0.16);
+  ctx.lineCap = 'round';
+  ctx.stroke();
 }
 
 // ---------------------------------------------------------------------------- lily pads and the lotus
@@ -220,14 +251,23 @@ function paintShadow(ctx: Ctx, shape: () => void): void {
   );
 }
 
-/** A pebble-like outline: an ellipse whose radius swells and dips a little, seeded. */
-function blob(rx: number, ry: number, random: () => number): Pt[] {
-  const lobes = 2 + Math.floor(random() * 2);
+/**
+ * A slab's outline: a rounded rectangle (a superellipse) with gently lumpy sides, seeded. Squarer than a pebble, so a
+ * row of them packs like a stone border.
+ */
+function slab(rx: number, ry: number, random: () => number): Pt[] {
+  const lumps = 2 + Math.floor(random() * 3);
   const phase = random() * TAU;
-  return Array.from({ length: 20 }, (_, i) => {
-    const angle = (i / 20) * TAU;
-    const swell = 1 + 0.06 * Math.sin(angle * lobes + phase) + 0.03 * (random() - 0.5);
-    return [Math.cos(angle) * rx * swell, Math.sin(angle) * ry * swell] as const;
+  const square = 2 / (2.6 + random() * 1.2); // 2 / exponent: lower is squarer
+  return Array.from({ length: 28 }, (_, i) => {
+    const angle = (i / 28) * TAU;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const swell = 1 + 0.05 * Math.sin(angle * lumps + phase) + 0.025 * (random() - 0.5);
+    return [
+      Math.sign(cos) * Math.abs(cos) ** square * rx * swell,
+      Math.sign(sin) * Math.abs(sin) ** square * ry * swell,
+    ] as const;
   });
 }
 
