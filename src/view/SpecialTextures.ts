@@ -3,6 +3,7 @@ import { paintGlow } from '../art/glow';
 import { bakeInkedKoi } from '../art/koiInk';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import {
+  bodySpan,
   curl,
   paintPrismGlow,
   paintSparkle,
@@ -50,7 +51,8 @@ export class SpecialTextures {
     return this.cached(`${special.type}:${kind}`, () => {
       const id = this.variety(kind);
       if (special.type === 'line') {
-        const look = { ...SPECIAL_LOOK.stripes, band: this.color(kind).band };
+        const body = bakeKoi(getVariety(id), { ...stillPose(this.bake), parts: 'body' });
+        const look = { ...SPECIAL_LOOK.stripes, band: this.color(kind).band, body: bodySpan(body) };
         return bakePoses(id, this.bake, (part) => {
           stripe(part, look);
         });

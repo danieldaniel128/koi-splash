@@ -39,9 +39,16 @@ export function bakeInkedKoi(
   const fins = bakeKoi(variety, { ...bake, parts: 'fins' });
   const body = bakeKoi(variety, { ...bake, parts: 'body' });
   if (dress) {
-    // a special koi's look (stripes, rainbow) goes on its paint, under the water's tint and the ink outline
+    // a special koi's look (stripes, rainbow) goes on its paint, under the water's tint and the ink outline; its eyes
+    // go back on top
     dress(fins);
     dress(body);
+    const eyes = bakeKoi(variety, { ...bake, parts: 'eyes' });
+    const ctx = context(body);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // the koi painter leaves its own scale on the canvas
+    ctx.drawImage(eyes, 0, 0);
+    ctx.restore();
   }
   const scale = bake.resolution ?? 1;
   const width = ink.outlineWidth * scale;

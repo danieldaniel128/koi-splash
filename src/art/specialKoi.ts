@@ -9,12 +9,16 @@
 
 type Ctx = CanvasRenderingContext2D;
 
-/** How a striped koi's bands look: the band colour (the other bands are white), how many across, and the fine dark
- * line between them. */
+/**
+ * How a striped koi's bands look (after the prototype's): `count` bands across its body, the band colour at both
+ * edges and white between, with a fine dark line between them; `body` is where the body spans across the canvas
+ * (see bodySpan), so the bands fit it exactly.
+ */
 export interface StripeLook {
   readonly band: string;
   readonly line: string;
   readonly count: number;
+  readonly body: { readonly left: number; readonly right: number };
 }
 
 /** The spectrum a rainbow koi wears, head to tail. */
@@ -29,25 +33,43 @@ export const SPECTRUM = [
 ] as const;
 
 /**
- * Bands of colour and white running along a head-up koi part (its body or its fins), drawn over its paint only
- * ('source-atop'), with a fine dark line between them. A dressing for bakeInkedKoi, so the ink outline goes on top.
+ * Bands of colour and white running along a head-up koi part (its body, its fins), like the prototype's striped koi:
+ * opaque, so the koi's own pattern is gone, `count` of them across the body with the band colour at both edges, the
+ * pattern carrying on over the fins, a fine dark line between bands and a light from the moon side for roundness.
+ * A dressing for bakeInkedKoi, so the ink outline goes on top.
  */
 export function stripe(part: HTMLCanvasElement, look: StripeLook): void {
   const ctx = fresh(part);
-  const bandWidth = (part.width * 0.42) / look.count; // across the body's widest part (a koi's build is chubby)
+  const band = (look.body.right - look.body.left) / look.count;
+  const first = look.body.left - Math.ceil(look.body.left / band) * band; // the grid, carried out to the edges
   ctx.globalCompositeOperation = 'source-atop';
-  ctx.globalAlpha = 0.9;
-  for (let x = 0, i = 0; x < part.width; x += bandWidth, i++) {
-    ctx.fillStyle = (i + Math.floor(part.width / 2 / bandWidth)) % 2 === 0 ? look.band : '#ffffff';
-    ctx.fillRect(x, 0, bandWidth + 0.5, part.height);
+  for (let x = first; x < part.width; x += band) {
+    const index = Math.round((x - look.body.left) / band);
+    ctx.fillStyle = ((index % 2) + 2) % 2 === 0 ? look.band : '#ffffff';
+    ctx.fillRect(x, 0, band + 0.5, part.height);
   }
-  ctx.globalAlpha = 1;
   ctx.fillStyle = look.line;
-  for (let x = 0; x < part.width; x += bandWidth) {
-    ctx.fillRect(x - bandWidth * 0.06, 0, bandWidth * 0.12, part.height);
-  }
+  for (let x = first; x < part.width; x += band) ctx.fillRect(x - band * 0.07, 0, band * 0.14, part.height);
   shade(ctx, part);
   ctx.restore();
+}
+
+/** Where a head-up koi body spans across its canvas (px), at its widest: what the bands fit. O(pixels), once. */
+export function bodySpan(body: HTMLCanvasElement): { left: number; right: number } {
+  const { width, height } = body;
+  const alpha = context(body).getImageData(0, 0, width, height).data;
+  let best = { left: width / 2, right: width / 2 };
+  for (let y = 0; y < height; y++) {
+    let left = -1;
+    let right = -1;
+    for (let x = 0; x < width; x++) {
+      if ((alpha[(y * width + x) * 4 + 3] ?? 0) < 128) continue;
+      if (left < 0) left = x;
+      right = x + 1;
+    }
+    if (left >= 0 && right - left > best.right - best.left) best = { left, right };
+  }
+  return best;
 }
 
 /**

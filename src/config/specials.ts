@@ -4,7 +4,7 @@
  */
 export const SPECIAL_LOOK = {
   /** A striped koi: its bands, how many across and the fine line between them. */
-  stripes: { count: 5, line: 'rgba(24, 12, 30, 0.55)' },
+  stripes: { count: 7, line: 'rgba(30, 14, 24, 0.85)' },
   /** Its sheen: a light bar baked in frames, sweeping tail to head every `every` s, each sweep `sweep` s long. */
   sheen: { frames: 10, every: 1.5, sweep: 0.5 },
   /** The glow under a striped koi: stretched along it (length, width), its strength and how it pulses. */
