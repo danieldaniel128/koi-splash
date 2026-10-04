@@ -152,7 +152,7 @@ function startGame(
   result.onRestart(() => {
     scene.restart();
   });
-  new SwipeInput(boardView, cell * INPUT.swipeThreshold, scene.handleSwipe);
+  new SwipeInput(boardView, cell * INPUT.swipeThreshold, { swipe: scene.handleSwipe, tap: () => undefined });
 }
 
 /** The koi on the board, placed on the layout's board. */
