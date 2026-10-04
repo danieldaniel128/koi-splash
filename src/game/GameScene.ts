@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoal } from '../model/goals';
+import { createGoals } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
@@ -59,7 +59,8 @@ export interface ResultDisplay {
 export interface LevelRules {
   readonly moves: number;
   readonly pointsPerPiece: number;
-  readonly goal: GoalDef;
+  /** The level's goals: it's won when every one is reached. */
+  readonly goals: readonly GoalDef[];
   readonly pads: PadSpec;
   readonly stars: StarRule;
 }
@@ -90,7 +91,7 @@ export class GameScene {
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
-    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoal(deps.level.goal) };
+    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoals(deps.level.goals) };
     this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
       won: {
         onEnter: () => {
@@ -184,7 +185,8 @@ export class GameScene {
   private async playRound(step: CascadeStep, round: number): Promise<void> {
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
     this.level.score += points;
-    this.level.goal.record({ points, padEvents: step.padEvents });
+    const cleared = step.cleared.map(({ piece }) => piece.kind);
+    this.level.goal.record({ points, padEvents: step.padEvents, cleared });
     await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
   }
@@ -192,7 +194,7 @@ export class GameScene {
   private status(): GameStatus {
     const { movesLeft, score, goal } = this.level;
     const { moves, stars } = this.deps.level;
-    return { movesLeft, moves, stars: starsFor(movesLeft, moves, stars), score, goal: goal.progress() };
+    return { movesLeft, moves, stars: starsFor(movesLeft, moves, stars), score, goals: goal.progress() };
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */

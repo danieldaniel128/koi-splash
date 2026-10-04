@@ -16,8 +16,11 @@ export const LEVEL = {
    * bay at least 2 cells wide, so there is room for the stones on both of its sides.
    */
   shape: ['..###..', '.#####.', '#######', '#######', '.#####.', '#######', '#######', '.#####.', '..###..'],
-  /** The lotus goal: bloom every bud. Swap for { type: 'score', target: 1500 } to play for points instead. */
-  goal: { type: 'lotus', count: 3 } as GoalDef,
+  /**
+   * The goals, all to be reached to win. Mix and match: { type: 'lotus', count }, { type: 'score', target }, or
+   * { type: 'koi', kind, count } to clear that many koi of one colour (kind 0 is the first of KOI_SET).
+   */
+  goals: [{ type: 'lotus', count: 3 }] as readonly GoalDef[],
   /** The win rating (as in the prototype): 2 stars with 15% of the moves left, 3 with 35%. */
   stars: { two: 0.15, three: 0.35 },
   pads: {

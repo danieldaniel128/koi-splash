@@ -46,7 +46,8 @@ export class Hud {
     this.moves.update(status.movesLeft);
     if (status.score === 0) this.score.reset();
     else this.score.update(status.score);
-    this.goal.update(status.goal);
+    const [first] = status.goals;
+    if (first) this.goal.update(first);
     this.stars.update(status.movesLeft, status.moves, status.stars);
   }
 }
