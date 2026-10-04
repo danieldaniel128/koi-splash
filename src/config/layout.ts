@@ -24,7 +24,7 @@ export const LAYOUT = {
    * they turn. Higher = more space.
    */
   cellGap: 1,
-  pondAlign: 0.8,
+  pondAlign: 1, // all the room left over goes to the garden above the pond
   minCell: 36,
   maxCell: 60,
 } as const satisfies LayoutConfig;
