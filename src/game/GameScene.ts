@@ -25,12 +25,15 @@ interface LevelState {
   readonly goal: Goal;
 }
 
-/** Table order is the priority: 'won' is checked before 'lost', so reaching the goal on the last move wins. */
+/**
+ * The level plays to its last move: met goals early and the player keeps scoring toward the stars. It ends when the
+ * moves run out, won if every goal is met by then. Table order is the priority: 'won' is checked before 'lost'.
+ */
 const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'idle', to: 'swapping', when: (level) => level.movesLeft > 0 },
   { from: 'swapping', to: 'resolving' },
   { from: 'swapping', to: 'idle' }, // the swap made no match and went back
-  { from: 'resolving', to: 'won', when: (level) => level.goal.isComplete() },
+  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goal.isComplete() },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
   { from: 'won', to: 'idle' }, // play again
@@ -81,7 +84,7 @@ export interface GameSceneDeps {
 /**
  * The presenter: takes swipes from the view, asks the model for the result and plays it back through the animator.
  * The turn state machine keeps one turn at a time and decides, at the end of each turn, whether the level is won,
- * lost or goes on.
+ * lost or goes on (it goes on until the last move).
  */
 export class GameScene {
   private readonly board: Board;
