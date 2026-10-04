@@ -73,7 +73,9 @@ decides anything, so the board on screen can't drift from the real one, and the 
 browser.
 
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
-if it's complete, without knowing which goal it is. A level picks a lotus goal or a score goal in config. The lily
+if it's complete, without knowing which goal it is. A goal can be lotuses to bloom, points to score or koi of one
+colour to clear, and a level lists as many as it likes: `createGoals` plays them as one (Composite), won when all are
+reached. This level asks for 3 lotuses and 10 red koi, and the HUD shows a chip per goal. The lily
 pads (`src/model/pads.ts`) each take a cell. They're placed before the koi, so no koi ever spawns or lands on one,
 and koi fall past them; a round hits a pad when it clears a koi right next to it, and a bloomed or drifted pad frees
 its cell for the koi above in the same round. Hits to bloom, the number of lotuses, the spacing between pads and the
