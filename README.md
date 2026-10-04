@@ -52,7 +52,8 @@ Changing the look is meant to be config, not surgery:
   takes the pond's rect from the layout can replace it.
 - **Rocks in the water:** `POND.props`. They stop the ripples and get the same shore foam as the pond's edge.
 - **Water and bank:** colours, waves and foam in `src/config/water.ts` and `src/config/pond.ts`.
-- **UI:** colours, type, spacing and motion are tokens in `src/ui/theme.ts`, read by the CSS and by Pixi.
+- **UI and background:** colours, type, spacing, motion and the scene around the pond are one theme in `src/theme`,
+  read by the CSS and by Pixi.
 
 ## How it's built
 
@@ -91,7 +92,7 @@ its shape on any phone, tablet or desktop. Phones play upright; turned sideways 
 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
 It's built from small components (moves, score, goal, specials bar, end card) and a little CSS kit (panel, number,
-label, track, button) that only reads theme tokens (`src/ui/theme.ts`). The same tokens are used by the Pixi side,
+label, track, button) that only reads theme tokens (`src/theme`). The same tokens are used by the Pixi side,
 so a new look is a change of tokens, not of components.
 
 Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the score

@@ -17,6 +17,7 @@ import { bakeDistanceField } from '../../art/distanceField';
 import { toPolygon } from '../../layout/outline';
 import type { Outline } from '../../layout/outline';
 import { WATER } from '../../config/water';
+import { THEME } from '../../theme/theme';
 import bankFragment from './shaders/bank.frag?raw';
 import koiRefraction from './shaders/koiRefraction.frag?raw';
 import surface from './shaders/surface.frag?raw';
@@ -307,11 +308,11 @@ const FIELD_MARGIN = 8;
 function bankLook(layout: PondLayout): UniformDefs {
   const halfWidth = layout.stageWidth / 2;
   const halfHeight = layout.stageHeight / 2;
-  const { stretch, strength, from, to } = POND.vignette;
+  const { stretch, strength, from, to } = THEME.scene.vignette;
   return {
-    uBank: { value: color(POND.bank), type: 'vec3<f32>' },
-    uBankPattern: { value: color(POND.bankPattern), type: 'vec3<f32>' },
-    uPatternSize: { value: POND.patternSize, type: 'f32' },
+    uBank: { value: color(THEME.scene.bank), type: 'vec3<f32>' },
+    uBankPattern: { value: color(THEME.scene.bankPattern), type: 'vec3<f32>' },
+    uPatternSize: { value: THEME.scene.patternSize, type: 'f32' },
     uWetBand: { value: POND.wetBand, type: 'f32' },
     uFrame: {
       value: [halfWidth, halfHeight, halfWidth * stretch[0], halfHeight * stretch[1]],
@@ -345,8 +346,8 @@ function waterLook({ board, moonAt }: PondLayout): UniformDefs {
     },
     uTroughShade: { value: WATER.troughShade, type: 'f32' },
     uRim: { value: [...WATER.rimGate, WATER.rimStrength], type: 'vec3<f32>' },
-    uMoon: { value: color(POND.moon), type: 'vec3<f32>' },
-    uMoonAt: { value: [...moonAt, POND.moonRadius], type: 'vec3<f32>' },
+    uMoon: { value: color(THEME.scene.moon), type: 'vec3<f32>' },
+    uMoonAt: { value: [...moonAt, THEME.scene.moonReflection], type: 'vec3<f32>' },
   };
 }
 

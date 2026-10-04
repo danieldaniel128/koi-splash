@@ -1,4 +1,4 @@
-import { THEME } from '../ui/theme';
+import { THEME } from '../theme/theme';
 
 /** The points that pop up over a match, then fly to the score. */
 export const POINTS = {

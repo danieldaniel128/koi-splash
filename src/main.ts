@@ -39,7 +39,7 @@ import { Hud } from './ui/Hud';
 import { placePowerBar } from './ui/PowerBar';
 import { ResultCard } from './ui/ResultCard';
 import { RotateNotice } from './ui/RotateNotice';
-import { applyTheme } from './ui/theme';
+import { THEME, applyTheme } from './theme/theme';
 import { UiLayer } from './ui/UiLayer';
 
 /** Composition root: the one place that creates the objects and hands each one what it needs. */
@@ -181,7 +181,7 @@ function createScenery(app: Application, layout: GameLayout, shore: readonly Out
     ],
     roam: POND.fireflyRoam,
     size: POND.fireflySize,
-    color: POND.firefly,
+    color: THEME.scene.firefly,
   });
   app.ticker.add((ticker) => {
     fireflies.tick(ticker.deltaMS / 1000);
@@ -284,7 +284,7 @@ async function createApp(host: HTMLElement): Promise<Application> {
   const app = new Application();
   await app.init({
     resizeTo: host,
-    background: POND.bank, // the bank shader covers the screen; this only shows before the first frame
+    background: THEME.scene.bank, // the bank shader covers the screen; this only shows before the first frame
     preference: 'webgl', // the water shaders are written in GLSL
     resolution: Math.min(window.devicePixelRatio, 2), // the water is per-pixel work: cap it on 3x phones
     antialias: true,
