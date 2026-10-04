@@ -18,8 +18,8 @@ npm run build    # static web build in dist/
 
 ## Stack & assets
 
-TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. There are no image files: the koi, stones, lily pads
-and reeds are painted on canvases once at startup (`src/art/`) and uploaded as textures.
+TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. There are no image files: the koi, stones and lily
+pads are painted on canvases once at startup (`src/art/`) and uploaded as textures.
 
 The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
 into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks

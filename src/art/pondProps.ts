@@ -2,18 +2,18 @@ import { Random } from '../core/Random';
 import { drawShadowOnly } from './blur';
 
 /**
- * pondProps.ts - the things around and on the pond, painted once on a canvas like the koi: stones, lily pads (one
- * carrying a lotus) and reed clumps. Ink-print style: dark shapes with a crisp ink outline, a moonlit rim on the
+ * pondProps.ts - the things around and on the pond, painted once on a canvas like the koi: stones, and lily pads
+ * with a lotus opening on them. Ink-print style: dark shapes with a crisp ink outline, a moonlit rim on the
  * side facing the moon (upper right) and a soft shadow falling away from it. Deterministic from the seed.
  *
  * No framework code: bake a canvas with `bakeProp` and upload it as a texture.
  */
 
-export type PropKind = 'stone' | 'pad' | 'lotus-pad' | 'reeds';
+export type PropKind = 'stone' | 'pad';
 
 export interface PropPaint {
   readonly kind: PropKind;
-  /** Half width and half height of the prop's body (px); for reeds, how far the blades reach. */
+  /** Half width and half height of the prop's body (px). */
   readonly radius: readonly [number, number];
   readonly seed: number;
 }
@@ -41,7 +41,6 @@ const PAD = {
 /** The pads' ink outline (px): as bold as the koi's cartoon outline, so the board reads as one style. */
 const PAD_OUTLINE = 1.9;
 const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)', heart: '#f4cf4f' } as const;
-const REED = { blade: '#21503a', edge: 'rgba(170, 225, 190, 0.6)', head: '#6b4528' } as const;
 
 /** Paints one prop into a fresh canvas, centred; the canvas is padded for the shadow. */
 export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement {
@@ -59,8 +58,7 @@ export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement
   const rng = new Random(prop.seed); // the same seed always paints the same prop
   const random = (): number => rng.next();
   if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
-  else if (prop.kind === 'reeds') paintReeds(ctx, prop.radius[0], random);
-  else paintPad(ctx, prop.radius[0], random, prop.kind === 'lotus-pad');
+  else paintPad(ctx, prop.radius[0], random);
   return canvas;
 }
 
@@ -109,7 +107,7 @@ function dryBrush(ctx: Ctx, rx: number, ry: number, random: () => number): void 
 
 // ---------------------------------------------------------------------------- lily pads and the lotus
 
-function paintPad(ctx: Ctx, radius: number, random: () => number, lotus: boolean): void {
+function paintPad(ctx: Ctx, radius: number, random: () => number): void {
   const notch = random() * TAU;
   const leaf = (): void => {
     ctx.beginPath();
@@ -137,7 +135,6 @@ function paintPad(ctx: Ctx, radius: number, random: () => number, lotus: boolean
   ctx.strokeStyle = PAD.ink;
   ctx.lineWidth = PAD_OUTLINE;
   ctx.stroke();
-  if (lotus) paintLotus(ctx, radius * 0.62, random);
 }
 
 function veins(ctx: Ctx, radius: number, notch: number): void {
@@ -190,21 +187,6 @@ function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: numbe
   ctx.fill();
 }
 
-/** A lotus seen from above: two rings of petals pointing out, pink at the tips, and a golden heart. */
-function paintLotus(ctx: Ctx, size: number, random: () => number): void {
-  const turn = random() * TAU;
-  paintShadow(ctx, () => {
-    ctx.beginPath();
-    ctx.arc(0, 0, size * 0.9, 0, TAU);
-  });
-  for (let i = 0; i < 8; i++) petal(ctx, turn + (i / 8) * TAU, size, size * 0.42);
-  for (let i = 0; i < 6; i++) petal(ctx, turn + ((i + 0.5) / 6) * TAU, size * 0.68, size * 0.34);
-  ctx.beginPath();
-  ctx.arc(0, 0, size * 0.2, 0, TAU);
-  ctx.fillStyle = LOTUS.heart;
-  ctx.fill();
-}
-
 function petal(ctx: Ctx, angle: number, length: number, width: number): void {
   ctx.save();
   ctx.rotate(angle);
@@ -219,68 +201,6 @@ function petal(ctx: Ctx, angle: number, length: number, width: number): void {
   ctx.fill();
   ctx.strokeStyle = LOTUS.ink;
   ctx.lineWidth = 0.7;
-  ctx.stroke();
-  ctx.restore();
-}
-
-// ---------------------------------------------------------------------------- reeds
-
-/**
- * A clump of reeds seen from above: tapered blades fanning out from the root (toward the top of the canvas; rotate
- * the sprite to lean them over the water), two with seed heads.
- */
-function paintReeds(ctx: Ctx, reach: number, random: () => number): void {
-  const blades = Array.from({ length: 11 }, () => ({
-    angle: -Math.PI / 2 + (random() - 0.5) * 2.6,
-    length: reach * (0.55 + random() * 0.45),
-    bend: (random() - 0.5) * 0.5,
-    width: 2 + random() * 1.6,
-  }));
-  paintShadow(ctx, () => {
-    ctx.beginPath();
-    for (const b of blades) bladePath(ctx, b.angle, b.length, b.width, b.bend);
-  });
-  for (const b of blades) {
-    ctx.beginPath();
-    bladePath(ctx, b.angle, b.length, b.width, b.bend);
-    ctx.fillStyle = REED.blade;
-    ctx.fill();
-    ctx.strokeStyle = REED.edge;
-    ctx.lineWidth = 0.6;
-    ctx.stroke();
-  }
-  for (const b of blades.slice(0, 2)) seedHead(ctx, b.angle, b.length * 0.7);
-}
-
-function bladePath(ctx: Ctx, angle: number, length: number, width: number, bend: number): void {
-  const along = (d: number, side: number): Pt => {
-    const sway = bend * d * d * length;
-    return [
-      Math.cos(angle) * d * length - Math.sin(angle) * (sway + side),
-      Math.sin(angle) * d * length + Math.cos(angle) * (sway + side),
-    ];
-  };
-  const [ax, ay] = along(0, -width / 2);
-  const [bx, by] = along(0.55, -width * 0.35);
-  const [tx, ty] = along(1, 0);
-  const [cx, cy] = along(0.55, width * 0.35);
-  const [dx, dy] = along(0, width / 2);
-  ctx.moveTo(ax, ay);
-  ctx.quadraticCurveTo(bx, by, tx, ty);
-  ctx.quadraticCurveTo(cx, cy, dx, dy);
-  ctx.closePath();
-}
-
-function seedHead(ctx: Ctx, angle: number, distance: number): void {
-  ctx.save();
-  ctx.translate(Math.cos(angle) * distance, Math.sin(angle) * distance);
-  ctx.rotate(angle);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 4.5, 1.8, 0, 0, TAU);
-  ctx.fillStyle = REED.head;
-  ctx.fill();
-  ctx.strokeStyle = REED.edge;
-  ctx.lineWidth = 0.6;
   ctx.stroke();
   ctx.restore();
 }

@@ -162,7 +162,7 @@ function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayo
   return pads;
 }
 
-/** Stones, lily pads and reeds around the pond (painted once) and fireflies over the bank, on the app's clock. */
+/** Stones around the pond (painted once) and fireflies over the bank, on the app's clock. */
 function createScenery(app: Application, layout: GameLayout): Container {
   const props = new PondProps(placeProps(layout.pond), app.renderer.resolution * KOI_LOOK.bakeResolution);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
@@ -176,7 +176,6 @@ function createScenery(app: Application, layout: GameLayout): Container {
     color: POND.firefly,
   });
   app.ticker.add((ticker) => {
-    props.tick(ticker.deltaMS / 1000);
     fireflies.tick(ticker.deltaMS / 1000);
   });
   const scenery = new Container();
@@ -184,7 +183,7 @@ function createScenery(app: Application, layout: GameLayout): Container {
   return scenery;
 }
 
-/** The pond's stones, pads and reeds, each at its corner of this pond. O(props). */
+/** The pond's stones, each at its corner of this pond. O(props). */
 function placeProps(pond: Rect): PondProp[] {
   return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
 }

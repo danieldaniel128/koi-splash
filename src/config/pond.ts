@@ -47,27 +47,16 @@ export const POND = {
   moon: '#f7ecc8',
 
   /**
-   * Stones, lily pads and reeds at the corners and on the open water, never over the board. Stones and pads also
-   * shape the water: ripples stop at them and the foam outlines them. Together with the lily pads on the board they
-   * share MAX_PROPS (16) slots in the water shaders. Reeds fan out toward their `turn` (0 = up). Each is pinned to
-   * a corner of the pond (offset in px), so the scene keeps its shape when the pond grows on a bigger screen.
+   * Stones at the corners, never over the board. They shape the water: ripples stop at them and the foam
+   * outlines them. Together with the lily pads on the board they share MAX_PROPS (16) slots in the water shaders.
+   * Each is pinned to a corner of the pond (offset in px), so the scene keeps its shape on a bigger screen.
    */
   props: [
     { kind: 'stone', corner: 'top-left', offset: [3, 4], radius: [40, 26], turn: -0.25, seed: 11 },
     { kind: 'stone', corner: 'top-left', offset: [55, -6], radius: [16, 10], turn: 0.5, seed: 12 },
-    { kind: 'reeds', corner: 'top-right', offset: [3, -8], radius: [52, 52], turn: -1.75, seed: 21 },
     { kind: 'stone', corner: 'top-right', offset: [-23, 8], radius: [18, 11], turn: 0.3, seed: 13 },
-    { kind: 'lotus-pad', corner: 'bottom-left', offset: [55, -22], radius: [27, 27], turn: 0, seed: 31 },
-    { kind: 'pad', corner: 'bottom-left', offset: [107, 0], radius: [17, 17], turn: 0, seed: 32 },
-    { kind: 'pad', corner: 'bottom-left', offset: [193, -8], radius: [11, 11], turn: 0, seed: 34 },
     { kind: 'stone', corner: 'bottom-right', offset: [-15, 8], radius: [42, 27], turn: 0.18, seed: 14 },
-    { kind: 'reeds', corner: 'bottom-left', offset: [19, 60], radius: [66, 66], turn: 0.3, seed: 22 },
-    { kind: 'reeds', corner: 'bottom-right', offset: [-65, 68], radius: [54, 54], turn: -0.3, seed: 23 },
   ] satisfies readonly PondPropSpot[] as readonly PondPropSpot[],
-
-  /** How far the lily pads rock on the water (radians) and how fast (radians per second). */
-  padRock: 0.05,
-  padRockSpeed: 0.8,
 
   /** Fireflies over the bank, where each one hovers: at the top of the screen, and on the bank below the pond. */
   fireflies: {
