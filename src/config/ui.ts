@@ -14,6 +14,8 @@ export const HUD_MOTION = {
   goalBump: 1.3,
   goalSettle: 0.4,
   starEarned: 1.7,
+  /** A met goal's bonus rises out of its chip for this long (s). */
+  bonusRise: 1.3,
 } as const;
 
 /** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */

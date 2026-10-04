@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoals } from '../model/goals';
+import { createGoals, goalsMet } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
@@ -59,6 +59,8 @@ export interface ResultDisplay {
 export interface LevelRules {
   readonly moves: number;
   readonly pointsPerPiece: number;
+  /** Points paid for each goal as it is met. */
+  readonly goalBonus: number;
   /** The level's goals: it's won when every one is reached. */
   readonly goals: readonly GoalDef[];
   readonly pads: PadSpec;
@@ -186,7 +188,10 @@ export class GameScene {
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
     this.level.score += points;
     const cleared = step.cleared.map(({ piece }) => piece.kind);
+    const metBefore = goalsMet(this.level.goal.progress());
     this.level.goal.record({ points, padEvents: step.padEvents, cleared });
+    // a goal met this round pays its bonus
+    this.level.score += (goalsMet(this.level.goal.progress()) - metBefore) * this.deps.level.goalBonus;
     await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
   }

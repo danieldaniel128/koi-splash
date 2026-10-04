@@ -40,4 +40,6 @@ export const LEVEL = {
 
 export const SCORE = {
   pointsPerPiece: 10,
+  /** Paid for each goal as it's met, on top of the points of the round that met it. */
+  goalBonus: 500,
 } as const;

@@ -239,6 +239,7 @@ function goalIcons(app: Application): GoalIcons {
   const resolution = app.renderer.resolution * KOI_LOOK.bakeResolution;
   const pose = { size: GOAL_TRAY.koiSize, resolution, build: KOI_LOOK.build, shadow: false };
   return {
+    bonus: SCORE.goalBonus,
     lotus: bakeLotusPad(GOAL_TRAY.iconRadius, 1, 7, resolution).toDataURL(),
     koi: KOI_SET.map((id) => bakeInkedKoi(getVariety(id), pose, koiInk()).toDataURL()),
   };
