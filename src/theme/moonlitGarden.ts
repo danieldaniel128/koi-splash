@@ -2,7 +2,7 @@ import type { BackdropLook } from '../art/backdrop';
 
 /**
  * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every colour, font, size
- * and timing the UI uses, and the look of the scene around the pond (the bank, the moon, the fireflies).
+ * and timing the UI uses, and the look of the scene around the pond (the raked ground, the moon, the fireflies).
  * Sizes are in stage px (the UI layer is scaled with the stage).
  */
 export const MOONLIT_GARDEN = {
@@ -48,10 +48,15 @@ export const MOONLIT_GARDEN = {
   time: { fast: 0.15, normal: 0.3, slow: 0.55 },
   /** The scene around the pond: the ground it is dug into, the moon over it and the fireflies. */
   scene: {
-    /** The bank: indigo with a faint seigaiha (overlapping waves) pattern; one circle is this wide (px). */
-    bank: '#0b1830',
-    bankPattern: '#1a335c',
-    patternSize: 34,
+    /**
+     * The ground: a dry garden of raked gravel by moonlight, its base colour, the lit ridges and the grooves; the rake
+     * draws a line every `period` px, follows the shore for `rings` lines, then runs in straight rows, wobbling by up
+     * to `wobble` px like a hand-held rake.
+     */
+    bank: '#16243d',
+    ridge: '#2b4166',
+    groove: '#0d1830',
+    rake: { period: 7, rings: 5, wobble: 1.4 },
     /**
      * The bank darkens toward the screen edges: an oval of half the stage stretched by `stretch` (x, y), darkening
      * by up to `strength` from `from` to `to` (distance from the centre, in those half sizes).
