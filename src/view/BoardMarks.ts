@@ -104,8 +104,10 @@ export class BoardMarks extends Container {
       .stroke({ width: 3, color: look.gold, alpha: 0.7 + 0.3 * beat });
     for (const offset of [0, Math.PI]) {
       const start = this.time * 2.4 + offset;
+      const radius = this.cell * 0.6;
       this.ring
-        .arc(x, y, this.cell * 0.6, start, start + 1.6)
+        .moveTo(x + Math.cos(start) * radius, y + Math.sin(start) * radius) // each arc its own stroke, not joined on
+        .arc(x, y, radius, start, start + 1.6)
         .stroke({ width: 2, color: look.pink, alpha: 0.8 });
     }
   }

@@ -94,7 +94,7 @@ export class SpecialMotions {
         const reach = 1 - k.e;
         koi.x = toward.x + (Math.cos(angle) * dx - Math.sin(angle) * dy) * reach;
         koi.y = toward.y + (Math.sin(angle) * dx + Math.cos(angle) * dy) * reach;
-        koi.heading = Math.atan2(toward.x - koi.x, koi.y - toward.y) + 1.2; // nose round the turn
+        koi.heading = Math.atan2(toward.x - koi.x, koi.y - toward.y) - 1.2; // nose round the (clockwise) turn
         koi.scale.set(rest * (1 - move.shrink * k.e));
         koi.alpha = 1 - 0.8 * k.e * k.e;
       },
