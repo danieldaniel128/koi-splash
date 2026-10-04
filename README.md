@@ -18,21 +18,29 @@ npm run build    # static web build in dist/
 ## Stack & assets
 
 - TypeScript (strict), Vite, PixiJS 8 (WebGL), GSAP for tweens
-- The pond is an ink print by moonlight: a real wave simulation on the GPU, drawn with a small palette and thin
-  lines (`src/view/water/`). I wanted the middle ground between the two: water that behaves for real, so the fish
+- The pond is an ink print by moonlight: a real wave simulation on the GPU, drawn with a small palette and soft
+  light (`src/view/water/`). I wanted the middle ground between the two: water that behaves for real, so the fish
   actually disturb it, but drawn clean enough that the pieces stay easy to scan on a phone.
   - **simulation** (`WaterSim`, `sim.frag`): a height field stepped 60 times a second with the wave equation (a
     9-point stencil, so rings stay round). Each cell's height and speed are packed into two 8-bit channels, so it
     runs on any phone GPU without float textures. The shore, the stones and the lily pads soak waves up, so a splash
-    fades out instead of bouncing back across the board.
+    fades out instead of bouncing back across the board, and a touch of viscosity calms the tiny ripples left where
+    many pushes overlap, so a cascade leaves smooth rings instead of a blotchy texture.
   - **the fish push the water** (`KoiLife`): a moving koi pushes the water behind it every few px, which lines up
-    into a wake; now and then a resting koi flicks its tail and turns, sending a small ring from its tail. Matched
-    koi dive (a bigger push) and new koi surface. Later, jumps are just bigger pushes.
+    into a wake; now and then a resting koi flicks its tail and turns, sending a small ring from its tail. A swap
+    shoves the water apart between the two koi, matched koi dive (a bigger push), the droplets of a splash land with
+    small rings, and new koi surface. Later, jumps are just bigger pushes.
   - **drawing**, passes that read the same waves and share one outline of the pond: the water under the koi (deep
-    indigo-teal, lighter shallows by the shore, a faint drifting net of light loops, the moon's reflection, and thin
-    moonlight lines between every crest and trough, so ripples read as stacked rings and wakes as arcs, never as
-    filled foam), a filter on the koi layer (the koi bend under the waves) and a sparse surface over them
-    (calligraphic shore foam around the bank, stones and pads, a few gold-leaf glints on the open water).
+    indigo-teal, and glowing shallows by the shore where soft, wide bands of light drift on the bottom, fading out
+    before the board so nothing busy sits behind the koi; a faint moonlit sheen; the waves as soft relief, lit on the
+    slopes facing the moon and shaded on the far ones, with a clean bright rim only on strong fronts; the moon's
+    reflection broken into a column of twinkling glints), a filter on the koi layer (the koi bend under the waves)
+    and a sparse surface over them (calligraphic shore foam around the bank, stones and pads, a few gold-leaf glints
+    on the open water). An earlier version drew the ripples and the light on the bottom as thin lines; where waves
+    overlapped they turned into scribbles, so everything on the water is soft now.
+  - **a match splashes** (`SplashFx`): one splash per match, a soft flash along the matched koi, a burst of foam
+    where each one goes under and droplets of different sizes arcing out and landing. The koi keep their colour as
+    they dive and fade into the blue.
   - Around the pond, an indigo bank with a faint seigaiha (overlapping waves) pattern and washi grain, painted once
     per screen size into a texture. Stones, lily pads with a lotus and reeds are painted on a canvas at startup
     (`src/art/pondProps.ts`), like the koi.
@@ -124,9 +132,11 @@ I used Claude (AI) as a helper during the project. So far:
 - `src/model/` (board, matching, cascade) and `src/core/Random.ts`: AI-written, based on the architecture I chose.
 - `tests/`: AI-written.
 - The water (`src/view/water/`: simulation, ink-print drawing), the koi swimming (`KoiLife`, `Koi`), the match
-  effects, the pond dressing (`src/art/pondProps.ts`) and koi shadows: AI-written. I set the direction (water that
-  reacts to the fish, a stylized look from a reference picture, readable for a match-3, room for koi to dive and
-  jump later) and judged each round against screenshots.
+  effects (`SplashFx`, `src/art/glow.ts`), the pond dressing (`src/art/pondProps.ts`) and koi shadows: AI-written.
+  I set the direction (water that reacts to the fish, a stylized look from a reference picture, readable for a
+  match-3, room for koi to dive and jump later) and judged each round against screenshots. When the thin ripple and
+  light lines read as scribbles, I chose to replace them with soft, wide light in the shallows that fades out under
+  the board, and AI reworked the drawing to that.
 - `src/view/` (board rendering, swipe input, animations, HUD, end card), `src/game/` (the game scene) and
   `src/config/`: AI-written, step by step from my plan,
   reviewed and tested by me on desktop and phone.

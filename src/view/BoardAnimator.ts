@@ -64,7 +64,11 @@ export class BoardAnimator {
       this.slide(this.view.spriteOf(second.piece.id), first.at, TIMING.swapSink),
     ]);
     for (const cell of [first.at, second.at]) {
-      this.water.ripple(this.view.toGlobal(this.view.cellToPoint(cell)), WATER.swapSettlePush, WATER.swapRadius);
+      this.water.ripple(
+        this.view.toGlobal(this.view.cellToPoint(cell)),
+        WATER.swapSettlePush,
+        WATER.swapRadius,
+      );
     }
   }
 

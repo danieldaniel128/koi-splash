@@ -45,8 +45,10 @@ export class Fireflies extends Container {
     this.time += deltaSeconds;
     const t = this.time;
     for (const { sprite, home, phase, blink } of this.flies) {
-      sprite.x = home[0] + (Math.sin(t * 0.31 + phase) * 0.7 + Math.sin(t * 0.73 + phase * 2) * 0.3) * this.roam;
-      sprite.y = home[1] + (Math.cos(t * 0.27 + phase) * 0.6 + Math.sin(t * 0.61 + phase * 3) * 0.4) * this.roam * 0.6;
+      sprite.x =
+        home[0] + (Math.sin(t * 0.31 + phase) * 0.7 + Math.sin(t * 0.73 + phase * 2) * 0.3) * this.roam;
+      sprite.y =
+        home[1] + (Math.cos(t * 0.27 + phase) * 0.6 + Math.sin(t * 0.61 + phase * 3) * 0.4) * this.roam * 0.6;
       sprite.alpha = 0.15 + 0.85 * Math.pow(Math.max(0, Math.sin(t * blink + phase)), 2);
     }
   }

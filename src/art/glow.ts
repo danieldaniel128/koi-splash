@@ -28,7 +28,12 @@ export function paintDroplet(color: string, size: number): HTMLCanvasElement {
  * centre (more toward the outside, like a crown breaking up), never a clean ring. On a square canvas `size` px wide;
  * `random` places the blobs.
  */
-export function paintFoamBurst(color: string, size: number, blobs: number, random: () => number): HTMLCanvasElement {
+export function paintFoamBurst(
+  color: string,
+  size: number,
+  blobs: number,
+  random: () => number,
+): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');

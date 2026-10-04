@@ -35,7 +35,9 @@ export class SplashFx extends Container {
   ) {
     super();
     for (let i = 0; i < FOAM_VARIANTS; i++) {
-      this.foamTextures.push(Texture.from(paintFoamBurst(SPLASH.ink, FOAM_TEXTURE, SPLASH.foamBlobs, random)));
+      this.foamTextures.push(
+        Texture.from(paintFoamBurst(SPLASH.ink, FOAM_TEXTURE, SPLASH.foamBlobs, random)),
+      );
     }
   }
 
@@ -73,7 +75,11 @@ export class SplashFx extends Container {
       .to(label.scale, { x: 1, y: 1, duration: POINTS.pop, ease: 'back.out(3)' }, 0)
       .to(label, { y: at.y - POINTS.rise, duration: flyAt, ease: 'power1.out' }, 0)
       .to(label, { x: this.scoreAt.x, y: this.scoreAt.y, duration: POINTS.flight, ease: 'power2.in' }, flyAt)
-      .to(label.scale, { x: POINTS.landScale, y: POINTS.landScale, duration: POINTS.flight, ease: 'power1.in' }, flyAt)
+      .to(
+        label.scale,
+        { x: POINTS.landScale, y: POINTS.landScale, duration: POINTS.flight, ease: 'power1.in' },
+        flyAt,
+      )
       .to(label, { alpha: 0, duration: 0.1 }, flyAt + POINTS.flight - 0.1);
   }
 
@@ -84,7 +90,12 @@ export class SplashFx extends Container {
     const [left, right, top, bottom] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     const width = SPLASH.flashSize + (right - left) * SPLASH.flashStretch;
     const height = SPLASH.flashSize + (bottom - top) * SPLASH.flashStretch;
-    const flash = this.bloom(this.flashTexture, { x: (left + right) / 2, y: (top + bottom) / 2 }, width, height);
+    const flash = this.bloom(
+      this.flashTexture,
+      { x: (left + right) / 2, y: (top + bottom) / 2 },
+      width,
+      height,
+    );
     flash.blendMode = 'add';
     this.fade(flash, SPLASH.flashLife, SPLASH.flashAlpha, 0);
   }
@@ -133,7 +144,10 @@ export class SplashFx extends Container {
   private droplet(from: PointData): void {
     const angle = this.random() * Math.PI * 2;
     const reach = this.between(SPLASH.dropletReach);
-    const start = { x: from.x + Math.cos(angle) * SPLASH.dropletStart, y: from.y + Math.sin(angle) * SPLASH.dropletStart };
+    const start = {
+      x: from.x + Math.cos(angle) * SPLASH.dropletStart,
+      y: from.y + Math.sin(angle) * SPLASH.dropletStart,
+    };
     const land = { x: from.x + Math.cos(angle) * reach, y: from.y + Math.sin(angle) * reach };
     const arc = this.between(SPLASH.dropletArc);
     const size = (this.between(SPLASH.dropletSize) * 2) / DROPLET_TEXTURE;
@@ -149,7 +163,10 @@ export class SplashFx extends Container {
         const { t } = flight;
         const lift = Math.sin(t * Math.PI);
         const out = 1 - (1 - t) * (1 - t); // fast out of the water, slowing as it falls
-        drop.position.set(start.x + (land.x - start.x) * out, start.y + (land.y - start.y) * out - arc * lift);
+        drop.position.set(
+          start.x + (land.x - start.x) * out,
+          start.y + (land.y - start.y) * out - arc * lift,
+        );
         drop.scale.set(size * (1 + 0.6 * lift));
       },
       onComplete: () => {

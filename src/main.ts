@@ -37,7 +37,10 @@ async function boot(host: HTMLElement): Promise<void> {
   const hud = new Hud(boardWidth);
   hud.position.set(boardLeft, HUD.top);
   const score = hud.scoreAnchor();
-  const splashes = new SplashFx({ x: hud.x + score.x - boardLeft, y: hud.y + score.y - BOARD_LAYOUT.top }, pond);
+  const splashes = new SplashFx(
+    { x: hud.x + score.x - boardLeft, y: hud.y + score.y - BOARD_LAYOUT.top },
+    pond,
+  );
   splashes.position.copyFrom(boardView.position);
   const result = new ResultOverlay(STAGE.width, STAGE.height);
 
