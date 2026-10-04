@@ -175,10 +175,11 @@ function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: numbe
   const open = Math.min(Math.max(openness, 0), 1);
   paintShadow(ctx, () => {
     ctx.beginPath();
-    ctx.arc(0, 0, size * (0.45 + 0.45 * open), 0, TAU);
+    ctx.arc(0, 0, size * (0.6 + 0.3 * open), 0, TAU);
   });
-  const outer = size * (0.45 + 0.55 * open);
-  const inner = size * (0.4 + 0.28 * open);
+  // even closed, the bud is big enough to spot between the koi
+  const outer = size * (0.62 + 0.38 * open);
+  const inner = size * (0.5 + 0.18 * open);
   for (let i = 0; i < 8; i++) petal(ctx, turn + (i / 8) * TAU, outer, size * (0.22 + 0.2 * open));
   for (let i = 0; i < 6; i++) petal(ctx, turn + ((i + 0.5) / 6) * TAU, inner, size * (0.2 + 0.14 * open));
   ctx.beginPath();

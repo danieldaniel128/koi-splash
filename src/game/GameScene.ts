@@ -2,10 +2,14 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
+import { createGoal } from '../model/goals';
+import type { Goal, GoalDef } from '../model/goals';
+import { PadField } from '../model/pads';
+import type { Pad, PadEvent, PadSpec } from '../model/pads';
 import { createBoard, resetBoard, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
-import type { Cell } from '../model/types';
+import type { CascadeStep, Cell } from '../model/types';
 import type { BoardAnimator, PlacedPiece } from '../view/BoardAnimator';
 import type { BoardView } from '../view/BoardView';
 import type { GameStatus } from './GameStatus';
@@ -16,15 +20,15 @@ type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
 interface LevelState {
   movesLeft: number;
   score: number;
-  readonly targetScore: number;
+  readonly goal: Goal;
 }
 
-/** Table order is the priority: 'won' is checked before 'lost', so reaching the target on the last move wins. */
+/** Table order is the priority: 'won' is checked before 'lost', so reaching the goal on the last move wins. */
 const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'idle', to: 'swapping', when: (level) => level.movesLeft > 0 },
   { from: 'swapping', to: 'resolving' },
   { from: 'swapping', to: 'idle' }, // the swap made no match and went back
-  { from: 'resolving', to: 'won', when: (level) => level.score >= level.targetScore },
+  { from: 'resolving', to: 'won', when: (level) => level.goal.isComplete() },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
   { from: 'won', to: 'idle' }, // play again
@@ -36,6 +40,12 @@ export interface StatusDisplay {
   update(status: GameStatus): void;
 }
 
+/** The lily pads on the board. Implemented by the pad view. */
+export interface PadDisplay {
+  reset(pads: readonly Pad[]): void;
+  play(events: readonly PadEvent[]): Promise<void>;
+}
+
 /** The end-of-level card. Implemented by the result overlay view. */
 export interface ResultDisplay {
   show(outcome: 'won' | 'lost', status: GameStatus): void;
@@ -44,8 +54,9 @@ export interface ResultDisplay {
 
 export interface LevelRules {
   readonly moves: number;
-  readonly targetScore: number;
   readonly pointsPerPiece: number;
+  readonly goal: GoalDef;
+  readonly pads: PadSpec;
 }
 
 export interface GameSceneDeps {
@@ -55,6 +66,7 @@ export interface GameSceneDeps {
   readonly view: BoardView;
   readonly animator: BoardAnimator;
   readonly status: StatusDisplay;
+  readonly pads: PadDisplay;
   readonly result: ResultDisplay;
 }
 
@@ -67,24 +79,27 @@ export class GameScene {
   private readonly board: Board;
   private readonly level: LevelState;
   private readonly turn: StateMachine<TurnState, LevelState>;
+  private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
     this.board = createBoard(deps.spec, deps.rng);
-    this.level = { movesLeft: deps.level.moves, score: 0, targetScore: deps.level.targetScore };
+    this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
+    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoal(deps.level.goal) };
     this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
       won: {
-        onEnter: (level) => {
-          deps.result.show('won', level);
+        onEnter: () => {
+          deps.result.show('won', this.status());
         },
       },
       lost: {
-        onEnter: (level) => {
-          deps.result.show('lost', level);
+        onEnter: () => {
+          deps.result.show('lost', this.status());
         },
       },
     });
     deps.view.render(this.board);
-    deps.status.update(this.level);
+    deps.pads.reset(this.pads.pads);
+    deps.status.update(this.status());
   }
 
   /** Swipe handler for the input. Ignored while a turn is playing or after the level has ended. */
@@ -97,10 +112,13 @@ export class GameScene {
   restart(): void {
     if (!this.turn.is('won') && !this.turn.is('lost')) return;
     resetBoard(this.board, this.deps.spec, this.deps.rng);
+    this.pads = PadField.scatter(this.deps.level.pads, this.deps.spec, this.deps.rng);
     this.level.movesLeft = this.deps.level.moves;
     this.level.score = 0;
+    this.level.goal.reset();
     this.deps.view.render(this.board);
-    this.deps.status.update(this.level);
+    this.deps.pads.reset(this.pads.pads);
+    this.deps.status.update(this.status());
     this.deps.result.hide();
     this.turn.transition('idle');
   }
@@ -129,16 +147,27 @@ export class GameScene {
     }
 
     this.level.movesLeft--;
-    this.deps.status.update(this.level);
+    this.deps.status.update(this.status());
     await animator.swap(first, second);
     this.turn.transition('resolving');
-    for (const [round, step] of result.steps.entries()) {
-      await animator.playStep(step);
-      this.level.score += scoreRound(step, round, this.deps.level.pointsPerPiece);
-      this.deps.status.update(this.level); // the score climbs with each round of the cascade
-    }
+    for (const [round, step] of result.steps.entries()) await this.playRound(step, round);
     if (result.reshuffled) view.render(this.board);
     this.turn.next();
+  }
+
+  /** One cascade round: the koi clear and fall, the pads next to the cleared koi react, the goal counts it. */
+  private async playRound(step: CascadeStep, round: number): Promise<void> {
+    await this.deps.animator.playStep(step);
+    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+    const padEvents = this.pads.hit(step.cleared.map((cleared) => cleared.at));
+    this.level.score += points;
+    this.level.goal.record({ points, padEvents });
+    this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
+    await this.deps.pads.play(padEvents);
+  }
+
+  private status(): GameStatus {
+    return { movesLeft: this.level.movesLeft, score: this.level.score, goal: this.level.goal.progress() };
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */

@@ -3,10 +3,11 @@ import { Container, Graphics, Text } from 'pixi.js';
 import type { PointData, TextStyleOptions } from 'pixi.js';
 import { HUD } from '../config/hud';
 import type { GameStatus } from '../game/GameStatus';
+import type { GoalProgress } from '../model/goals';
 
 /**
- * Moves left in a water drop on the left; the score in a pill on the right, counting up to each new value, with a
- * gold bar filling toward the target. Same ink-and-moonlight style as the pond. Display only.
+ * Moves left in a water drop on the left; the score in a pill on the right, counting up to each new value, with the
+ * level's goal beside it and a gold bar filling toward it. Same ink-and-moonlight style as the pond. Display only.
  */
 export class Hud extends Container {
   private readonly moves: Text;
@@ -37,6 +38,11 @@ export class Hud extends Container {
     this.addChild(drop(radius), pill(panelWidth), this.bar, this.moves, movesLabel, this.score, this.target);
   }
 
+  /** Where the goal sits, in the HUD's space (a bloomed lotus flies there). */
+  goalAnchor(): PointData {
+    return { x: this.panelWidth - 40, y: HUD.pillHeight / 2 };
+  }
+
   /** Where the score number sits, in the HUD's space (the points from a match fly there). */
   scoreAnchor(): PointData {
     return { x: this.score.x + 10, y: this.score.y };
@@ -44,8 +50,8 @@ export class Hud extends Container {
 
   update(status: GameStatus): void {
     if (status.movesLeft !== this.lastMoves) this.showMoves(status.movesLeft);
-    this.target.text = `/ ${status.targetScore}`;
-    const progress = Math.min(1, status.score / status.targetScore);
+    this.target.text = goalLabel(status.goal);
+    const progress = Math.min(1, status.goal.done / status.goal.target);
     if (status.score === Math.round(this.shown.score)) {
       this.drawScore(progress);
       return;
@@ -94,6 +100,11 @@ export class Hud extends Container {
       .roundRect(left, top, filled, HUD.barHeight, HUD.barHeight / 2)
       .fill(HUD.gold);
   }
+}
+
+/** The goal next to the score: the points to reach, or the lotuses bloomed so far. */
+function goalLabel(goal: GoalProgress): string {
+  return goal.kind === 'score' ? `/ ${goal.target}` : `lotus ${goal.done} / ${goal.target}`;
 }
 
 function label(text: string, style: TextStyleOptions, anchorX: number): Text {

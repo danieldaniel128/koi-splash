@@ -37,7 +37,11 @@ export class ResultOverlay extends Container {
 
   show(outcome: Outcome, status: GameStatus): void {
     this.title.text = outcome === 'won' ? 'Pond complete!' : 'Out of moves';
-    this.detail.text = `Score ${status.score} / ${status.targetScore}`;
+    const { goal } = status;
+    this.detail.text =
+      goal.kind === 'lotus'
+        ? `Lotus ${goal.done} / ${goal.target}   Score ${status.score}`
+        : `Score ${status.score} / ${goal.target}`;
     this.visible = true;
     gsap.fromTo(this, { alpha: 0 }, { alpha: 1, duration: RESULT.fadeIn });
     gsap.fromTo(
