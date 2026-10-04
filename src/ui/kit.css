@@ -18,12 +18,56 @@
   box-sizing: border-box;
 }
 
-/* A see-through indigo panel with a thin moonlit rim, like the pond's foam lines. */
+/* A frosted-glass panel with a thin moonlit rim, lit from the top (the prototype's glass). */
 .panel {
-  background: var(--color-panel);
-  border: var(--line) solid var(--color-rim);
+  background: var(--color-glass);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 0 0 var(--line) var(--color-rim),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    var(--shadow);
+}
+
+/* A round glass button or counter: lit from the top left, darker underneath, with the same rim. */
+.orb {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  border-radius: 50%;
+  background: var(--color-glassRound);
+  box-shadow:
+    inset 0 0 0 var(--line) var(--color-rim),
+    inset 0 2px 1px rgba(255, 255, 255, 0.28),
+    inset 0 -8px 14px rgba(0, 10, 20, 0.45),
+    var(--shadow);
+}
+
+/* A small dark pill holding an icon and a count. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 2px var(--space-sm) 2px 2px;
   border-radius: var(--radius-round);
-  box-shadow: var(--shadow);
+  background: rgba(4, 12, 28, 0.5);
+  box-shadow: inset 0 0 0 1px var(--color-rim);
+}
+
+/* A round gold badge with a count on a control's corner. */
+.badge {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: var(--radius-round);
+  background: linear-gradient(180deg, var(--color-goldLight), var(--color-goldDeep));
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  color: #3a1a00;
+  font: 900 var(--text-sm) / 22px var(--font-number);
+  text-align: center;
 }
 
 /* Numbers: the print-like serif with lining, even-width figures, so a counting score doesn't jitter. */
@@ -32,6 +76,7 @@
   font-weight: 900;
   font-variant-numeric: lining-nums tabular-nums;
   line-height: 1;
+  text-shadow: 0 2px 0 rgba(4, 10, 24, 0.6);
 }
 
 .label {
@@ -58,27 +103,4 @@
   background: var(--color-gold);
   box-shadow: 0 0 6px var(--color-gold);
   transition: width var(--time-slow) ease-out;
-}
-
-/* A water drop: a rounded square with one sharp corner, turned so the point is on top. Content stays upright. */
-.drop {
-  position: relative;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-}
-
-.drop::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  background: var(--color-panel);
-  border: var(--line) solid var(--color-rim);
-  border-radius: 50% 0 50% 50%;
-  box-shadow: var(--shadow);
-  transform: rotate(-45deg);
-}
-
-.drop > * {
-  position: relative;
 }

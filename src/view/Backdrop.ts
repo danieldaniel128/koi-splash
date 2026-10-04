@@ -11,7 +11,7 @@ const MAX_SIZE = 2048;
  * down to the horizon) and drawn as a single sprite over the bank. O(stage area) paint, once.
  */
 export function createBackdrop(
-  size: { width: number; horizon: number },
+  size: { width: number; horizon: number; open: number },
   look: BackdropLook,
   resolution: number,
   seed: number,
@@ -24,7 +24,7 @@ export function createBackdrop(
   if (!ctx) throw new Error('backdrop: 2D canvas not available');
   ctx.scale(scale, scale);
   const rng = new Random(seed);
-  paintBackdrop(ctx, size.width, size.horizon, look, () => rng.next());
+  paintBackdrop(ctx, size.width, size, look, () => rng.next());
   const sprite = new Sprite(Texture.from(canvas));
   sprite.scale.set(1 / scale);
   return sprite;

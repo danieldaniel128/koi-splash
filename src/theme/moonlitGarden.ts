@@ -19,6 +19,14 @@ export const MOONLIT_GARDEN = {
     track: '#1a3150',
     dim: 'rgba(4, 12, 24, 0.72)',
     outline: '#0a1a2e',
+    /** Frosted glass for panels and round buttons (the prototype's), lit from the top left. */
+    glass: 'linear-gradient(180deg, rgba(30, 62, 104, 0.94), rgba(9, 22, 46, 0.96))',
+    glassRound:
+      'radial-gradient(circle at 34% 26%, rgba(190, 225, 255, 0.36), rgba(22, 52, 96, 0.92) 55%, rgba(6, 16, 36, 0.96))',
+    /** Gold for badges and fills, from light to deep; coral when moves run low. */
+    goldLight: '#ffeaa8',
+    goldDeep: '#f5b54e',
+    coral: '#ff8f9e',
   },
   font: {
     /**
@@ -58,7 +66,7 @@ export const MOONLIT_GARDEN = {
     backdrop: {
       sky: { top: '#050b20', horizon: '#1d3862' },
       stars: { color: '#e3ecff', density: 7 },
-      moon: { color: '#f7ecc8', glow: 'rgba(247, 236, 200, 0.3)', radius: 22, at: [0.78, 0.36] },
+      moon: { color: '#f7ecc8', glow: 'rgba(247, 236, 200, 0.3)', radius: 22, at: [0.78, 0.3] },
       hills: [
         { color: '#22406c', height: 84, roll: 12 },
         { color: '#132a4c', height: 40, roll: 7 },

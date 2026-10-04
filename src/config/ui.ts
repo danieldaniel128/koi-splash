@@ -3,18 +3,19 @@ export const HUD_MOTION = {
   /** The score counts up to a new value in this long, and swells while it does. */
   countUp: 0.35,
   scoreBump: 1.18,
-  /** The moves counter pops when a move is spent. */
+  /** The moves counter pops when a move is spent, warns at `lowMoves` left and pulses at `lastMoves`. */
   movesBump: 1.3,
   movesSettle: 0.3,
-  /** A goal slot pops when its lotus lands. */
-  slotBump: 1.45,
-  slotSettle: 0.45,
+  lowMoves: 5,
+  lastMoves: 3,
+  /** The goal chip pops when its count ticks down, and a star pops as it's lost. */
+  goalBump: 1.3,
+  goalSettle: 0.4,
+  starLost: 1.5,
 } as const;
 
-/** The goal in the HUD: one slot per lotus up to this many; a bigger goal shows a count instead. */
+/** The goal chip's lotus icon: its radius (px), baked from the same painter as the lotuses on the board. */
 export const GOAL_TRAY = {
-  maxSlots: 5,
-  /** The lotus icon's radius (px), baked from the same painter as the pads on the board. */
   iconRadius: 13,
 } as const;
 

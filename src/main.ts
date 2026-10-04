@@ -55,7 +55,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const { board } = layout;
   const shore = traceShore(SHAPE, board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   const ui = new UiLayer(host, layout.stage);
-  const hud = new Hud(ui, layout.hud, lotusIcon(app));
+  const hud = new Hud(ui, layout.hud, { lotusIcon: lotusIcon(app), stars: LEVEL.stars });
   placePowerBar(ui, layout.bar, POWER_BAR.slots);
 
   const textures = createTextures(app, board.piece);
@@ -72,7 +72,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const stage = new Container();
   putUnderWater(app, boardView, pond, board);
   const backdrop = createBackdrop(
-    { width: layout.stage.width, horizon: layout.scene.height },
+    { width: layout.stage.width, horizon: layout.scene.height, open: layout.hud.y + layout.hud.height },
     THEME.scene.backdrop,
     app.renderer.resolution * layout.stage.scale,
     POND.shore.seed,

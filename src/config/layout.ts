@@ -11,7 +11,7 @@ export const LAYOUT = {
   rows: BOARD.rows,
   designWidth: 360,
   designHeight: 640,
-  hudHeight: 58,
+  hudHeight: 80,
   barHeight: 66,
   sidePadding: 8,
   sectionGap: 6,
