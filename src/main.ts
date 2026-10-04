@@ -1,4 +1,5 @@
 import { Application, Container, Rectangle, UPDATE_PRIORITY } from 'pixi.js';
+import type { PointData } from 'pixi.js';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
@@ -13,6 +14,7 @@ import { BoardAnimator } from './view/BoardAnimator';
 import { BoardView } from './view/BoardView';
 import { Fireflies } from './view/Fireflies';
 import { Hud } from './view/Hud';
+import { PadView } from './view/PadView';
 import { ResultOverlay } from './view/ResultOverlay';
 import { SplashFx } from './view/SplashFx';
 import { KoiLife } from './view/KoiLife';
@@ -36,32 +38,26 @@ async function boot(host: HTMLElement): Promise<void> {
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
   const hud = new Hud(boardWidth);
   hud.position.set(boardLeft, HUD.top);
-  const score = hud.scoreAnchor();
-  const splashes = new SplashFx(
-    { x: hud.x + score.x - boardLeft, y: hud.y + score.y - BOARD_LAYOUT.top },
-    pond,
-  );
-  splashes.position.copyFrom(boardView.position);
+  const boardOrigin = { x: boardLeft, y: BOARD_LAYOUT.top };
+  const splashes = createSplashes(hud, pond, boardOrigin);
   const result = new ResultOverlay(STAGE.width, STAGE.height);
+  const pads = createPads(app, pond, hud, boardOrigin);
 
-  const level = { ...LEVEL, ...SCORE };
-  const scene = new GameScene({
-    spec: BOARD,
-    level,
-    rng: new Random(),
-    view: boardView,
-    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, splashes, level.pointsPerPiece),
-    status: hud,
-    result,
-  });
-  result.on('restart', () => {
-    scene.restart();
-  });
-  new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
+  startGame({ boardView, pond, splashes, hud, pads, result });
 
   const stage = new Container();
   putUnderWater(app, boardView, pond);
-  stage.addChild(pond.bank, pond.bottom, boardView, pond.surface, splashes, createScenery(app), hud, result);
+  stage.addChild(
+    pond.bank,
+    pond.bottom,
+    pads, // under the koi: they swim over the pads, so a pad never hides a piece
+    boardView,
+    pond.surface,
+    splashes,
+    createScenery(app),
+    hud,
+    result,
+  );
   app.stage.addChild(stage);
   keepFitted(app, stage, boardView, pond);
 }
@@ -84,6 +80,66 @@ function keepFitted(app: Application, stage: Container, boardView: BoardView, po
   };
   fit();
   app.renderer.on('resize', fit);
+}
+
+/** The game: the scene (presenter) wired to every display it drives, and the swipe input that feeds it. */
+function startGame(parts: {
+  boardView: BoardView;
+  pond: PondWater;
+  splashes: SplashFx;
+  hud: Hud;
+  pads: PadView;
+  result: ResultOverlay;
+}): void {
+  const { boardView, pond, splashes, hud, pads, result } = parts;
+  const level = { ...LEVEL, ...SCORE };
+  const scene = new GameScene({
+    spec: BOARD,
+    level,
+    rng: new Random(),
+    view: boardView,
+    animator: new BoardAnimator(boardView, BOARD.cellSize, pond, splashes, level.pointsPerPiece),
+    status: hud,
+    pads,
+    result,
+  });
+  result.on('restart', () => {
+    scene.restart();
+  });
+  new SwipeInput(boardView, BOARD.cellSize * INPUT.swipeThreshold, scene.handleSwipe);
+}
+
+/** Match splashes over the board; their points fly to the score in the HUD. */
+function createSplashes(hud: Hud, pond: PondWater, boardOrigin: PointData): SplashFx {
+  const score = hud.scoreAnchor();
+  const splashes = new SplashFx(
+    { x: hud.x + score.x - boardOrigin.x, y: hud.y + score.y - boardOrigin.y },
+    pond,
+  );
+  splashes.position.set(boardOrigin.x, boardOrigin.y);
+  return splashes;
+}
+
+/**
+ * The lily pads floating between the koi, under them: they rock on the app's clock, and a bloomed lotus flies
+ * to the goal in the HUD.
+ */
+function createPads(app: Application, pond: PondWater, hud: Hud, boardOrigin: PointData): PadView {
+  const goal = hud.goalAnchor();
+  const pads = new PadView(
+    {
+      cellSize: BOARD.cellSize,
+      goalTarget: { x: hud.x + goal.x - boardOrigin.x, y: hud.y + goal.y - boardOrigin.y },
+      toStage: (point) => ({ x: boardOrigin.x + point.x, y: boardOrigin.y + point.y }),
+    },
+    pond,
+    app.renderer.resolution * KOI_LOOK.bakeResolution,
+  );
+  pads.position.set(boardOrigin.x, boardOrigin.y);
+  app.ticker.add((ticker) => {
+    pads.tick(ticker.deltaMS / 1000);
+  });
+  return pads;
 }
 
 /** Stones, lily pads and reeds around the pond (painted once) and fireflies over the bank, on the app's clock. */

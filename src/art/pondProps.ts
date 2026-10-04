@@ -150,6 +150,44 @@ function veins(ctx: Ctx, radius: number, notch: number): void {
   }
 }
 
+/**
+ * A lily pad on the board carrying a lotus at some stage of opening: 0 is a closed bud (a pink tip in a cup of
+ * petals), 1 is the full bloom. Baked once per stage; the board swaps stages as the bud is hit.
+ */
+export function bakeLotusPad(
+  radius: number,
+  openness: number,
+  seed: number,
+  resolution: number,
+): HTMLCanvasElement {
+  const canvas = bakeProp({ kind: 'pad', radius: [radius, radius], seed }, resolution);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('pondProps: 2D canvas not available');
+  ctx.setTransform(resolution, 0, 0, resolution, canvas.width / 2, canvas.height / 2);
+  ctx.lineJoin = 'round';
+  const rng = new Random(seed + 1);
+  paintOpeningLotus(ctx, radius * 0.66, openness, rng.next() * TAU);
+  return canvas;
+}
+
+/** Petals grow longer and wider and the heart shows as the lotus opens; a closed bud is a tight pink cup. */
+function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: number): void {
+  const open = Math.min(Math.max(openness, 0), 1);
+  paintShadow(ctx, () => {
+    ctx.beginPath();
+    ctx.arc(0, 0, size * (0.6 + 0.3 * open), 0, TAU);
+  });
+  // even closed, the bud is big enough to spot between the koi
+  const outer = size * (0.62 + 0.38 * open);
+  const inner = size * (0.5 + 0.18 * open);
+  for (let i = 0; i < 8; i++) petal(ctx, turn + (i / 8) * TAU, outer, size * (0.22 + 0.2 * open));
+  for (let i = 0; i < 6; i++) petal(ctx, turn + ((i + 0.5) / 6) * TAU, inner, size * (0.2 + 0.14 * open));
+  ctx.beginPath();
+  ctx.arc(0, 0, size * (0.06 + 0.14 * open), 0, TAU);
+  ctx.fillStyle = open > 0.5 ? LOTUS.heart : LOTUS.tip;
+  ctx.fill();
+}
+
 /** A lotus seen from above: two rings of petals pointing out, pink at the tips, and a golden heart. */
 function paintLotus(ctx: Ctx, size: number, random: () => number): void {
   const turn = random() * TAU;
