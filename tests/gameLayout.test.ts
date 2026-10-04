@@ -11,11 +11,11 @@ const CONFIG: LayoutConfig = {
   barHeight: 64,
   sidePadding: 12,
   sectionGap: 14,
+  shoreWidth: 12,
   pondMargin: { left: 26, right: 26, top: 24, bottom: 70 },
   cellGap: 4,
   minCell: 36,
   maxCell: 56,
-  maxPanelWidth: 420,
 };
 const NO_INSETS = { top: 0, bottom: 0 };
 
@@ -41,15 +41,17 @@ describe('layoutGame', () => {
       CONFIG,
     );
     expect(hud.y).toBeGreaterThanOrEqual(47 / stage.scale);
-    expect(pond.y).toBeGreaterThanOrEqual(hud.y + hud.height);
-    expect(bar.y).toBeGreaterThanOrEqual(pond.y + pond.height);
+    expect(pond.y - CONFIG.shoreWidth).toBeGreaterThanOrEqual(hud.y + hud.height);
+    expect(bar.y).toBeGreaterThanOrEqual(pond.y + pond.height + CONFIG.shoreWidth);
     expect(bar.y + bar.height).toBeLessThanOrEqual(stage.height - 34 / stage.scale);
   });
 
-  it('on a tall phone the board takes the full width and the bar moves down to the bottom', () => {
+  it('on a tall phone the pond takes the full width, on screen, and the bar moves down to the bottom', () => {
     const design = layoutGame({ width: 360, height: 640 }, NO_INSETS, CONFIG);
     const tall = layoutGame({ width: 390, height: 844 }, NO_INSETS, CONFIG);
-    expect(tall.board.width).toBeCloseTo(tall.stage.width - CONFIG.sidePadding * 2);
+    const edge = CONFIG.sidePadding + CONFIG.shoreWidth; // the shore's stones stay on screen
+    expect(tall.pond.x).toBeCloseTo(edge);
+    expect(tall.pond.width).toBeCloseTo(tall.stage.width - edge * 2);
     expect(tall.bar.y).toBeGreaterThan(design.bar.y);
   });
 
@@ -58,7 +60,14 @@ describe('layoutGame', () => {
     const tablet = layoutGame({ width: 768, height: 1024 }, NO_INSETS, CONFIG);
     expect(tablet.stage.width).toBeGreaterThan(design.stage.width);
     expect(tablet.board.cell * tablet.stage.scale).toBeGreaterThan(design.board.cell * design.stage.scale);
-    expect(tablet.board.x * 2 + tablet.board.width).toBeCloseTo(tablet.stage.width);
+    expect(tablet.pond.x * 2 + tablet.pond.width).toBeCloseTo(tablet.stage.width);
+  });
+
+  it('on a wide screen the HUD and the bar line up with the pond and its shore', () => {
+    const { hud, bar, pond } = layoutGame({ width: 1280, height: 720 }, NO_INSETS, CONFIG);
+    expect(hud.width).toBeCloseTo(pond.width + CONFIG.shoreWidth * 2);
+    expect(hud.x).toBeCloseTo(pond.x - CONFIG.shoreWidth);
+    expect(bar.x).toBeCloseTo(hud.x);
   });
 
   it('keeps the cell within its bounds and the gap between pieces', () => {

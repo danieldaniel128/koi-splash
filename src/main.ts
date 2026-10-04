@@ -5,6 +5,7 @@ import './ui/bar.css';
 import './ui/overlay.css';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad } from './art/pondProps';
+import { SHORE_STYLES } from './art/shoreStyles';
 import { BOARD } from './config/board';
 import { INPUT } from './config/input';
 import { KOI_LOOK, KOI_SET } from './config/koi';
@@ -17,6 +18,7 @@ import { WATER } from './config/water';
 import { Random } from './core/Random';
 import { GameScene } from './game/GameScene';
 import { placeOn } from './layout/anchor';
+import { ringAlongShore } from './layout/shore';
 import { layoutGame } from './layout/gameLayout';
 import type { GameLayout, Rect } from './layout/gameLayout';
 import { readSafeInsets } from './layout/safeInsets';
@@ -25,6 +27,7 @@ import { BoardView } from './view/BoardView';
 import { Fireflies } from './view/Fireflies';
 import { PadView } from './view/PadView';
 import { ScorePopups } from './view/ScorePopups';
+import { ShoreRing } from './view/ShoreRing';
 import { KoiLife } from './view/KoiLife';
 import { KoiTextures } from './view/KoiTextures';
 import { PondProps } from './view/water/PondProps';
@@ -162,9 +165,11 @@ function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayo
   return pads;
 }
 
-/** Stones, lily pads and reeds around the pond (painted once) and fireflies over the bank, on the app's clock. */
+/** The pond's border and stones (painted once) and fireflies over the bank, on the app's clock. */
 function createScenery(app: Application, layout: GameLayout): Container {
   const props = new PondProps(placeProps(layout.pond), app.renderer.resolution * KOI_LOOK.bakeResolution);
+  // the ring is baked at exactly the screen's pixels per stage px (the layout is made for this screen)
+  const shore = createShore(layout.pond, app.renderer.resolution * layout.stage.scale);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
   const fireflies = new Fireflies({
     spots: [
@@ -176,17 +181,24 @@ function createScenery(app: Application, layout: GameLayout): Container {
     color: POND.firefly,
   });
   app.ticker.add((ticker) => {
-    props.tick(ticker.deltaMS / 1000);
     fireflies.tick(ticker.deltaMS / 1000);
   });
   const scenery = new Container();
-  scenery.addChild(props, fireflies);
+  scenery.addChild(props, shore, fireflies);
   return scenery;
 }
 
-/** The pond's stones, pads and reeds, each at its corner of this pond. O(props). */
+/** The pond's stones in the water, each at its corner of this pond. O(props). */
 function placeProps(pond: Rect): PondProp[] {
   return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
+}
+
+/** The border along this pond's shore, in the style the config picks. */
+function createShore(pond: Rect, resolution: number): ShoreRing {
+  const { style, seed } = POND.shore;
+  const rng = new Random(seed);
+  const pieces = ringAlongShore(pond, { ...POND.shore, cornerRadius: POND.cornerRadius }, () => rng.next());
+  return new ShoreRing(pieces, SHORE_STYLES[style], seed, resolution);
 }
 
 /** The lotus in the HUD's goal: painted by the same painter as the lotuses on the board. */
