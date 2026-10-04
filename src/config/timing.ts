@@ -12,6 +12,8 @@ export const TIMING = {
   /** Matched koi dive: a quick squash as they kick, then they sink away into the deep, turning a little. */
   diveKick: 0.07,
   diveSink: 0.34,
+  /** The kick's squash: width and length of the koi, as shares of its size. */
+  diveSquash: [1.18, 0.84],
   /** How small a diving koi gets before it's gone, and how far it turns (radians). */
   diveScale: 0.45,
   diveTurn: 0.9,

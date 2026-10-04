@@ -39,6 +39,8 @@ export const WATER = {
   swapPush: 0.32,
   swapRadius: 15,
   swapSettlePush: 0.1,
+  /** A swap that makes no match shoves the water this share of swapPush. */
+  invalidSwapPush: 0.6,
 
   // --- water body (under the koi): indigo-teal, lighter in the shallows by the shore, darkest in the middle
   shallow: '#195669',
@@ -117,6 +119,8 @@ export const WATER = {
   contactBreaks: 9,
   /** A koi moving this fast (px/s), or lifted while swapping, stirs its foam to the full (wider, brighter). */
   contactStirSpeed: 300,
+  /** How much a koi lifted while swapping stirs its foam: per unit of lift (its scale over its resting scale, - 1). */
+  contactLiftStir: 6,
   /**
    * Each beat of a koi's tail sends a small ripple out: a soft ring of moonlight around its shape. The ring is where
    * the koi's silhouette blurred by `rippleBlur` px falls to `rippleLevel`, spread `rippleWidth` around it, baked
@@ -135,6 +139,8 @@ export const WATER = {
   ripple: '#d9eef2',
   rippleStrength: 0.3,
   rippleRestart: 0.6,
+  /** How fast a new ripple fades in (per share of its life): 8 = fully in after the first eighth. */
+  rippleFadeIn: 8,
 
   // --- koi under the surface
   /** How far the waves shift the koi (px per unit of slope). */
@@ -148,4 +154,6 @@ export const WATER = {
   shadowAlpha: 0.26,
   shadowBlur: 5,
   shadowColor: '#020a16',
+  /** A koi lifted while swapping casts its shadow further: offset grows by this per unit of lift (scale - 1). */
+  shadowLiftReach: 6,
 } as const;

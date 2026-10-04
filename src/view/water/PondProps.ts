@@ -1,13 +1,10 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { bakeProp } from '../../art/pondProps';
+import { POND } from '../../config/pond';
 import type { PondProp } from '../../config/pond';
 
 /** Most stones and pads the water shaders take; must match MAX_PROPS in common.glsl. */
 export const MAX_PROPS = 8;
-
-/** How far the lily pads rock on the water (radians) and how fast (radians per second). */
-const PAD_ROCK = 0.05;
-const PAD_ROCK_SPEED = 0.8;
 
 /**
  * The stones, lily pads and reeds around the pond, painted once at startup (see art/pondProps) and drawn over the
@@ -37,7 +34,7 @@ export class PondProps extends Container {
   tick(deltaSeconds: number): void {
     this.time += deltaSeconds;
     for (const pad of this.pads) {
-      pad.sprite.rotation = pad.turn + Math.sin(this.time * PAD_ROCK_SPEED + pad.phase) * PAD_ROCK;
+      pad.sprite.rotation = pad.turn + Math.sin(this.time * POND.padRockSpeed + pad.phase) * POND.padRock;
     }
   }
 }

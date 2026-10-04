@@ -64,9 +64,9 @@ function panel(): Graphics {
   const width = RESULT.cardWidth;
   const height = RESULT.cardHeight;
   return new Graphics()
-    .roundRect(-width / 2, -height / 2, width, height, 22)
-    .fill({ color: HUD.panel, alpha: 0.95 })
+    .roundRect(-width / 2, -height / 2, width, height, RESULT.cardRadius)
+    .fill({ color: HUD.panel, alpha: RESULT.cardAlpha })
     .stroke({ width: 1.5, color: HUD.rim, alpha: HUD.rimAlpha })
-    .roundRect(-width / 2 + 6, -height / 2 + 6, width - 12, height - 12, 17)
-    .stroke({ width: 1, color: HUD.rim, alpha: 0.15 });
+    .roundRect(-width / 2 + 6, -height / 2 + 6, width - 12, height - 12, RESULT.rimRadius)
+    .stroke({ width: 1, color: HUD.rim, alpha: RESULT.rimAlpha });
 }

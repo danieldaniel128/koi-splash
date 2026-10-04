@@ -60,6 +60,10 @@ export const POND = {
     { kind: 'reeds', at: [302, 680], radius: [54, 54], turn: -0.3, seed: 23 },
   ] satisfies readonly PondProp[] as readonly PondProp[],
 
+  /** How far the lily pads rock on the water (radians) and how fast (radians per second). */
+  padRock: 0.05,
+  padRockSpeed: 0.8,
+
   /** Fireflies over the bank: where each one hovers (stage px; below 640 is only seen on tall phones). */
   fireflies: [
     [34, 12],

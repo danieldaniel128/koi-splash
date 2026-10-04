@@ -22,6 +22,9 @@ export const HUD = {
   /** How long the score takes to count up to a new value, and how much it swells while it does (s, scale). */
   countUp: 0.55,
   bump: 1.18,
+  /** The moves counter pops to this size when a move is spent, and settles back in this long (scale, s). */
+  movesBump: 1.3,
+  movesSettle: 0.3,
 } as const;
 
 /** The end-of-level card: a panel in the HUD's style over the dimmed pond. */
@@ -32,6 +35,11 @@ export const RESULT = {
   dimReach: 1.5,
   cardWidth: 270,
   cardHeight: 168,
+  /** The card's corner radius and opacity, and the thin rim inside it (radius, opacity). */
+  cardRadius: 22,
+  cardAlpha: 0.95,
+  rimRadius: 17,
+  rimAlpha: 0.15,
   titleSize: 30,
   detailSize: 17,
   hintSize: 13,

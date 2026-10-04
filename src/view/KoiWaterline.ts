@@ -82,7 +82,7 @@ export class KoiWaterline {
   /** Same turn, scale and fade as its koi, offset away from the moon: further for a koi lifted toward the surface. */
   private followShadow(koi: Koi, shadow: Sprite, lift: number): void {
     const [offsetX, offsetY] = WATER.shadowOffset;
-    const reach = 1 + (lift - 1) * 6;
+    const reach = 1 + (lift - 1) * WATER.shadowLiftReach;
     shadow.position.set(koi.x + offsetX * reach, koi.y + offsetY * reach);
     shadow.scale.copyFrom(koi.scale); // same pixel density as the koi texture, the extra canvas is blur room
     shadow.rotation = koi.rotation;
@@ -107,7 +107,8 @@ export class KoiWaterline {
     ripple.position.copyFrom(koi.position);
     ripple.scale.set(koi.scale.x * grow, koi.scale.y * grow);
     ripple.rotation = koi.rotation;
-    ripple.alpha = WATER.rippleStrength * Math.min(life * 8, 1) * (1 - life) * (1 - life) * koi.alpha;
+    ripple.alpha =
+      WATER.rippleStrength * Math.min(life * WATER.rippleFadeIn, 1) * (1 - life) * (1 - life) * koi.alpha;
   }
 
   /**
@@ -119,7 +120,10 @@ export class KoiWaterline {
     const { contact, last } = marks;
     const moved = Number.isNaN(last.x) ? 0 : Math.hypot(koi.x - last.x, koi.y - last.y);
     last.copyFrom(koi.position);
-    const stir = Math.max(moved / Math.max(deltaSeconds, 1e-3) / WATER.contactStirSpeed, (lift - 1) * 6);
+    const stir = Math.max(
+      moved / Math.max(deltaSeconds, 1e-3) / WATER.contactStirSpeed,
+      (lift - 1) * WATER.contactLiftStir,
+    );
     contact.texture = marks.contactPoses[koi.pose] ?? contact.texture;
     contact.position.copyFrom(koi.position);
     contact.scale.set(koi.scale.x * this.coarse, koi.scale.y * this.coarse);

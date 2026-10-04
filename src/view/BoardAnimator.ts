@@ -68,7 +68,7 @@ export class BoardAnimator {
   /** A swap that makes no match: both koi lean toward each other and spring back, with a smaller shove. */
   async invalidSwap(first: PlacedPiece, second: PlacedPiece): Promise<void> {
     this.view.bringToFront(this.view.spriteOf(first.piece.id));
-    this.stir(first.at, second.at, 0.6);
+    this.stir(first.at, second.at, WATER.invalidSwapPush);
     await Promise.all([this.lean(first, second.at, TIMING.swapLift), this.lean(second, first.at, 1)]);
   }
 
@@ -157,10 +157,11 @@ export class BoardAnimator {
     this.water.push(this.onStage(point), WATER.divePush, WATER.diveRadius);
     koi.turnToward(koi.heading + TIMING.diveTurn, 1);
     const rest = koi.restScale;
+    const [squashX, squashY] = TIMING.diveSquash;
     const sink = { depth: 0 };
     await gsap
       .timeline()
-      .to(koi.scale, { x: rest * 1.18, y: rest * 0.84, duration: TIMING.diveKick, ease: 'power2.out' })
+      .to(koi.scale, { x: rest * squashX, y: rest * squashY, duration: TIMING.diveKick, ease: 'power2.out' })
       .to(koi.scale, {
         x: rest * TIMING.diveScale,
         y: rest * TIMING.diveScale,

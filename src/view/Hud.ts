@@ -71,7 +71,11 @@ export class Hud extends Container {
     this.lastMoves = movesLeft;
     this.moves.text = `${movesLeft}`;
     if (!first)
-      gsap.fromTo(this.moves.scale, { x: 1.3, y: 1.3 }, { x: 1, y: 1, duration: 0.3, ease: 'back.out(3)' });
+      gsap.fromTo(
+        this.moves.scale,
+        { x: HUD.movesBump, y: HUD.movesBump },
+        { x: 1, y: 1, duration: HUD.movesSettle, ease: 'back.out(3)' },
+      );
   }
 
   private drawScore(progress: number): void {
