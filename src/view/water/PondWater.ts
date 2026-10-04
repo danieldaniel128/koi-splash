@@ -87,7 +87,12 @@ export class PondWater implements WaterSurface {
     this.bank.addChild(this.bankPainter);
     this.bottom = this.quad(water, withWaves(pondBottom), waterLook(layout.board));
     const koiMask = this.contact.texture;
-    this.surface = this.quad(water, withWaves(surface), surfaceLook(layout.board, this.contact.area), koiMask);
+    this.surface = this.quad(
+      water,
+      withWaves(surface),
+      surfaceLook(layout.board, this.contact.area),
+      koiMask,
+    );
     this.koiFilter = this.createKoiFilter();
     this.koiUniforms = (
       this.koiFilter.resources as { koiUniforms: { uniforms: PondWater['koiUniforms'] } }
@@ -155,7 +160,12 @@ export class PondWater implements WaterSurface {
    * A quad over a stage rectangle, drawn by one of the pond's fragment shaders with its own uniforms (`look`) and,
    * for the passes that draw around the koi, the koi contact mask (uKoiMask).
    */
-  private quad(area: SimArea, fragment: string, look: UniformDefs, uKoiMask?: TextureSource): Mesh<Geometry, Shader> {
+  private quad(
+    area: SimArea,
+    fragment: string,
+    look: UniformDefs,
+    uKoiMask?: TextureSource,
+  ): Mesh<Geometry, Shader> {
     const geometry = quadGeometry(area);
     const shader = Shader.from({
       gl: { vertex, fragment },
@@ -208,7 +218,12 @@ function pondRect(board: SimArea): SimArea {
 /** Where the koi can be: the board plus room for koi that sway or lift past their cell. */
 function koiArea(board: SimArea): SimArea {
   const reach = WATER.koiReach;
-  return { x: board.x - reach, y: board.y - reach, width: board.width + reach * 2, height: board.height + reach * 2 };
+  return {
+    x: board.x - reach,
+    y: board.y - reach,
+    width: board.width + reach * 2,
+    height: board.height + reach * 2,
+  };
 }
 
 /** Everywhere the water can reach: the pond rectangle plus room for the shore's bends. */
@@ -249,7 +264,10 @@ function bankLook(layout: PondLayout): UniformDefs {
     uBankPattern: { value: color(POND.bankPattern), type: 'vec3<f32>' },
     uPatternSize: { value: POND.patternSize, type: 'f32' },
     uWetBand: { value: POND.wetBand, type: 'f32' },
-    uFrame: { value: [halfWidth, halfHeight, halfWidth * stretch[0], halfHeight * stretch[1]], type: 'vec4<f32>' },
+    uFrame: {
+      value: [halfWidth, halfHeight, halfWidth * stretch[0], halfHeight * stretch[1]],
+      type: 'vec4<f32>',
+    },
     uVignette: { value: [strength, from, to], type: 'vec3<f32>' },
   };
 }

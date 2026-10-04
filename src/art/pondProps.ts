@@ -30,7 +30,13 @@ const SHADOW = 'rgba(2, 8, 18, 0.5)';
 const SHADOW_BLUR = 1.5;
 
 const STONE = { lit: '#8ea2c2', top: '#56647f', mid: '#2b364d', dark: '#121928', ink: '#060a13' } as const;
-const PAD = { rim: '#86c595', centre: '#4f9a63', edge: '#2a6644', vein: 'rgba(190, 235, 190, 0.35)', ink: '#0b2618' };
+const PAD = {
+  rim: '#86c595',
+  centre: '#4f9a63',
+  edge: '#2a6644',
+  vein: 'rgba(190, 235, 190, 0.35)',
+  ink: '#0b2618',
+};
 const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)', heart: '#f4cf4f' } as const;
 const REED = { blade: '#21503a', edge: 'rgba(170, 225, 190, 0.6)', head: '#6b4528' } as const;
 
@@ -207,7 +213,10 @@ function paintReeds(ctx: Ctx, reach: number, random: () => number): void {
 function bladePath(ctx: Ctx, angle: number, length: number, width: number, bend: number): void {
   const along = (d: number, side: number): Pt => {
     const sway = bend * d * d * length;
-    return [Math.cos(angle) * d * length - Math.sin(angle) * (sway + side), Math.sin(angle) * d * length + Math.cos(angle) * (sway + side)];
+    return [
+      Math.cos(angle) * d * length - Math.sin(angle) * (sway + side),
+      Math.sin(angle) * d * length + Math.cos(angle) * (sway + side),
+    ];
   };
   const [ax, ay] = along(0, -width / 2);
   const [bx, by] = along(0.55, -width * 0.35);

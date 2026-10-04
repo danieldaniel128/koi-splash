@@ -122,4 +122,3 @@ export class BoardView extends Container {
     }
   }
 }
-

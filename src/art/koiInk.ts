@@ -64,7 +64,11 @@ export interface KoiContactShape {
  * surface, and drops to 0 over the fins so the line breaks around them instead of covering them. Red and blue are
  * left at full for the game to scale per koi. Head up, on a square canvas like bakeKoi.
  */
-export function bakeKoiContact(variety: KoiVariety, bake: BakeOptions, shape: KoiContactShape): HTMLCanvasElement {
+export function bakeKoiContact(
+  variety: KoiVariety,
+  bake: BakeOptions,
+  shape: KoiContactShape,
+): HTMLCanvasElement {
   const scale = bake.resolution ?? 1;
   const body = bakeKoi(variety, { ...bake, parts: 'body' });
   const fins = bakeKoi(variety, { ...bake, parts: 'fins' });
@@ -111,7 +115,12 @@ export function bakeKoiRipple(
 }
 
 /** Draws `source`'s silhouette in `color`, grown by `width` px all round, under whatever is drawn next. */
-function outline(ctx: CanvasRenderingContext2D, source: HTMLCanvasElement, color: string, width: number): void {
+function outline(
+  ctx: CanvasRenderingContext2D,
+  source: HTMLCanvasElement,
+  color: string,
+  width: number,
+): void {
   const shape = solid(source, color);
   for (let i = 0; i < OUTLINE_STEPS; i++) {
     const angle = (i / OUTLINE_STEPS) * Math.PI * 2;
@@ -120,7 +129,12 @@ function outline(ctx: CanvasRenderingContext2D, source: HTMLCanvasElement, color
 }
 
 /** `source`'s silhouette in `color`, grown by `grow` px all round and blurred by `blur` px. */
-function softSilhouette(source: HTMLCanvasElement, color: string, grow: number, blur: number): HTMLCanvasElement {
+function softSilhouette(
+  source: HTMLCanvasElement,
+  color: string,
+  grow: number,
+  blur: number,
+): HTMLCanvasElement {
   const grown = blank(source.width);
   outline(context(grown), source, color, grow);
   context(grown).drawImage(solid(source, color), 0, 0);
