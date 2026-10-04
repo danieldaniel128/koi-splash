@@ -19,7 +19,7 @@ export type PondPropSpot = Omit<PondProp, 'at'> & Anchor;
  */
 export const POND = {
   /** How far the water reaches past the board on each side, to the shore (the stones sit on it). */
-  margin: { left: 16, right: 16, top: 20, bottom: 22 },
+  margin: { left: 14, right: 14, top: 16, bottom: 16 },
   cornerRadius: 24,
   /** The shore wanders in and out by up to this many px, in bends about this long (px): a little, under the stones. */
   shoreWobble: 3,
@@ -31,9 +31,9 @@ export const POND = {
    */
   shore: {
     length: [11, 17],
-    depth: [10, 13],
+    depth: [9, 12],
     gap: 1.5,
-    outward: 4,
+    outward: 5,
     cornerScale: 1.3,
     seed: 5,
   },
