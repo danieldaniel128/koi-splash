@@ -1,7 +1,8 @@
 # Koi Splash
 
 A calm match-3 on a moonlit koi pond, built for the mini-game home assignment. Swipe a koi into its neighbour's
-cell to line up three or more of a colour; reach 1500 points in 20 moves.
+cell to line up three or more of a colour. Lily pads float between the koi; matches next to a lotus bud open it, and
+the goal is to bloom all three lotuses in 15 moves.
 
 Play it here: https://danieldaniel128.github.io/koi-splash/ (GitHub Pages, deployed by GitHub Actions from `main`
 only, so it always shows the last finished milestone).
@@ -36,6 +37,12 @@ what spawned. The presenter (`GameScene`) plays those steps through the animator
 decides anything, so the board on screen can't drift from the real one, and the rules can be tested without a
 browser.
 
+The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
+if it's complete, without knowing which goal it is. A level picks a lotus goal or a score goal in config. The lily
+pads (`src/model/pads.ts`) sit on the corners between cells, so they never hide a koi; a round hits a pad when it
+clears any of the four koi around it. Hits to bloom, the number of lotuses and moves are all in
+`src/config/level.ts`; the defaults (3 lotuses, 2 hits, 15 moves) were tuned with a simulation of 400 boards.
+
 The turn runs on a small state machine (`src/core/StateMachine.ts`) with guarded transitions and enter/exit hooks.
 The end of a turn picks won, lost or idle from a table (won is listed first, so winning on the last move counts),
 and entering won or lost shows the end card.
@@ -68,7 +75,7 @@ Prettier on the staged files.
 Milestones:
 
 1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
-2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece.
+2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece. Done.
 3. Juice: splashes, ripples, squash and stretch, the water shader, sound. Done except sound and screen shake.
 4. Specials: special koi from bigger matches, and their combos.
 5. Boosters.
@@ -76,9 +83,9 @@ Milestones:
 
 ## Tests
 
-21 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
+29 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
 new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole. The rest
-cover scoring, the state machine's guards and hooks, and how a swipe picks its cell. They run in CI on every push, so
+cover scoring, the lily pads and goals, the state machine's guards and hooks, and how a swipe picks its cell. They run in CI on every push, so
 when I work on the feel I find out right away if I broke the rules.
 
 ## AI usage
@@ -96,6 +103,8 @@ My part:
 - I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
   standards into ESLint config.
 - I designed the state machine: guarded transitions in a table, with enter/exit hooks.
+- I planned the lotus goal: the rules, a goal interface so a level can swap goals, and every number in config (hits
+  to bloom, lotuses, moves).
 - I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
   for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
 - I reviewed the code and play-tested it on desktop and on my phone.
@@ -104,7 +113,9 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 
 ## Next steps
 
-- Milestone 2, the lily pad and lotus goal; then specials from bigger matches, and boosters.
+- A new UI built on a reusable style library (one set of colour, type and spacing tokens), adaptive to any screen,
+  with the grid's spacing and the pond's size driven by config; the same preset approach for the effects.
+- Specials from bigger matches, and boosters.
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 - Have the scene pass each round's points to the animator, so the score popups can't drift from the score.
