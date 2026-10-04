@@ -132,6 +132,15 @@ export class PondWater {
     this.paintBank(visible, scale * resolution);
   }
 
+  /**
+   * Repaints what lives only on the GPU after a lost WebGL context is restored: the water's state (Pixi brings it
+   * back empty) and the bank's cached painting.
+   */
+  restore(): void {
+    this.sim.reset();
+    this.bank.updateCacheTexture();
+  }
+
   /** Paints the bank once over the visible stage area into a cached texture, at the screen's pixel density. */
   private paintBank(visible: SimArea, pixelRatio: number): void {
     const old = this.bankPainter.geometry;

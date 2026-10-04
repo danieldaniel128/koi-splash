@@ -59,8 +59,16 @@ export class WaterSim {
       uTime: { value: 0, type: 'f32' },
       uPixelRatio: { value: 1, type: 'f32' },
     });
+    this.reset();
+  }
+
+  /**
+   * Calms the water: both state textures back to flat. Called at start, and after a lost WebGL context is restored
+   * (the textures come back as zeros, which unpack to a deep trough all over the pond).
+   */
+  reset(): void {
     for (const target of [this.front, this.back]) {
-      renderer.render({ container: new Container(), target, clear: true, clearColor: FLAT_WATER }); // start calm
+      this.renderer.render({ container: new Container(), target, clear: true, clearColor: FLAT_WATER });
     }
   }
 

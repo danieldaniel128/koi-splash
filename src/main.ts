@@ -31,6 +31,10 @@ async function boot(host: HTMLElement): Promise<void> {
   const boardLeft = (STAGE.width - boardWidth) / 2;
 
   const pond = createPond(app, boardLeft);
+  // Pixi rebuilds the GL state in its own listener (added first, so it runs first); then the pond repaints its own
+  app.canvas.addEventListener('webglcontextrestored', () => {
+    pond.restore();
+  });
 
   const boardView = new BoardView(textures, { ...BOARD, koiSize });
   boardView.position.set(boardLeft, BOARD_LAYOUT.top);
