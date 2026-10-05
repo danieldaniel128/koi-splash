@@ -2,3 +2,5 @@ dist
 node_modules
 package-lock.json
 src/art/koiBank.ts
+# the baked art atlases are generated (npm run bake:art)
+public/art
