@@ -18,7 +18,7 @@ export class ShoreRing extends Container {
         const rng = seeded(seed + i); // each piece its own look, the same every time
         return {
           radius: piece.radius,
-          paint: (ctx: CanvasRenderingContext2D) => {
+          paint: (ctx) => {
             paint(ctx, piece.radius, rng);
           },
         };

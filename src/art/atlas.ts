@@ -1,5 +1,6 @@
 import { blank, centerOn, context } from './canvas';
 import { pieceSize } from './pondProps';
+import type { Painter } from './pondProps';
 
 /** A rectangle in the atlas, in canvas pixels. */
 export interface AtlasSlot {
@@ -12,7 +13,7 @@ export interface AtlasSlot {
 /** One piece to paint into the atlas: its half size (px) and a painter that draws it centred on the origin. */
 export interface AtlasPiece {
   readonly radius: readonly [number, number];
-  readonly paint: (ctx: CanvasRenderingContext2D) => void;
+  readonly paint: Painter;
 }
 
 export interface Atlas {

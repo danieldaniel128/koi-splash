@@ -15,17 +15,12 @@ import {
   sheenFrames,
   stripe,
 } from '../art/specialKoi';
+import type { SpecialColors } from '../config/koi';
 import { SPECIAL_LOOK } from '../config/specials';
 import type { Kind, Special } from '../model/types';
 import { bakeContact, bakePose, bakePoses, bakeShadow, stillPose, tailWag } from './KoiTextures';
 import type { KoiBake } from './KoiTextures';
 import type { KoiMarks } from './KoiWaterline';
-
-/** A special koi's colours: its glow, and a striped koi's band. */
-export interface SpecialColors {
-  readonly glow: string;
-  readonly band: string;
-}
 
 /** Where a koi body spans across its canvas, left to right (px). */
 type BodySpan = ReturnType<typeof bodySpan>;

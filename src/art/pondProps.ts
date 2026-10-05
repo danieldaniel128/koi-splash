@@ -1,4 +1,4 @@
-import type { PropKind } from '../config/pond';
+import type { PondProp } from '../config/pond';
 import { seeded } from '../core/Random';
 import { drawShadowOnly } from './blur';
 import { blank, centerOn, context, traceSmoothClosed } from './canvas';
@@ -12,12 +12,11 @@ import type { CanvasPoint } from './canvas';
  * No framework code: bake a canvas with `bakeProp` and upload it as a texture.
  */
 
-export interface PropPaint {
-  readonly kind: PropKind;
-  /** Half width and half height of the prop's body (px). */
-  readonly radius: readonly [number, number];
-  readonly seed: number;
-}
+/** What the painter needs of a prop (see PondProp): what it is, its half size (px) and its paint seed. */
+export type PropPaint = Pick<PondProp, 'kind' | 'radius' | 'seed'>;
+
+/** Paints a piece centered on the canvas origin, in its own px. */
+export type Painter = (ctx: CanvasRenderingContext2D) => void;
 
 type Pt = readonly [number, number];
 
@@ -71,7 +70,7 @@ export function pieceSize([rx, ry]: readonly [number, number]): { width: number;
 export function bakePiece(
   radius: readonly [number, number],
   resolution: number,
-  paint: (ctx: CanvasRenderingContext2D) => void,
+  paint: Painter,
 ): HTMLCanvasElement {
   const { width, height } = pieceSize(radius);
   const canvas = blank(width * resolution, height * resolution);
