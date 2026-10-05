@@ -3,8 +3,8 @@ import { HUD_MOTION } from '../config/ui';
 import { bump, el } from './UiLayer';
 
 /**
- * The score: it counts up to each new value and swells while it does. Points still flying to it (big gains) are held
- * back until they land, so the number climbs as they arrive.
+ * The score, captioned under it like every HUD counter: it counts up to each new value and swells while it does.
+ * Points still flying to it (big gains) are held back until they land, so the number climbs as they arrive.
  */
 export class ScoreCounter {
   readonly element: HTMLElement;
@@ -15,7 +15,7 @@ export class ScoreCounter {
   private flying = 0;
 
   constructor() {
-    this.element = el('div', 'score', el('span', 'label score__label', 'score'), this.value);
+    this.element = el('div', 'score', this.value, el('span', 'label score__label', 'score'));
   }
 
   update(score: number): void {

@@ -54,9 +54,10 @@
   display: grid;
 }
 
+/* The score and the goals, each a number with its caption under it, the captions on one line. */
 .hud__row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
 }
 
