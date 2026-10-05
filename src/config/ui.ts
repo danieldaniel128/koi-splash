@@ -35,6 +35,17 @@ export const HUD_MOTION = {
   bonusRise: 1.3,
 } as const;
 
+/** How the booster bar answers: a press swells a button's orb, and a booster just spent shrinks it (scale, s). */
+export const BAR_MOTION = {
+  pressBump: 0.9,
+  pressSettle: 0.3,
+  spentBump: 0.85,
+  spentSettle: 0.35,
+} as const;
+
+/** The "no" shake of a press the game can't take (a booster, the pill): px either way, then still, over `time` s. */
+export const NOPE_SHAKE = { offsets: [-5, 4, -2], time: 0.34 } as const;
+
 /** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */
 export const GOAL_TRAY = {
   iconRadius: 13,

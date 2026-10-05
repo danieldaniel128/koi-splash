@@ -1,28 +1,23 @@
 import type { PointData } from 'pixi.js';
+import { NOPE_SHAKE } from '../config/ui';
 import type { Rect } from '../layout/gameLayout';
+import { THEME } from '../theme/theme';
 
 /**
  * The HTML UI over the canvas. It is laid out in stage px, like the Pixi stage, and scaled with it (fit), so a HUD
  * rect from the layout lands exactly where the layout says on any screen. Text stays sharp: the browser draws it.
  */
 export class UiLayer {
-  readonly root = document.createElement('div');
+  readonly root = el('div', 'ui');
 
   constructor(host: HTMLElement, size: { width: number; height: number }) {
-    this.root.className = 'ui';
-    this.root.style.width = `${size.width}px`;
-    this.root.style.height = `${size.height}px`;
+    setRect(this.root, { x: 0, y: 0, ...size });
     host.appendChild(this.root);
   }
 
   /** Adds a component at its rect from the layout. */
   place(element: HTMLElement, rect: Rect): void {
-    Object.assign(element.style, {
-      left: `${rect.x}px`,
-      top: `${rect.y}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-    });
+    setRect(element, rect);
     this.root.appendChild(element);
   }
 
@@ -61,6 +56,35 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
+/**
+ * A real button with these classes and children. It never submits anything (type=button), and `label` is its name
+ * for screen readers when its content is only an icon.
+ */
+export function button(className: string, label?: string, ...children: (Node | string)[]): HTMLButtonElement {
+  const element = el('button', className, ...children);
+  element.type = 'button';
+  if (label) element.setAttribute('aria-label', label);
+  return element;
+}
+
+/** A picture; with no `alt` it is decoration only, and screen readers skip it. */
+export function image(className: string, src: string, alt = ''): HTMLImageElement {
+  const element = el('img', className);
+  element.src = src;
+  element.alt = alt;
+  return element;
+}
+
+/** Puts an element at a rect, in the px of whatever it sits in (the stage, for the UI layer's children). */
+export function setRect(element: HTMLElement, rect: Rect): void {
+  Object.assign(element.style, {
+    left: `${rect.x}px`,
+    top: `${rect.y}px`,
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+  });
+}
+
 /** The player has asked the system for less motion. */
 const LESS_MOTION = '(prefers-reduced-motion: reduce)';
 
@@ -85,6 +109,15 @@ export async function fade(element: HTMLElement, to: 'in' | 'out', seconds: numb
 export function bump(element: HTMLElement, scale: number, seconds: number): void {
   element.animate([{ transform: `scale(${scale})` }, { transform: 'scale(1)' }], {
     duration: seconds * 1000,
-    easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)', // overshoots a little, like back.out
+    easing: THEME.ease.back,
   });
+}
+
+/**
+ * Shakes an element side to side: a press the game can't take. It moves the element's `translate`, not its
+ * `transform`, so a lifted or scaled element keeps its pose while it shakes.
+ */
+export function shake(element: HTMLElement): void {
+  const steps = [0, ...NOPE_SHAKE.offsets, 0].map((x) => ({ translate: `${x}px 0` }));
+  element.animate(steps, { duration: NOPE_SHAKE.time * 1000, easing: 'ease-out' });
 }

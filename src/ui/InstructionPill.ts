@@ -1,7 +1,7 @@
 import type { BoosterPill } from '../game/BoosterControl';
 import type { Rect } from '../layout/gameLayout';
 import type { UiLayer } from './UiLayer';
-import { el } from './UiLayer';
+import { button, el, shake } from './UiLayer';
 
 /** A cross, for closing. */
 const CROSS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor"
@@ -17,9 +17,7 @@ export class InstructionPill implements BoosterPill {
   private closed: (() => void) | null = null;
 
   constructor(layer: UiLayer, rect: Rect) {
-    const close = el('button', 'pill__close');
-    close.type = 'button';
-    close.setAttribute('aria-label', 'Cancel booster');
+    const close = button('pill__close', 'Cancel booster');
     close.innerHTML = CROSS; // a fixed string from this file
     close.addEventListener('click', () => {
       this.closed?.();
@@ -43,9 +41,6 @@ export class InstructionPill implements BoosterPill {
   }
 
   nope(): void {
-    this.root.animate(
-      [{ translate: '0' }, { translate: '-5px 0' }, { translate: '4px 0' }, { translate: '0' }],
-      { duration: 320, easing: 'ease-out' },
-    );
+    shake(this.root);
   }
 }

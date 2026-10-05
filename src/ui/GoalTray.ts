@@ -1,7 +1,7 @@
 import { HUD_MOTION } from '../config/ui';
 import type { GoalProgress, GoalType } from '../model/goals';
 import { CHECK, STAR, setIcon } from './icons';
-import { bump, el } from './UiLayer';
+import { bump, el, image } from './UiLayer';
 
 /** The goals' icons, painted by the game's own painters: the lotus, and a koi of each colour. */
 export interface GoalIcons {
@@ -62,16 +62,12 @@ class GoalChip {
 
   constructor(
     goal: GoalProgress,
-    image: string | null,
+    picture: string | null,
     private readonly bonus: number,
   ) {
     this.kind = goal.kind;
-    if (image) {
-      const picture = el('img', `chip__image chip__image--${goal.kind}`);
-      picture.src = image;
-      picture.alt = '';
-      this.icon.append(picture);
-    } else setIcon(this.icon, STAR);
+    if (picture) this.icon.append(image(`chip__image chip__image--${goal.kind}`, picture));
+    else setIcon(this.icon, STAR);
     this.element = el('div', 'chip', this.icon, this.count);
     this.left = leftOf(goal);
     this.show();

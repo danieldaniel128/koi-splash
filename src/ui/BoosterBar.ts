@@ -1,9 +1,10 @@
+import { BAR_MOTION } from '../config/ui';
 import type { BoosterButtons } from '../game/BoosterControl';
 import type { Rect } from '../layout/gameLayout';
 import type { BoosterSlot, BoosterType } from '../model/boosters';
 import { BOOSTER_ICONS, CHECK, setIcon } from './icons';
 import type { UiLayer } from './UiLayer';
-import { bump, el } from './UiLayer';
+import { bump, button, el, shake } from './UiLayer';
 
 /** One button's parts. */
 interface Button {
@@ -22,7 +23,7 @@ export class BoosterBar implements BoosterButtons {
   private pressed: ((type: BoosterType) => void) | null = null;
 
   constructor(layer: UiLayer, rect: Rect, slots: readonly BoosterSlot[]) {
-    const elements = slots.map((slot) => this.button(slot).element);
+    const elements = slots.map((slot) => this.makeButton(slot).element);
     layer.place(el('div', 'boosters', ...elements), rect);
   }
 
@@ -47,40 +48,29 @@ export class BoosterBar implements BoosterButtons {
     const wasSpent = button.element.classList.contains('booster--used');
     button.element.classList.toggle('booster--used', spent);
     button.badge.textContent = `${left}`;
-    if (spent && !wasSpent) bump(button.orb, 0.85, 0.35);
+    if (spent && !wasSpent) bump(button.orb, BAR_MOTION.spentBump, BAR_MOTION.spentSettle);
   }
 
   nope(type: BoosterType): void {
-    this.buttons
-      .get(type)
-      ?.element.animate(
-        [
-          { transform: 'translateX(0)' },
-          { transform: 'translateX(-5px)' },
-          { transform: 'translateX(4px)' },
-          { transform: 'translateX(-2px)' },
-          { transform: 'translateX(0)' },
-        ],
-        { duration: 340, easing: 'ease-out' },
-      );
+    const refused = this.buttons.get(type);
+    if (refused) shake(refused.element);
   }
 
-  private button(slot: BoosterSlot): Button {
+  private makeButton(slot: BoosterSlot): Button {
     const orb = el('span', 'orb booster__orb');
     orb.innerHTML = BOOSTER_ICONS[slot.type]; // a fixed string from icons.ts
     const check = el('span', 'booster__check');
     setIcon(check, CHECK);
     orb.append(check);
     const badge = el('b', 'badge', `${slot.count}`);
-    const element = el('button', 'booster', orb, badge, el('span', 'label booster__name', slot.name));
-    element.type = 'button';
-    element.setAttribute('aria-label', `${slot.name} booster: ${slot.tip}`);
+    const name = el('span', 'label booster__name', slot.name);
+    const element = button('booster', `${slot.name} booster: ${slot.tip}`, orb, badge, name);
     element.addEventListener('click', () => {
-      bump(orb, 0.9, 0.3);
+      bump(orb, BAR_MOTION.pressBump, BAR_MOTION.pressSettle);
       this.pressed?.(slot.type);
     });
-    const button = { element, orb, badge };
-    this.buttons.set(slot.type, button);
-    return button;
+    const parts = { element, orb, badge };
+    this.buttons.set(slot.type, parts);
+    return parts;
   }
 }
