@@ -36,21 +36,15 @@
 }
 
 .result__star {
+  --star-glow: 8px;
   width: 46px;
   height: 46px;
-  color: var(--color-starOff);
-  filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--color-shade) 60%, transparent));
 }
 
 .result__star:nth-child(2) {
   width: 60px;
   height: 60px;
   margin-bottom: var(--space-sm); /* the middle star sits up, bigger */
-}
-
-.result__star--lit {
-  color: var(--color-gold);
-  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-gold) 80%, transparent));
 }
 
 .result__score {

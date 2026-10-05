@@ -3,8 +3,9 @@ import { Timers } from '../core/Timers';
 import type { ResultDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
 import type { GoalProgress, GoalType } from '../model/goals';
+import { THEME } from '../theme/theme';
 import { STAR, setIcon } from './icons';
-import { el } from './UiLayer';
+import { button, el, wantsLessMotion } from './UiLayer';
 
 /**
  * The end-of-level card over the dimmed pond: won (with the stars earned landing one by one) or out of moves, the
@@ -16,11 +17,11 @@ export class ResultCard implements ResultDisplay {
   private readonly root: HTMLElement;
   private readonly card: HTMLElement;
   private readonly title = el('h2', 'number result__title');
-  private readonly stars = [0, 1, 2].map(() => el('span', 'result__star'));
+  private readonly stars = [0, 1, 2].map(() => el('span', 'star result__star'));
   private readonly starRow = el('div', 'result__stars', ...this.stars);
   private readonly score = el('p', 'number result__score');
   private readonly detail = el('p', 'label result__detail');
-  private readonly again = el('button', 'btn', 'Play again');
+  private readonly again = button('btn', undefined, 'Play again');
   /** The card's own timeouts (its stars landing, its taps opening): cancelled when it closes, so none fires later. */
   private readonly timers = new Timers();
   /** Taps count once the card is fully up, so a last swipe on the board can't press Play again by accident. */
@@ -66,10 +67,11 @@ export class ResultCard implements ResultDisplay {
       this.takesTaps = true;
     });
     if (won) this.landStars(status.stars);
+    if (wantsLessMotion()) return;
     this.root.animate([{ opacity: 0 }, { opacity: 1 }], { duration: RESULT_CARD.fadeIn * 1000 });
     this.card.animate([{ scale: 0.8 }, { scale: 1 }], {
       duration: RESULT_CARD.popIn * 1000,
-      easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      easing: THEME.ease.back,
     });
   }
 
@@ -84,14 +86,15 @@ export class ResultCard implements ResultDisplay {
     this.again.focus();
   }
 
-  /** The stars earned light up one after another, each popping in; the rest stay dark. */
+  /** The stars earned light up one after another, each popping in (unless less motion); the rest stay dark. */
   private landStars(earned: number): void {
     this.stars.forEach((star, i) => {
-      star.classList.remove('result__star--lit');
+      star.classList.remove('star--lit');
       if (i >= earned) return;
       this.timers.after(RESULT_CARD.firstStar + i * RESULT_CARD.starStep, () => {
-        star.classList.add('result__star--lit');
+        star.classList.add('star--lit');
         this.starLanded?.(i);
+        if (wantsLessMotion()) return;
         star.animate([{ transform: 'scale(0.2)' }, { transform: 'scale(1.35)' }, { transform: 'scale(1)' }], {
           duration: RESULT_CARD.starPop * 1000,
           easing: 'ease-out',
