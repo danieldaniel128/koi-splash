@@ -15,15 +15,10 @@ import { createBackdrop } from '../view/Backdrop';
 import { Fireflies } from '../view/Fireflies';
 import { ShoreRing } from '../view/ShoreRing';
 import { PondProps } from '../view/water/PondProps';
-import { bakeShoreField, PondWater } from '../view/water/PondWater';
+import { PondWater } from '../view/water/PondWater';
 import type { GameScreen } from './screen';
 
-/** The pond's shore as a distance field, which every water shader reads (see bakeShoreField). */
-export function bakeShore({ layout, shore }: GameScreen): DistanceField {
-  return bakeShoreField(layout.pond, shore);
-}
-
-/** The bank, and the water below and above the board, inside the shore. */
+/** The bank, and the water below and above the board, inside the shore (its distance field, see bakeShoreField). */
 export function createPond(renderer: Renderer, { layout }: GameScreen, shoreField: DistanceField): PondWater {
   return new PondWater(renderer, {
     stageWidth: layout.stage.width,

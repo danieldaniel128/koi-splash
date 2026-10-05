@@ -8,12 +8,13 @@ import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
 import type { KoiTextures } from '../view/KoiTextures';
 import type { SpecialTextures } from '../view/SpecialTextures';
+import { bakeShoreField } from '../view/water/PondWater';
 import type { PondWater } from '../view/water/PondWater';
 import { keepFitted, restoreAfterContextLoss } from './app';
 import { addFrameLoop } from './frameLoop';
 import { createGame } from './game';
 import { bakeKoi, createSpecialKoi, goalIcons, koiBake } from './koi';
-import { bakeShore, createGarden, createPond, createScenery } from './pond';
+import { createGarden, createPond, createScenery } from './pond';
 import type { Scenery } from './pond';
 import type { GameScreen } from './screen';
 import { addSoundMenu } from './sound';
@@ -61,12 +62,12 @@ export async function loadGame(
       specials.bakePreviews();
     })
     .step('koi', 15, () => bakeKoi(bake))
-    .step('shoreField', 3, () => bakeShore(screen))
+    .step('shoreField', 3, () => bakeShoreField(screen.layout.pond, screen.shore))
     .step('pond', 1, ({ shoreField }) => createPond(app.renderer, screen, shoreField))
     .step('garden', 1, () => createGarden(screen))
     .step('scenery', 1, () => createScenery(screen))
     .step('game', 2, (made) => {
-      assembleGame(app, screen, { ...made, specialKoi: specials }, wiring);
+      assembleGame(app, screen, { ...made, specials }, wiring);
     })
     // the GPU draws the koi's canvases as they're first uploaded, here
     .step('firstFrame', 85, () => {
@@ -79,7 +80,7 @@ export async function loadGame(
 interface Loaded {
   readonly goalIcons: GoalIcons;
   readonly koi: KoiTextures;
-  readonly specialKoi: SpecialTextures;
+  readonly specials: SpecialTextures;
   readonly pond: PondWater;
   readonly garden: Sprite;
   readonly scenery: Scenery;
@@ -97,7 +98,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const menu = addSoundMenu(screen, sound, events);
   const materials = {
     koi: made.koi,
-    specials: made.specialKoi,
+    specials: made.specials,
     pond,
     hud,
     screenFlow: wiring.screenFlow,
@@ -122,7 +123,10 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   });
 }
 
-/** Waits for the bundled font's weights the game draws with (a missing one just falls back, it never throws). */
+/**
+ * Waits for the bundled font's weights the game draws with: the Pixi labels are drawn once with whatever font is
+ * ready, so it must be Nunito (a missing one just falls back, it never throws).
+ */
 async function loadFonts(): Promise<void> {
   await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
 }
