@@ -78,6 +78,24 @@ export function planBackdrop(frame: BackdropFrame): BackdropPlan {
 const FULL_SKY = 170;
 /** The bottom of the scene fades out over this many px, so the bank shows through and the two meet softly. */
 const FADE = 28;
+/** The pagoda's height at scale 1, from its footing to the tip of its spire (px). */
+const PAGODA_HEIGHT = 72;
+/** The pagoda keeps this far below the top of its sky (px), and is left out rather than shrunk below this scale. */
+const PAGODA_MARGIN = 6;
+const PAGODA_MIN_SCALE = 0.5;
+
+/**
+ * The pagoda's scale standing on `base` (px): as `spot` asks, but small enough that its spire stays this side of the
+ * top of the sky (`spot.top`), so it never loses its upper storey; null when it would have to shrink too far (it is
+ * left out). O(1).
+ */
+export function fitPagoda(
+  spot: { readonly scale: number; readonly top: number },
+  base: number,
+): number | null {
+  const scale = Math.min(spot.scale, (base - spot.top - PAGODA_MARGIN) / PAGODA_HEIGHT);
+  return scale >= PAGODA_MIN_SCALE ? scale : null;
+}
 
 /** Paints the whole scene for a frame (the canvas is already scaled to px). */
 export function paintBackdrop(
@@ -116,7 +134,9 @@ function paintLandscape(
   const [far, ...near] = scene.hills;
   if (far) {
     const ridge = paintHill(ctx, width, horizon, far, random, look.rim);
-    if (spots.garden) paintPagoda(ctx, spots.pagoda.x, ridge(spots.pagoda.x) + 3, look, spots.pagoda.scale);
+    const base = ridge(spots.pagoda.x) + 3;
+    const scale = fitPagoda(spots.pagoda, base);
+    if (spots.garden && scale !== null) paintPagoda(ctx, spots.pagoda.x, base, look, scale);
   }
   paintMist(ctx, width, horizon, look);
   for (const hill of near) {
@@ -130,7 +150,8 @@ function paintLandscape(
 interface Spots {
   readonly garden: boolean;
   readonly moon: readonly [number, number];
-  readonly pagoda: { readonly x: number; readonly scale: number };
+  /** Where the pagoda stands, its scale, and the top of the sky it stands in (px). */
+  readonly pagoda: { readonly x: number; readonly scale: number; readonly top: number };
   /** A maple branch reaching in from the left edge; on a wide screen the maple is a tree on the ground instead. */
   readonly branch: { readonly top: number; readonly reach: number } | null;
 }
@@ -143,7 +164,7 @@ function tallSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
   return {
     garden: horizon - open >= GARDEN_ROOM.sky,
     moon: [width * look.moon.at[0], moonY],
-    pagoda: { x: width * 0.5, scale: Math.min(1.25, (horizon - open) / 140) },
+    pagoda: { x: width * 0.5, scale: Math.min(1.25, (horizon - open) / 140), top: open },
     branch: { top: open + 10, reach: Math.min(width * 0.42, 170) },
   };
 }
@@ -154,7 +175,7 @@ function wideSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
   return {
     garden: horizon >= GARDEN_ROOM.sky,
     moon: [right, Math.max(look.moon.radius + 6, horizon * 0.45)],
-    pagoda: { x: frame.pond.left * 0.62, scale: Math.min(1.1, horizon / 110) },
+    pagoda: { x: frame.pond.left * 0.62, scale: Math.min(1.1, horizon / 110), top: 0 },
     branch: null,
   };
 }
