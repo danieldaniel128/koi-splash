@@ -2,7 +2,7 @@ import { BAR_MOTION } from '../config/ui';
 import type { BoosterButtons } from '../game/BoosterControl';
 import type { Rect } from '../layout/gameLayout';
 import type { BoosterSlot, BoosterType } from '../model/boosters';
-import { BOOSTER_ICONS, CHECK, setIcon } from './icons';
+import { BOOSTER_ICONS, setIcon } from './icons';
 import type { UiLayer } from './UiLayer';
 import { bump, button, el, shake } from './UiLayer';
 
@@ -15,8 +15,8 @@ interface Button {
 
 /**
  * The booster bar under the pond (after the prototype's): a round glass button per booster with its count on a gold
- * badge and its name under it. The armed one lifts and glows; a spent one dims, its badge gone and a check in its orb;
- * a press it can't take shakes it. Presses go to the handler given to onPress.
+ * badge and its name under it. The armed one lifts and glows; a spent one dims to grey with its badge at 0 (a check is
+ * kept for a goal met); a press it can't take shakes it. Presses go to the handler given to onPress.
  */
 export class BoosterBar implements BoosterButtons {
   private readonly buttons = new Map<BoosterType, Button>();
@@ -59,9 +59,6 @@ export class BoosterBar implements BoosterButtons {
   private makeButton(slot: BoosterSlot): Button {
     const orb = el('span', 'orb booster__orb');
     setIcon(orb, BOOSTER_ICONS[slot.type]);
-    const check = el('span', 'booster__check');
-    setIcon(check, CHECK);
-    orb.append(check);
     const badge = el('b', 'badge', `${slot.count}`);
     const name = el('span', 'label booster__name', slot.name);
     const element = button('booster', `${slot.name} booster: ${slot.tip}`, orb, badge, name);
