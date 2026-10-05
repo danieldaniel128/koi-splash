@@ -69,7 +69,7 @@ describe('specials in a cascade', () => {
     expect(swept).toHaveLength(5);
   });
 
-  it('a whirlpool drains the eight round it, and a special it catches fires too', () => {
+  it('a whirlpool drains the eight round it, and leaves a special outside them', () => {
     const board = boardFrom(['232323', '3w2v23', '232323', '323232', '232323', '323232']);
     const result = trySwap(board, { col: 1, row: 1 }, { col: 1, row: 2 }, SPEC, new Random(1));
     if (!result.valid) throw new Error('refused');
