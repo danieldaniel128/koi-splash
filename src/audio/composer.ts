@@ -21,6 +21,9 @@ export interface MusicNote {
 type Rhythm = readonly (readonly [step: number, length: number])[];
 
 const STEPS = 8; // eighths in a bar
+const PHRASE = 4; // bars in a phrase: it closes on a long chord tone
+/** Bars in one pass through the progression: its last phrase closes on the root. */
+const CYCLE = MUSIC.bars * MUSIC.progression.length;
 const KOTO_RHYTHMS: readonly Rhythm[] = [
   [
     [0, 2],
@@ -123,16 +126,16 @@ export class Composer {
   }
 
   private melody(mood: BarMood, tones: readonly number[]): MusicNote[] {
-    const inCycle = this.bar % (MUSIC.bars * MUSIC.progression.length);
+    const inCycle = this.bar % CYCLE;
     if (inCycle === 0) this.fluteAnswers = this.random() < MUSIC.melody.flute;
-    const closing = inCycle % 4 === 3;
+    const closing = inCycle % PHRASE === PHRASE - 1;
     if (!closing && inCycle !== 0 && this.random() < MUSIC.melody.rest) return [];
-    const part = inCycle >= 4 && this.fluteAnswers ? 'flute' : 'koto';
+    const part = inCycle >= PHRASE && this.fluteAnswers ? 'flute' : 'koto';
     const rhythm = closing ? CLOSING : this.pick(this.rhythms(part, mood));
     return rhythm.map(([step, length], k) => {
       const last = closing && k === rhythm.length - 1;
       const strong = step % 4 === 0;
-      this.degree = this.walk(strong || last ? tones : null, last && inCycle === 7);
+      this.degree = this.walk(strong || last ? tones : null, last && inCycle === CYCLE - 1);
       return { part, step, length, pitches: [semitonesOf(this.degree)] };
     });
   }
