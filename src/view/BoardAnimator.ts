@@ -365,11 +365,14 @@ export class BoardAnimator implements TurnAnimator {
 
   /**
    * Swims down into a gap: the koi turns to face where it's going and swims there at swimming pace (longer
-   * distances take longer, no gravity and no bounce). Its tail beats faster on its own while it moves.
+   * distances take longer, no gravity and no bounce), then turns back the way it was resting, so a cascade doesn't
+   * leave columns of koi all pointing down. Its tail beats faster on its own while it moves.
    */
   private async swim(koi: Koi, to: Cell, rows: number, delay: number): Promise<void> {
     const target = this.view.cellToPoint(to);
+    let resting = koi.heading;
     gsap.delayedCall(delay, () => {
+      resting = koi.heading;
       koi.turnToward(Math.atan2(target.x - koi.x, koi.y - target.y), 1);
     });
     await play(
@@ -381,6 +384,7 @@ export class BoardAnimator implements TurnAnimator {
         ease: 'sine.inOut',
       }),
     );
+    koi.turnToward(resting, 1);
     this.events.emit('land');
   }
 
