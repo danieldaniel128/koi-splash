@@ -15,7 +15,7 @@ import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import { scoreRound } from '../model/score';
 import { starsFor, starsForWin } from '../model/stars';
 import type { StarRule } from '../model/stars';
-import type { BoardSpec, CascadeStep, Cell, Pad, PadEvent, PlacedPiece, Special } from '../model/types';
+import type { BoardSpec, CascadeRound, Cell, Pad, PadEvent, PlacedPiece, Special } from '../model/types';
 import type { BoosterChange } from '../model/boosters';
 import type { BoosterGame } from './BoosterControl';
 import type { GameEventBus } from './events';
@@ -67,8 +67,8 @@ export interface TurnAnimator {
   /** A koi swiped into the bank, or into a lily pad: it bumps its nose and swims back. */
   bumpBank(koi: PlacedPiece, toward: Cell): Promise<void>;
   bumpPad(koi: PlacedPiece, padCell: Cell): Promise<void>;
-  /** One cascade round (`round` of its turn, 0 = the swap's own), with the points it scored. */
-  playStep(step: CascadeStep, points: number, round: number): Promise<void>;
+  /** One cascade round (`roundIndex` in its turn, 0 = the swap's own), with the points it scored. */
+  playRound(round: CascadeRound, points: number, roundIndex: number): Promise<void>;
   playBooster(use: BoosterUse, change: BoosterChange): Promise<void>;
 }
 
@@ -120,8 +120,8 @@ export interface GameSceneDeps {
 
 /** One cascade round, counted before it plays: its points, the goals it met (0 = the level's first) and the status after it. */
 interface CountedRound {
-  readonly step: CascadeStep;
-  readonly round: number;
+  readonly round: CascadeRound;
+  readonly roundIndex: number;
   readonly points: number;
   readonly met: readonly number[];
   readonly status: GameStatus;
@@ -341,18 +341,18 @@ export class GameScene implements BoosterGame, SwapGame {
    * One cascade round: the pads next to the cleared koi react while the koi clear and fall (into a bloomed pad's
    * cell too), and the HUD climbs to the round's status.
    */
-  private async playRound({ step, round, points, met, status }: CountedRound): Promise<void> {
-    this.announce(step, round, met);
+  private async playRound({ round, roundIndex, points, met, status }: CountedRound): Promise<void> {
+    this.announce(round, roundIndex, met);
     await Promise.all([
-      this.deps.animator.playStep(step, points, round),
-      this.deps.pads.play(step.padEvents),
+      this.deps.animator.playRound(round, points, roundIndex),
+      this.deps.pads.play(round.padEvents),
     ]);
     this.deps.status.update(status);
   }
 
   /** Counts a settled board's rounds into the level (score and goals), in order, before any of them plays. */
-  private count(result: { steps: readonly CascadeStep[]; reshuffled: boolean }): CountedTurn {
-    const rounds = result.steps.map((step, round) => this.countRound(step, round));
+  private count(result: { rounds: readonly CascadeRound[]; reshuffled: boolean }): CountedTurn {
+    const rounds = result.rounds.map((round, roundIndex) => this.countRound(round, roundIndex));
     return { rounds, reshuffled: result.reshuffled };
   }
 
@@ -360,29 +360,29 @@ export class GameScene implements BoosterGame, SwapGame {
    * Feeds a round to the goals and adds its points to the score, with the bonus of each goal it met, and notes the
    * goals it met, numbered by when (0 = the first met).
    */
-  private countRound(step: CascadeStep, round: number): CountedRound {
+  private countRound(round: CascadeRound, roundIndex: number): CountedRound {
     const { goal } = this.level;
-    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+    const points = scoreRound(round, roundIndex, this.deps.level.pointsPerPiece);
     // a rainbow koi has no colour of its own: it counts toward no colour goal
-    const cleared = step.cleared.map(({ piece }) => colourOf(piece)).filter((kind) => kind !== null);
+    const cleared = round.cleared.map(({ piece }) => colourOf(piece)).filter((kind) => kind !== null);
     const metBefore = goalsMet(goal.progress());
     this.level.score += recordRound(
       goal,
-      { points, padEvents: step.padEvents, cleared },
+      { points, padEvents: round.padEvents, cleared },
       this.deps.level.goalBonus,
     );
     const metAfter = goalsMet(goal.progress());
     const met = Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
-    return { step, round, points, met, status: this.status() };
+    return { round, roundIndex, points, met, status: this.status() };
   }
 
   /** Says what a round did: its match, what happened to the lily pads (once each), and the goals it met. */
-  private announce(step: CascadeStep, round: number, met: readonly number[]): void {
+  private announce(round: CascadeRound, roundIndex: number, met: readonly number[]): void {
     const { events } = this.deps;
-    if (step.cleared.length > 0) {
-      events.emit('match', { round, size: step.cleared.length, ...strongestMade(step) });
+    if (round.cleared.length > 0) {
+      events.emit('match', { roundIndex, size: round.cleared.length, ...strongestMade(round) });
     }
-    const pads = new Set(step.padEvents.map((event) => event.type));
+    const pads = new Set(round.padEvents.map((event) => event.type));
     if (pads.has('hit')) events.emit('budHit');
     if (pads.has('bloom')) events.emit('bloom');
     if (pads.has('drift')) events.emit('padDrift');
@@ -414,8 +414,8 @@ export class GameScene implements BoosterGame, SwapGame {
 }
 
 /** The strongest special a round made (a rainbow over a whirlpool over a striped koi), if it made one. */
-function strongestMade(step: CascadeStep): { made?: Special['type'] } {
-  const types = step.created.map(({ piece }) => piece.special?.type);
+function strongestMade(round: CascadeRound): { made?: Special['type'] } {
+  const types = round.created.map(({ piece }) => piece.special?.type);
   const made = SPECIAL_RANK.find((type) => types.includes(type));
   return made ? { made } : {};
 }

@@ -116,7 +116,7 @@ describe('chains', () => {
     makeSpecial(board, cell(3, 2), { type: 'line', along: 'row' });
     const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const first = result.steps[0];
+    const first = result.rounds[0];
     if (!first) throw new Error('no round');
     expect(first.matches).toEqual([]);
     expect(types(first)).toEqual(['whirl', 'line']); // the whirlpool, moved to (3, 2), caught the striped koi
@@ -143,11 +143,11 @@ describe('chains', () => {
       { id: 1, at: cell(4, 1), kind: 'empty', hitsLeft: 2, hitsNeeded: 2 },
       { id: 2, at: cell(5, 1), kind: 'bud', hitsLeft: 2, hitsNeeded: 2 }, // next to the other pad and the bank
     ]);
-    const { steps } = settle(board, { ...SPEC, rows: 4 }, seeded(1), {
+    const { rounds } = settle(board, { ...SPEC, rows: 4 }, seeded(1), {
       pads,
       firing: [{ at: cell(0, 1) }],
     });
-    const first = steps[0];
+    const first = rounds[0];
     expect(first?.padEvents.map((e) => [e.type, e.pad.id])).toEqual([
       ['hit', 1],
       ['hit', 2],
@@ -163,7 +163,7 @@ describe('two specials swapped together', () => {
     makeSpecial(board, cell(2, 3), { type: 'rainbow' });
     const result = trySwap(board, cell(2, 2), cell(2, 3), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const first = result.steps[0];
+    const first = result.rounds[0];
     expect(first?.fired.map((f) => f.target)).toEqual(['all', 'all']);
     expect(cellKeys(first?.cleared.map((c) => c.at) ?? [])).toEqual(cellKeys([...board.cells()]));
   });
@@ -175,7 +175,7 @@ describe('two specials swapped together', () => {
     const threes = [...board.cells()].filter((c) => board.get(c)?.kind === 3);
     const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const first = result.steps[0];
+    const first = result.rounds[0];
     if (!first) throw new Error('no round');
     expect(first.matches).toEqual([]);
     expect(types(first)).toEqual(['rainbow', 'line']);

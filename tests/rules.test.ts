@@ -172,16 +172,16 @@ describe('trySwap', () => {
       const result = trySwap(board, move[0], move[1], SPEC, rng);
       if (!result.valid) throw new Error('a found move was refused');
 
-      expect(result.steps.length).toBeGreaterThan(0);
+      expect(result.rounds.length).toBeGreaterThan(0);
       for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
       expect(findMatches(board)).toEqual([]);
       expect(findMove(board)).not.toBeNull();
 
-      for (const step of result.steps) {
+      for (const round of result.rounds) {
         // every cleared cell is refilled: the piece count stays the same
-        expect(step.spawns.length).toBe(step.cleared.length);
-        for (const fall of step.falls) expect(fall.to.row).toBeGreaterThan(fall.from.row);
-        for (const spawn of step.spawns) expect(spawn.order).toBeGreaterThanOrEqual(0);
+        expect(round.spawns.length).toBe(round.cleared.length);
+        for (const fall of round.falls) expect(fall.to.row).toBeGreaterThan(fall.from.row);
+        for (const spawn of round.spawns) expect(spawn.order).toBeGreaterThanOrEqual(0);
       }
     }
   });
@@ -197,7 +197,7 @@ describe('trySwap', () => {
       seeded(3),
     );
     if (!result.valid) throw new Error('expected a valid swap');
-    const first = result.steps[0];
+    const first = result.rounds[0];
     expect(first?.cleared.map((c) => c.at)).toEqual([
       { col: 0, row: 1 },
       { col: 1, row: 1 },
@@ -247,8 +247,8 @@ describe('blocked cells (lily pads)', () => {
       const result = trySwap(board, move[0], move[1], SPEC, rng);
       if (!result.valid) throw new Error('a found move was refused');
       for (const pad of pads) expect(board.get(pad)).toBeNull();
-      for (const step of result.steps) {
-        for (const move of [...step.falls, ...step.spawns]) {
+      for (const round of result.rounds) {
+        for (const move of [...round.falls, ...round.spawns]) {
           expect(pads.some((p) => p.col === move.to.col && p.row === move.to.row)).toBe(false);
         }
       }
@@ -279,12 +279,12 @@ describe('a shaped board (holes)', () => {
       if (!move) throw new Error('no move');
       const result = trySwap(board, move[0], move[1], shaped, rng);
       if (!result.valid) throw new Error('a found move was refused');
-      for (const step of result.steps) {
-        for (const fall of step.falls) {
+      for (const round of result.rounds) {
+        for (const fall of round.falls) {
           for (let row = fall.from.row; row <= fall.to.row; row++)
             expect(isHole({ col: fall.to.col, row })).toBe(false);
         }
-        for (const spawn of step.spawns) expect(isHole(spawn.to)).toBe(false);
+        for (const spawn of round.spawns) expect(isHole(spawn.to)).toBe(false);
       }
       for (const cell of board.cells()) expect(board.get(cell) === null).toBe(isHole(cell));
     }

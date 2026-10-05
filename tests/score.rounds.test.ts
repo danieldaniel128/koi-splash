@@ -3,7 +3,7 @@ import { SCORE } from '../src/config/level';
 import { seeded } from '../src/core/Random';
 import { trySwap } from '../src/model/rules';
 import { scoreRound } from '../src/model/score';
-import type { CascadeStep, Cell, Cleared, Created, Special } from '../src/model/types';
+import type { CascadeRound, Cell, Cleared, Created, Special } from '../src/model/types';
 import { boardFrom } from './support/boards';
 
 const POINTS = SCORE.pointsPerPiece;
@@ -11,7 +11,7 @@ const POINTS = SCORE.pointsPerPiece;
 const cells = (count: number, row = 0): Cell[] => Array.from({ length: count }, (_, col) => ({ col, row }));
 
 /** A round that cleared `count` koi and made these specials, each from a shape of `size` koi. */
-function round(count: number, made: readonly { special: Special; size: number }[] = []): CascadeStep {
+function round(count: number, made: readonly { special: Special; size: number }[] = []): CascadeRound {
   const cleared: Cleared[] = cells(count).map((at, i) => ({ piece: { id: i + 1, kind: 0 }, at }));
   const created: Created[] = made.map(({ special, size }, i) => ({
     piece: { id: 100 + i, kind: 0, special },
@@ -58,7 +58,7 @@ describe('scoreRound', () => {
       seeded(1),
     );
     if (!result.valid) throw new Error('refused');
-    const first = result.steps[0];
+    const first = result.rounds[0];
     if (!first) throw new Error('no round');
     expect(first.created.map((c) => c.piece.special)).toEqual([{ type: 'rainbow' }]);
     expect(first.cleared).toHaveLength(4);

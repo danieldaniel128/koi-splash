@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { StateMachine } from '../src/core/StateMachine';
-import { BOOSTER_STEPS, BoosterControl } from '../src/game/BoosterControl';
-import type { Arming, BoosterGame, BoosterStep } from '../src/game/BoosterControl';
+import { BOOSTER_TRANSITIONS, BoosterControl } from '../src/game/BoosterControl';
+import type { Arming, BoosterGame, BoosterState } from '../src/game/BoosterControl';
 import type { BoosterType, BoosterUse } from '../src/model/boosters';
 import type { Cell, Special } from '../src/model/types';
 
@@ -189,9 +189,9 @@ describe('BoosterControl', () => {
 });
 
 describe('BOOSTER_STEPS', () => {
-  it('lets each booster take only the steps of its own flow', () => {
-    const can = (type: BoosterType, from: BoosterStep, to: BoosterStep): boolean =>
-      new StateMachine<BoosterStep, Arming>(from, BOOSTER_STEPS, { type, picked: null }).can(to);
+  it('lets each booster take only the transitions of its own flow', () => {
+    const can = (type: BoosterType, from: BoosterState, to: BoosterState): boolean =>
+      new StateMachine<BoosterState, Arming>(from, BOOSTER_TRANSITIONS, { type, picked: null }).can(to);
     const firstTap = { swap: 'picked', special: 'choosing', feed: 'playing' } as const;
     for (const type of ['swap', 'special', 'feed'] as const) {
       for (const to of ['picked', 'choosing', 'playing'] as const) {

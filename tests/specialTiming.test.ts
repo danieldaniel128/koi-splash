@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CascadeStep, Piece, Special } from '../src/model/types';
+import type { CascadeRound, Piece, Special } from '../src/model/types';
 import { blastLands, planRound } from '../src/view/specialTiming';
 
 const TIMING = {
@@ -16,7 +16,7 @@ const TIMING = {
 };
 let nextId = 1;
 const koi = (special?: Special): Piece => ({ id: nextId++, kind: 0, ...(special ? { special } : {}) });
-const step = (over: Partial<CascadeStep>): CascadeStep => ({
+const cascadeRound = (over: Partial<CascadeRound>): CascadeRound => ({
   matches: [],
   created: [],
   fired: [],
@@ -32,7 +32,7 @@ describe('planRound', () => {
     const merging = koi();
     const plain = koi();
     const plan = planRound(
-      step({
+      cascadeRound({
         created: [{ piece: koi({ type: 'whirl' }), at: { col: 2, row: 2 }, from: [{ col: 3, row: 2 }] }],
         cleared: [
           { piece: merging, at: { col: 3, row: 2 } },
@@ -50,7 +50,7 @@ describe('planRound', () => {
     const near = koi();
     const far = koi();
     const plan = planRound(
-      step({
+      cascadeRound({
         fired: [{ piece: striped, at: { col: 3, row: 1 }, reach: [] }],
         cleared: [
           { piece: striped, at: { col: 3, row: 1 } },
@@ -69,7 +69,7 @@ describe('planRound', () => {
     const whirl = koi({ type: 'whirl' });
     const drained = koi();
     const plan = planRound(
-      step({
+      cascadeRound({
         fired: [
           { piece: striped, at: { col: 0, row: 1 }, reach: [] },
           { piece: whirl, at: { col: 4, row: 1 }, reach: [] },
@@ -93,7 +93,7 @@ describe('planRound', () => {
 describe('blastLands', () => {
   it('is when the blast takes its first koi, so its points show as it lands', () => {
     const whirl = koi({ type: 'whirl' });
-    const round = step({
+    const round = cascadeRound({
       fired: [{ piece: whirl, at: { col: 3, row: 3 }, reach: [] }],
       cleared: [
         { piece: whirl, at: { col: 3, row: 3 } },
@@ -106,7 +106,7 @@ describe('blastLands', () => {
 
   it('is when it fires, for a blast that takes nothing', () => {
     const striped = koi({ type: 'line', along: 'row' });
-    const round = step({
+    const round = cascadeRound({
       fired: [{ piece: striped, at: { col: 0, row: 0 }, reach: [] }],
       cleared: [{ piece: striped, at: { col: 0, row: 0 } }],
     });

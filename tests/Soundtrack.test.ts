@@ -36,7 +36,7 @@ describe('Soundtrack', () => {
 
   it('dips the music under a match by its own depth, and under nothing else', () => {
     const { events, dips } = rig();
-    events.emit('match', { round: 0, size: 3 });
+    events.emit('match', { roundIndex: 0, size: 3 });
     events.emit('swap');
     events.emit('bloom');
     expect(dips).toEqual([['music', MUSIC.duck.match, MUSIC.duck.back]]);

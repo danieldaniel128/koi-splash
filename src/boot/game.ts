@@ -117,8 +117,8 @@ function bannerRect(board: GameLayout['board']): Rect {
 /** What the banner lane announces: combos and specials made, a reshuffle, every goal met, the pond won. */
 function announceOnBanner(events: GameEventBus, lane: BannerLane): void {
   const { text } = BANNER;
-  events.on('match', ({ round, made }) => {
-    const banner = comboBanner(round, made);
+  events.on('match', ({ roundIndex, made }) => {
+    const banner = comboBanner(roundIndex, made);
     if (banner) lane.show(banner);
   });
   events.on('reshuffle', () => {

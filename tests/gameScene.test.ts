@@ -95,7 +95,7 @@ function stubAnimator(seen: Seen): TurnAnimator {
     },
     invalidSwap: done,
     swap: done,
-    playStep: done,
+    playRound: done,
     playBooster: done,
   };
 }
@@ -176,7 +176,7 @@ describe('GameScene', () => {
 
   it('still ends the level, with the score and goals counted, when the last move fails to play', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const failing = { playStep: () => Promise.reject(new Error('a tween broke')) };
+    const failing = { playRound: () => Promise.reject(new Error('a tween broke')) };
     const { scene, board, statuses, outcomes } = stubScene({
       moves: 1,
       goals: [{ type: 'score', target: 1 }],

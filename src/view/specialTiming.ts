@@ -1,4 +1,4 @@
-import type { CascadeStep, Cell, Fired } from '../model/types';
+import type { CascadeRound, Cell, Fired } from '../model/types';
 import { cellKey, stepsApart } from '../model/types';
 
 /** How long a special's parts take (s), after the prototype (see TIMING.specials). */
@@ -50,13 +50,13 @@ export interface RoundPlan {
  * into it), each special fires when it was matched or swapped (at once) or when another's blast reached it, and each
  * blast takes its cells in its own rhythm. Pure: the animator plays it, the tests check it. O(cleared + fired).
  */
-export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
+export function planRound(round: CascadeRound, timing: SpecialTiming): RoundPlan {
   const clears = new Map<number, ClearPlan>();
   const blasts: BlastPlan[] = [];
   const mergeInto = new Map<string, Cell>();
-  for (const made of step.created) for (const cell of made.from) mergeInto.set(cellKey(cell), made.at);
+  for (const made of round.created) for (const cell of made.from) mergeInto.set(cellKey(cell), made.at);
 
-  for (const cleared of step.cleared) {
+  for (const cleared of round.cleared) {
     if (cleared.blast !== undefined) continue;
     const into = mergeInto.get(cellKey(cleared.at));
     clears.set(
@@ -66,11 +66,11 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
         : { delay: 0, lasts: timing.dive, how: 'dive' },
     );
   }
-  step.fired.forEach((fired, index) => {
+  round.fired.forEach((fired, index) => {
     // matched or swapped: it fires at once; caught by an earlier blast: a beat after that blast reaches it
     const caught = clears.get(fired.piece.id)?.delay ?? 0;
     const start = caught > 0 ? caught + timing.chain : 0;
-    const reach = step.cleared.filter((cleared) => cleared.blast === index);
+    const reach = round.cleared.filter((cleared) => cleared.blast === index);
     blasts.push({ fired, at: start });
     clears.set(fired.piece.id, { delay: start, lasts: firing(fired, reach.length, timing), how: 'fire' });
     for (const cleared of reach) {
@@ -86,9 +86,9 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
  * When a round's blast (its index in the round's fired) lands: when it takes its first koi, or when it fires if it
  * takes none. Its points show then. Pure. O(cleared).
  */
-export function blastLands(step: CascadeStep, plan: RoundPlan, blast: number): number {
+export function blastLands(round: CascadeRound, plan: RoundPlan, blast: number): number {
   let lands = Infinity;
-  for (const cleared of step.cleared) {
+  for (const cleared of round.cleared) {
     if (cleared.blast !== blast) continue;
     lands = Math.min(lands, plan.clears.get(cleared.piece.id)?.delay ?? Infinity);
   }

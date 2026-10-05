@@ -34,7 +34,7 @@ describe('splitPoints', () => {
       seeded(1),
     );
     if (!result.valid) throw new Error('refused');
-    const [first] = result.steps;
+    const [first] = result.rounds;
     if (!first) throw new Error('no round');
     const points = scoreRound(first, 0, 10); // 3 koi cleared and a striped koi's bonus
     expect(splitPoints(first, points)).toEqual([{ over: first.matches[0]?.cells, amount: points, size: 4 }]);
@@ -54,9 +54,9 @@ describe('splitPoints', () => {
       if (!swap) continue;
       const result = trySwap(board, swap[0], swap[1], SPEC, rng);
       if (!result.valid) continue;
-      result.steps.forEach((step, round) => {
-        const points = scoreRound(step, round, 10);
-        const shares = splitPoints(step, points);
+      result.rounds.forEach((round, roundIndex) => {
+        const points = scoreRound(round, roundIndex, 10);
+        const shares = splitPoints(round, points);
         expect(shares.reduce((sum, share) => sum + share.amount, 0)).toBe(points);
         for (const share of shares) expect(share.amount).toBeGreaterThan(0);
         rounds++;

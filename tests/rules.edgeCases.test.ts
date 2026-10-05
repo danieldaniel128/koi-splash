@@ -24,9 +24,9 @@ describe('a stuck board', () => {
   it('is dealt again when it settles: full, with no ready-made match and at least one move', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const board = boardFrom(STUCK);
-      const { steps, reshuffled } = settle(board, SPEC, seeded(seed));
+      const { rounds, reshuffled } = settle(board, SPEC, seeded(seed));
       expect(reshuffled).toBe(true);
-      expect(steps).toEqual([]);
+      expect(rounds).toEqual([]);
       for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
       expect(findMatches(board)).toEqual([]);
       expect(findMove(board)).not.toBeNull();
@@ -85,7 +85,7 @@ describe('trySwap refusing a swap', () => {
     makeSpecial(board, { col: 2, row: 1 }, { type: 'line', along: 'row' });
     const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, seeded(1));
     expect(result.valid).toBe(true);
-    if (result.valid) expect(result.steps[0]?.matches).toEqual([]);
+    if (result.valid) expect(result.rounds[0]?.matches).toEqual([]);
   });
 });
 
@@ -100,8 +100,8 @@ describe('the cascade cap', () => {
   it('lets a board that matches everywhere settle, however many rounds its new koi chain', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const board = boardFrom(['000111', '222333', '000111', '222333']);
-      const { steps } = settle(board, { ...SPEC, kinds: 4 }, seeded(seed));
-      expect(steps.length).toBeGreaterThan(0);
+      const { rounds } = settle(board, { ...SPEC, kinds: 4 }, seeded(seed));
+      expect(rounds.length).toBeGreaterThan(0);
       expect(findMatches(board)).toEqual([]);
       expect(drawBoard(board).join('')).not.toContain('-');
     }

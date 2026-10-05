@@ -168,7 +168,7 @@ describe('Soundtrack', () => {
     events.emit('moveSpent', { movesLeft: 9 });
     events.emit('moveSpent', { movesLeft: 4 });
     events.emit('won');
-    events.emit('match', { round: 0, size: 3 });
+    events.emit('match', { roundIndex: 0, size: 3 });
     events.emit('whirlPopped');
     expect(moods).toEqual(['calm', 'tense', 'won']);
     expect(dips).toEqual([

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { scoreSwap } from '../src/model/score';
-import type { CascadeStep, Cleared } from '../src/model/types';
+import type { CascadeRound, Cleared } from '../src/model/types';
 
 /** A cascade round that cleared `count` pieces (only the count matters for scoring). */
-function round(count: number): CascadeStep {
+function round(count: number): CascadeRound {
   const cleared: Cleared[] = Array.from({ length: count }, (_, i) => ({
     piece: { id: i, kind: 0 },
     at: { col: i, row: 0 },

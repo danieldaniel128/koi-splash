@@ -11,7 +11,7 @@ const EVERY_EVENT: { readonly [K in keyof GameEvents]: GameEvents[K] } = {
   swap: undefined,
   invalidSwap: undefined,
   moveSpent: { movesLeft: 9 },
-  match: { round: 0, size: 3 },
+  match: { roundIndex: 0, size: 3 },
   dive: undefined,
   land: undefined,
   budHit: undefined,

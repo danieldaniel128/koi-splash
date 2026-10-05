@@ -4,7 +4,7 @@ import type { PointData } from 'pixi.js';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
 import type { BoosterChange, BoosterUse } from '../model/boosters';
-import type { CascadeStep, Cell, Cleared, Created, Piece, PlacedPiece, Spawn } from '../model/types';
+import type { CascadeRound, Cell, Cleared, Created, Piece, PlacedPiece, Spawn } from '../model/types';
 import type { BoosterMotions } from './BoosterMotions';
 import type { GameEventBus } from '../game/events';
 import type { TurnAnimator } from '../game/GameScene';
@@ -38,7 +38,7 @@ export interface AnimatorDeps {
 /** The match effects over the water, in the board's space (one splash per match, points). */
 /** How a popup looks and when it shows: its cascade round (its colour), the koi it counts (its size), its delay (s). */
 export interface PointsLook {
-  readonly round: number;
+  readonly roundIndex: number;
   readonly size: number;
   readonly delay: number;
 }
@@ -54,7 +54,7 @@ type ExitMotion = (koi: Koi, piece: Piece, plan: ClearPlan) => Promise<void> | n
  * Plays the model's results on the board view, koi-pond style: the dragged koi rises and passes over the other,
  * matched koi kick and dive into the deep under a splash of rings, the koi above glide down, and new koi rise from
  * the deep into the gaps. Every method returns a promise that resolves when the motion ends, so the scene can await
- * the turn step by step instead of chaining callbacks.
+ * the turn round by round instead of chaining callbacks.
  */
 export class BoardAnimator implements TurnAnimator {
   private readonly view: BoardView;
@@ -172,25 +172,25 @@ export class BoardAnimator implements TurnAnimator {
   /**
    * One cascade round, timed by planRound: matched koi dive (a special's shape spirals into it), specials fire and
    * their blasts take their koi in their own rhythm, then the koi above swim down and new ones rise into the gaps.
-   * `points` is what the scene scored for the round (`round` of its cascade, 0 = the swap's own): its popups show
+   * `points` is what the scene scored for the round (`roundIndex` in its cascade, 0 = the swap's own): its popups show
    * exactly that.
    */
-  async playStep(step: CascadeStep, points: number, round: number): Promise<void> {
-    const plan = planRound(step, TIMING.specials);
-    this.score(step, plan, { points, round });
-    this.splashMatches(step, round);
+  async playRound(round: CascadeRound, points: number, roundIndex: number): Promise<void> {
+    const plan = planRound(round, TIMING.specials);
+    this.score(round, plan, { points, roundIndex });
+    this.splashMatches(round, roundIndex);
     for (const blast of plan.blasts) this.specials.fx.fire(blast);
     // the koi above start swimming down while the last ones are still going
     const swimDelay =
-      step.cleared.length > 0 ? Math.max(0, plan.end - TIMING.dive * (1 - TIMING.swimStartAt)) : 0;
+      round.cleared.length > 0 ? Math.max(0, plan.end - TIMING.dive * (1 - TIMING.swimStartAt)) : 0;
     // a newborn special waits in its cell until its shape has spiralled into it, then falls
-    const newborn = new Set(step.created.map((made) => made.piece.id));
+    const newborn = new Set(round.created.map((made) => made.piece.id));
     const fallDelay = (id: number): number =>
       newborn.has(id) ? Math.max(swimDelay, TIMING.specials.merge) : swimDelay;
     await Promise.all([
-      ...step.created.map((made) => this.birth(made)),
-      ...step.cleared.map((cleared) => this.leave(cleared, plan.clears.get(cleared.piece.id))),
-      ...step.falls.map((fall) =>
+      ...round.created.map((made) => this.birth(made)),
+      ...round.cleared.map((cleared) => this.leave(cleared, plan.clears.get(cleared.piece.id))),
+      ...round.falls.map((fall) =>
         this.swim(
           this.view.spriteOf(fall.piece.id),
           fall.to,
@@ -198,7 +198,7 @@ export class BoardAnimator implements TurnAnimator {
           fallDelay(fall.piece.id),
         ),
       ),
-      ...step.spawns.map((spawn) => this.rise(spawn, swimDelay)),
+      ...round.spawns.map((spawn) => this.rise(spawn, swimDelay)),
     ]);
   }
 
@@ -264,14 +264,14 @@ export class BoardAnimator implements TurnAnimator {
    * splitPoints), in the round's colour, bigger for bigger matches.
    */
   private score(
-    step: CascadeStep,
+    round: CascadeRound,
     plan: RoundPlan,
-    { points, round }: { points: number; round: number },
+    { points, roundIndex }: { points: number; roundIndex: number },
   ): void {
-    for (const { over, amount, size, blast } of splitPoints(step, points)) {
-      const delay = blast === undefined ? 0 : blastLands(step, plan, blast);
+    for (const { over, amount, size, blast } of splitPoints(round, points)) {
+      const delay = blast === undefined ? 0 : blastLands(round, plan, blast);
       this.fx.points(centreOf(over.map((cell) => this.view.cellToPoint(cell))), amount, {
-        round,
+        roundIndex,
         size,
         delay,
       });
@@ -279,10 +279,11 @@ export class BoardAnimator implements TurnAnimator {
   }
 
   /** Each match splashes at its middle as it clears, harder for bigger matches and deeper in a cascade. */
-  private splashMatches(step: CascadeStep, round: number): void {
-    for (const { cells } of step.matches) {
+  private splashMatches(round: CascadeRound, roundIndex: number): void {
+    for (const { cells } of round.matches) {
       const middle = centreOf(cells.map((cell) => this.view.cellToPoint(cell)));
-      const extra = Math.max(0, cells.length - 3) * WATER.matchPushPerKoi + round * WATER.matchPushPerRound;
+      const extra =
+        Math.max(0, cells.length - 3) * WATER.matchPushPerKoi + roundIndex * WATER.matchPushPerRound;
       this.water.push(this.onStage(middle), WATER.matchPush * (1 + extra), WATER.matchRadius);
     }
   }

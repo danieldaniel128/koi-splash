@@ -19,7 +19,7 @@ export interface GameEvents {
    * A cascade round clears: which round of the turn (0 = the swap's own), how many koi, and the strongest special it
    * made, if any.
    */
-  match: { round: number; size: number; made?: SpecialType };
+  match: { roundIndex: number; size: number; made?: SpecialType };
   /** A koi slips under; a koi settles into a new cell. */
   dive: undefined;
   land: undefined;

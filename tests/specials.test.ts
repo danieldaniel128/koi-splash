@@ -51,7 +51,7 @@ describe('specials in a cascade', () => {
     const board = boardFrom(['110134', '231402', '234012', '340123', '401234', '012340']);
     const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 0 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const [first] = result.steps;
+    const [first] = result.rounds;
     expect(first?.created).toHaveLength(1);
     expect(first?.created[0]?.at).toEqual({ col: 2, row: 0 });
     expect(first?.created[0]?.piece.special).toEqual({ type: 'line', along: 'row' });
@@ -62,7 +62,7 @@ describe('specials in a cascade', () => {
     const board = boardFrom(['232323', '32h232', '232323', '323232', '232323', '323232']);
     const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const [first] = result.steps;
+    const [first] = result.rounds;
     expect(first?.fired).toHaveLength(1);
     const swept = first?.cleared.filter((c) => c.blast === 0).map((c) => c.at.row);
     expect(new Set(swept)).toEqual(new Set([2])); // it moved to row 2 and swept it
@@ -73,7 +73,7 @@ describe('specials in a cascade', () => {
     const board = boardFrom(['232323', '3w2v23', '232323', '323232', '232323', '323232']);
     const result = trySwap(board, { col: 1, row: 1 }, { col: 1, row: 2 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const [first] = result.steps;
+    const [first] = result.rounds;
     expect(first?.fired.map((f) => f.piece.special?.type)).toEqual(['whirl']);
     expect(first?.fired[0]?.reach).toHaveLength(8);
     // the whirlpool moved to (1, 2); the striped koi at (3, 1) is out of its reach, so it stays
@@ -84,7 +84,7 @@ describe('specials in a cascade', () => {
     const board = boardFrom(['012340', '1r3401', '234012', '340123', '401234', '012340']);
     const result = trySwap(board, { col: 1, row: 1 }, { col: 2, row: 1 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
-    const [first] = result.steps;
+    const [first] = result.rounds;
     const blast = first?.fired[0];
     expect(blast?.target).toBe(3);
     const taken = first?.cleared.filter((c) => c.blast === 0) ?? [];

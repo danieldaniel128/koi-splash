@@ -22,8 +22,8 @@ const SOUND_OF: SoundMap = {
   moveSpent: (v, { movesLeft, goalsMet }) => {
     sounds.tick(v, goalsMet ? Infinity : movesLeft); // a victory lap ticks calmly
   },
-  match: (v, { round, size }) => {
-    sounds.match(v, round, size);
+  match: (v, { roundIndex, size }) => {
+    sounds.match(v, roundIndex, size);
   },
   dive: (v) => {
     sounds.dive(v);

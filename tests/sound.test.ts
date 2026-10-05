@@ -34,10 +34,10 @@ describe('playSoundsOf', () => {
     const events = createGameEvents();
     const voice = fakeVoice();
     playSoundsOf(events, voice);
-    events.emit('match', { round: 0, size: 3 });
+    events.emit('match', { roundIndex: 0, size: 3 });
     expect(voice.played.filter((p) => p.startsWith('pluck'))).toEqual(['pluck:494', 'pluck:659']); // B4, E5
     voice.played.length = 0;
-    events.emit('match', { round: 2, size: 4 }); // a cascade climbs, a 4 adds a third note
+    events.emit('match', { roundIndex: 2, size: 4 }); // a cascade climbs, a 4 adds a third note
     expect(voice.played.filter((p) => p.startsWith('pluck'))).toEqual([
       'pluck:659',
       'pluck:880',

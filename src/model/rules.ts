@@ -4,7 +4,7 @@ import { Board } from './Board';
 import type { PadField } from './pads';
 import type {
   BoardSpec,
-  CascadeStep,
+  CascadeRound,
   Cell,
   Fall,
   Kind,
@@ -99,7 +99,7 @@ export function hasAnyMove(board: Board): boolean {
 /**
  * Plays a swap. An invalid swap leaves the board untouched: cells not side by side, a cell with no koi (a pad or the
  * bank), or a swap that makes no match and fires no special. A valid one swaps, then settles the board (see settle)
- * and returns every round as data so the view can animate it step by step.
+ * and returns every round as data so the view can animate it round by round.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
 export function trySwap(
@@ -120,6 +120,12 @@ export function trySwap(
   return { valid: true, ...settle(board, spec, rng, { pads, swap: [b, a], firing }) };
 }
 
+/** A settled board: every round of its cascade, and whether the board was dealt again at the end. */
+export interface SettleResult {
+  readonly rounds: CascadeRound[];
+  readonly reshuffled: boolean;
+}
+
 /** What starts a cascade: the cells just swapped (a special appears there first), and specials set to fire. */
 export interface SettleStart {
   readonly pads?: PadField | undefined;
@@ -138,17 +144,17 @@ export function settle(
   spec: BoardSpec,
   rng: RandomSource,
   start: SettleStart = {},
-): { steps: CascadeStep[]; reshuffled: boolean } {
-  const steps: CascadeStep[] = [];
+): SettleResult {
+  const rounds: CascadeRound[] = [];
   let firing: readonly Trigger[] = start.firing ?? [];
   for (
     let matches = findMatches(board);
     matches.length > 0 || firing.length > 0;
     matches = findMatches(board)
   ) {
-    if (steps.length >= MAX_CASCADE) throw new Error('cascade did not settle');
+    if (rounds.length >= MAX_CASCADE) throw new Error('cascade did not settle');
     // the first round puts its special where the player swapped; later rounds in the middle of the shape
-    const round = resolveRound(board, matches, steps.length === 0 ? (start.swap ?? []) : [], firing);
+    const round = resolveRound(board, matches, rounds.length === 0 ? (start.swap ?? []) : [], firing);
     firing = [];
     const struck = [
       ...round.cleared.map((c) => c.at),
@@ -159,11 +165,11 @@ export function settle(
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
     const { created, fired, cleared } = round;
-    steps.push({ matches, created, fired, cleared, padEvents, falls, spawns });
+    rounds.push({ matches, created, fired, cleared, padEvents, falls, spawns });
   }
   const reshuffled = !hasAnyMove(board);
   if (reshuffled) fillSafely(board, spec.kinds, rng);
-  return { steps, reshuffled };
+  return { rounds, reshuffled };
 }
 
 // ---------------------------------------------------------------------------------------------------------------

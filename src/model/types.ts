@@ -114,7 +114,7 @@ export interface Spawn {
 }
 
 /** One round of a cascade: what matched, what was removed, what fell and what came in. */
-export interface CascadeStep {
+export interface CascadeRound {
   readonly matches: readonly Match[];
   /** Specials made this round, and specials that fired (matched, swapped or caught in a blast). */
   readonly created: readonly Created[];
@@ -128,7 +128,7 @@ export interface CascadeStep {
 
 export type SwapResult =
   | { readonly valid: false; readonly reason: 'not-adjacent' | 'blocked' | 'no-match' }
-  | { readonly valid: true; readonly steps: readonly CascadeStep[]; readonly reshuffled: boolean };
+  | { readonly valid: true; readonly rounds: readonly CascadeRound[]; readonly reshuffled: boolean };
 
 export const sameCell = (a: Cell, b: Cell): boolean => a.col === b.col && a.row === b.row;
 
