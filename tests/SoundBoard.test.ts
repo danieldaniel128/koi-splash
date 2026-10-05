@@ -19,6 +19,7 @@ const EVERY_EVENT: { readonly [K in keyof GameEvents]: GameEvents[K] } = {
   padDrift: undefined,
   reshuffle: undefined,
   goalMet: { n: 0 },
+  allGoalsMet: undefined,
   specialBorn: { type: 'line' },
   lineFired: undefined,
   whirlFired: undefined,

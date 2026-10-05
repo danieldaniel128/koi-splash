@@ -13,7 +13,7 @@ import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import { scoreRound } from '../model/score';
 import { starsFor, starsForWin } from '../model/stars';
 import type { StarRule } from '../model/stars';
-import type { BoardSpec, CascadeStep, Cell, Pad, PadEvent, PlacedPiece } from '../model/types';
+import type { BoardSpec, CascadeStep, Cell, Pad, PadEvent, PlacedPiece, Special } from '../model/types';
 import type { BoosterChange } from '../model/boosters';
 import type { BoosterGame } from './BoosterControl';
 import type { GameEventBus } from './events';
@@ -309,10 +309,11 @@ export class GameScene implements BoosterGame, SwapGame {
     }
 
     this.level.movesLeft--;
+    const lap = this.level.goal.isComplete(); // every goal met before this move: the moves left are a victory lap
     const spent = this.status(); // the move is spent at once; the score climbs as the rounds play
     const turn = this.count(result);
     this.deps.events.emit('swap');
-    this.deps.events.emit('moveSpent', { movesLeft: this.level.movesLeft });
+    this.deps.events.emit('moveSpent', { movesLeft: this.level.movesLeft, goalsMet: lap });
     this.deps.status.update(spent);
     await animator.swap(first, second);
     await this.playCascade(turn);
@@ -370,12 +371,15 @@ export class GameScene implements BoosterGame, SwapGame {
   /** Says what a round did: its match, what happened to the lily pads (once each), and the goals it met. */
   private announce(step: CascadeStep, round: number, met: readonly number[]): void {
     const { events } = this.deps;
-    if (step.cleared.length > 0) events.emit('match', { round, size: step.cleared.length });
+    if (step.cleared.length > 0) {
+      events.emit('match', { round, size: step.cleared.length, ...strongestMade(step) });
+    }
     const pads = new Set(step.padEvents.map((event) => event.type));
     if (pads.has('hit')) events.emit('budHit');
     if (pads.has('bloom')) events.emit('bloom');
     if (pads.has('drift')) events.emit('padDrift');
     for (const n of met) events.emit('goalMet', { n });
+    if (met.at(-1) === this.level.goal.progress().length - 1) events.emit('allGoalsMet');
   }
 
   private status(): GameStatus {
@@ -400,3 +404,12 @@ export class GameScene implements BoosterGame, SwapGame {
     ];
   }
 }
+
+/** The strongest special a round made (a rainbow over a whirlpool over a striped koi), if it made one. */
+function strongestMade(step: CascadeStep): { made?: Special['type'] } {
+  const types = step.created.map(({ piece }) => piece.special?.type);
+  const made = SPECIAL_RANK.find((type) => types.includes(type));
+  return made ? { made } : {};
+}
+
+const SPECIAL_RANK: readonly Special['type'][] = ['rainbow', 'whirl', 'line'];

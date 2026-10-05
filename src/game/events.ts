@@ -10,10 +10,16 @@ export interface GameEvents {
   /** A valid swap starts, or a swap that makes nothing bounces back. */
   swap: undefined;
   invalidSwap: undefined;
-  /** A move was spent: how many are left. */
-  moveSpent: { movesLeft: number };
-  /** A cascade round clears: which round of the turn (0 = the swap's own) and how many koi. */
-  match: { round: number; size: number };
+  /**
+   * A move was spent: how many are left, and whether every goal is met already (the moves left are a victory lap,
+   * nothing to warn about).
+   */
+  moveSpent: { movesLeft: number; goalsMet?: boolean };
+  /**
+   * A cascade round clears: which round of the turn (0 = the swap's own), how many koi, and the strongest special it
+   * made, if any.
+   */
+  match: { round: number; size: number; made?: Special['type'] };
   /** A koi slips under; a koi settles into a new cell. */
   dive: undefined;
   land: undefined;
@@ -23,8 +29,9 @@ export interface GameEvents {
   padDrift: undefined;
   /** The board had no move left and was dealt again. */
   reshuffle: undefined;
-  /** A goal was met (the nth this level, from 0). */
+  /** A goal was met (the nth this level, from 0); the last one, so every goal is met and the rest is a victory lap. */
   goalMet: { n: number };
+  allGoalsMet: undefined;
   /** A special is born, or fires. */
   specialBorn: { type: Special['type'] };
   lineFired: undefined;

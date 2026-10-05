@@ -52,7 +52,10 @@ export class Hud implements StatusDisplay {
   }
 
   update(status: GameStatus): void {
-    this.moves.update(status.movesLeft);
+    this.moves.update(
+      status.movesLeft,
+      status.goals.every((goal) => goal.done >= goal.target),
+    );
     this.score.update(status.score);
     this.goal.update(status.goals);
     this.stars.update(status.score, status.stars);
