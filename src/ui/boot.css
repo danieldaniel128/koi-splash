@@ -1,9 +1,10 @@
 /*
- * The loading screen: the game's name under the moon, over a still pond with the moon's reflection in it, and a bar
- * filling as the game loads.
+ * The screens before the game. The loading screen: the game's name under the moon, over a still pond with the moon's
+ * reflection in it, and a bar filling as the game loads. And, if the game can't start, a card saying so.
  */
 
-.loading {
+.loading,
+.boot-error {
   position: fixed;
   inset: 0;
   z-index: 5; /* over the game while it loads, under the rotate notice */
@@ -82,4 +83,24 @@
   .loading__fill {
     transition: none;
   }
+}
+
+.boot-error__card {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-sm);
+  max-width: 300px;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.boot-error__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-gold);
+}
+
+.boot-error__text {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.4;
 }

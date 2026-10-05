@@ -1,5 +1,5 @@
 import { GardenMusic } from '../audio/GardenMusic';
-import { byBus, Mixer } from '../audio/Mixer';
+import { BUSES, byBus, Mixer } from '../audio/Mixer';
 import type { Bus } from '../audio/Mixer';
 import { NightAmbience } from '../audio/NightAmbience';
 import { SampleTrack } from '../audio/SampleTrack';
@@ -23,6 +23,8 @@ export interface Sound {
   readonly settings: Record<Bus, StoredSetting>;
   /** Written a little ahead on every frame. */
   readonly soundtrack: Soundtrack;
+  /** Silences it for good (the game could not start): every channel off and the sound asleep. */
+  stop(): void;
 }
 
 /**
@@ -37,10 +39,20 @@ export function startSound(events: GameEventBus): Sound {
   new SoundBoard(events, new Synth(mixer, 'sfx'));
   const soundtrack = new Soundtrack(events, [musicTrack(mixer), ambienceTrack(mixer)], mixer);
   mixer.listenForUnlock(window);
-  document.addEventListener('visibilitychange', () => {
-    mixer.setAwake(!document.hidden);
-  });
-  return { mixer, settings, soundtrack };
+  const following = new AbortController(); // the page's visibility, until the sound is stopped
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      mixer.setAwake(!document.hidden);
+    },
+    { signal: following.signal },
+  );
+  const stop = (): void => {
+    following.abort();
+    for (const bus of BUSES) mixer.setOn(bus, false); // for this visit only: the player's choices stay stored
+    mixer.setAwake(false);
+  };
+  return { mixer, settings, soundtrack, stop };
 }
 
 /** The menu at the end of the booster bar that switches each channel. Returned for the Escape key. */
