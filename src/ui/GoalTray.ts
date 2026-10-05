@@ -16,6 +16,12 @@ export interface GoalIcons {
 /** How far the score is from an element (stage px), for a met goal's bonus to fly there. */
 export type TowardScore = (from: HTMLElement) => { readonly x: number; readonly y: number };
 
+/** The bonus a chip shows as its goal is met: its points, flying into the score. */
+interface ChipBonus {
+  readonly points: number;
+  readonly towardScore: TowardScore;
+}
+
 /**
  * The level's goals, one chip each: the goal's icon and how many are still to go (lotuses to bloom, koi of a colour
  * to clear, points to score), ticking down with a pop and turning into a check once that goal is met. The chips are
@@ -37,7 +43,7 @@ export class GoalTray {
   reset(goals: readonly GoalProgress[]): void {
     this.element.classList.toggle('goal--many', goals.length > GOAL_TRAY.roomy);
     const bonus = { points: this.icons.bonus, towardScore: this.towardScore };
-    this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal), bonus));
+    this.chips = goals.map((goal) => new GoalChip(goal, goalPicture(goal, this.icons), bonus));
     this.row.replaceChildren(...this.chips.map((chip) => chip.element));
   }
 
@@ -50,20 +56,26 @@ export class GoalTray {
     const chip = this.chips.find((c) => c.kind === kind) ?? this.chips[0];
     return chip?.icon ?? this.element;
   }
-
-  /** Each goal type's picture (null: a star, for a score goal). One per type: a new goal asks for its icon here. */
-  private iconFor(goal: GoalProgress): string | null {
-    const icons: Readonly<Record<GoalType, () => string | null>> = {
-      lotus: () => this.icons.lotus,
-      koi: () => this.icons.koi[goal.koi ?? 0] ?? null,
-      score: () => null,
-    };
-    return icons[goal.kind]();
-  }
 }
 
-/** One goal's chip. To a screen reader it is one picture, named by its goal and how far it has to go. */
-class GoalChip {
+/**
+ * A goal's picture: the lotus, or the koi of its colour; null for a score goal, which shows a star. One per goal type:
+ * a new goal asks for its icon here.
+ */
+export function goalPicture(goal: GoalProgress, icons: GoalIcons): string | null {
+  const pictures: Readonly<Record<GoalType, () => string | null>> = {
+    lotus: () => icons.lotus,
+    koi: () => icons.koi[goal.koi ?? 0] ?? null,
+    score: () => null,
+  };
+  return pictures[goal.kind]();
+}
+
+/**
+ * One goal's chip: its picture and how many are still to go, or a check once it's met. To a screen reader it is one
+ * picture, named by its goal and how far it has to go. Given a bonus, it shows it flying off as the goal is met.
+ */
+export class GoalChip {
   readonly element: HTMLElement;
   readonly icon = el('span', 'chip__icon');
   readonly kind: GoalProgress['kind'];
@@ -74,7 +86,7 @@ class GoalChip {
   constructor(
     goal: GoalProgress,
     picture: string | null,
-    private readonly bonus: { readonly points: number; readonly towardScore: TowardScore },
+    private readonly bonus: ChipBonus | null = null,
   ) {
     this.kind = goal.kind;
     this.name = goalName(goal);
@@ -92,7 +104,7 @@ class GoalChip {
     this.left = left;
     this.show();
     bump(this.element, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
-    if (left === 0 && this.bonus.points > 0) this.showBonus();
+    if (left === 0 && this.bonus && this.bonus.points > 0) this.showBonus(this.bonus);
   }
 
   private show(): void {
@@ -107,10 +119,10 @@ class GoalChip {
    * The goal's bonus pops out of the chip in gold, then flies into the score, which it was just added to. With less
    * motion it only fades in and out where it is.
    */
-  private showBonus(): void {
-    const label = el('span', 'number chip__bonus', `+${this.bonus.points}`);
+  private showBonus(bonus: ChipBonus): void {
+    const label = el('span', 'number chip__bonus', `+${bonus.points}`);
     this.element.append(label);
-    const to = this.bonus.towardScore(this.element);
+    const to = bonus.towardScore(this.element);
     const pose = (transform: string): string => (wantsLessMotion() ? 'none' : transform);
     const flight = label.animate(
       [
@@ -133,7 +145,7 @@ function leftOf(goal: GoalProgress): number {
 }
 
 /** What a goal is called out loud: lotuses, red koi, points. */
-function goalName(goal: GoalProgress): string {
+export function goalName(goal: GoalProgress): string {
   if (goal.kind === 'lotus') return 'lotuses';
   if (goal.kind === 'koi') return `${KOI_NAMES[goal.koi ?? 0] ?? ''} koi`;
   return 'points';

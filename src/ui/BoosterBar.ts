@@ -21,6 +21,8 @@ interface Button {
  */
 export class BoosterBar implements BoosterButtons {
   private readonly buttons = new Map<BoosterType, Button>();
+  /** How many of each booster the bar shows left. */
+  private readonly left = new Map<BoosterType, number>();
   private pressed: ((type: BoosterType) => void) | null = null;
 
   constructor(layer: UiLayer, rect: Rect, slots: readonly BoosterSlot[]) {
@@ -31,6 +33,11 @@ export class BoosterBar implements BoosterButtons {
   /** Where the presses go. */
   onPress(handler: (type: BoosterType) => void): void {
     this.pressed = handler;
+  }
+
+  /** How many boosters in all are still there to use (the end card mentions them). */
+  unused(): number {
+    return [...this.left.values()].reduce((sum, left) => sum + Math.max(0, left), 0);
   }
 
   /** A booster's button, for things that start there (the feed's pellets). */
@@ -48,6 +55,7 @@ export class BoosterBar implements BoosterButtons {
   setLeft(type: BoosterType, left: number): void {
     const button = this.buttons.get(type);
     if (!button) return;
+    this.left.set(type, left);
     const spent = left <= 0;
     const wasSpent = button.element.classList.contains('booster--used');
     button.element.classList.toggle('booster--used', spent);
@@ -75,6 +83,7 @@ export class BoosterBar implements BoosterButtons {
     });
     const parts = { element, orb, badge, label };
     this.buttons.set(slot.type, parts);
+    this.left.set(slot.type, slot.count);
     return parts;
   }
 }

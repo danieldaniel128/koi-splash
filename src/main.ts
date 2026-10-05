@@ -54,7 +54,7 @@ async function boot(page: BootPage, running: Stop[]): Promise<void> {
     events.emit('buttonClicked');
     screenFlow.replay();
   });
-  const { warmUp } = await loadGame(app, screen, { events, sound, screenFlow }, (done) => {
+  const { warmUp } = await loadGame(app, screen, { events, sound, screenFlow, card }, (done) => {
     loader.setProgress(done);
   });
   app.start();

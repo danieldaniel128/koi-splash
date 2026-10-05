@@ -13,6 +13,7 @@ import { createFlash, Impact } from '../view/Impact';
 import { Sparkles } from '../view/Sparkles';
 import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
+import type { ResultCard } from '../ui/ResultCard';
 import type { KoiTextures } from '../view/KoiTextures';
 import type { SpecialTextures } from '../view/SpecialTextures';
 import { bakeShoreField } from '../view/water/PondWater';
@@ -28,11 +29,15 @@ import { addSoundMenu } from './sound';
 import type { Sound } from './sound';
 import { buildStage, putUnderWater } from './stage';
 
-/** What the game is wired to before loading starts: the events bus, the sound, and the flow between screens. */
+/**
+ * What the game is wired to before loading starts: the events bus, the sound, the flow between screens, and the end
+ * card (it shows the goals' pictures and the boosters left, once there is a game).
+ */
 export interface GameWiring {
   readonly events: GameEventBus;
   readonly sound: Sound;
   readonly screenFlow: ScreenFlow;
+  readonly card: ResultCard;
 }
 
 /** What loading leaves for later: the art the game may want once it's played, to bake in the background. */
@@ -102,7 +107,8 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     screenFlow: wiring.screenFlow,
     events,
   };
-  const { parts: game, control } = createGame(screen, materials, app.canvas);
+  const { parts: game, control, bar } = createGame(screen, materials, app.canvas);
+  wiring.card.setGame({ goalIcons: made.goalIcons, boostersLeft: () => bar.unused() });
   const menu = addSoundMenu(screen, sound, events); // after the booster bar it ends, for the keyboard too
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);

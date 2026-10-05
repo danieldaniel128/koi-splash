@@ -94,7 +94,7 @@ export const SPECIAL_MENU = {
   closeScale: 0.6,
 } as const satisfies { choices: readonly PetalChoice[] } & Record<string, unknown>;
 
-/** The end-of-level card fades in and pops (s). */
+/** The end-of-level card fades in and pops (s), and what it says out of moves. */
 export const RESULT_CARD = {
   /** A won pond is celebrated for this long before the card opens (s). */
   winBeat: 0.9,
@@ -104,6 +104,17 @@ export const RESULT_CARD = {
   firstStar: 0.4,
   starStep: 0.35,
   starPop: 0.4,
+  /**
+   * Out of moves, the card says what to try next, for the first goal missed ({goal} is its name, "red koi"), and
+   * reminds the player of the free boosters left unused ({n}).
+   */
+  tips: {
+    lotus: 'A lotus opens when you match koi right beside its bud, twice.',
+    koi: 'Match four or five in a row: specials clear the {goal} fastest.',
+    score: 'Long matches and specials score the most points.',
+  },
+  unusedBooster: 'You still had a free booster!',
+  unusedBoosters: 'You still had {n} free boosters!',
 } as const;
 
 /** A lost graphics context that hasn't come back after this long (s) is given up on: the error screen shows. */

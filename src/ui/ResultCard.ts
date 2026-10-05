@@ -2,17 +2,27 @@ import { RESULT_CARD } from '../config/ui';
 import { Timers } from '../core/Timers';
 import type { ResultDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
-import type { GoalProgress, GoalType } from '../model/goals';
+import type { GoalProgress } from '../model/goals';
 import { THEME } from '../theme/theme';
+import { GoalChip, goalName, goalPicture } from './GoalTray';
+import type { GoalIcons } from './GoalTray';
 import { STAR, setIcon } from './icons';
 import { button, el, wantsLessMotion } from './UiLayer';
 
+/** What the card shows of the game it ends: the goals' pictures, and how many free boosters are still unused. */
+export interface CardGame {
+  readonly goalIcons: GoalIcons;
+  boostersLeft(): number;
+}
+
 /**
  * The end-of-level card over the dimmed pond: won (with the stars earned landing one by one) or out of moves, the
- * score and the goal, and a button to play again. It dims the whole screen and its card scales with the stage
- * (--ui-scale). It is a modal dialog: named by its title and described by the score and the goals, and while it's up
- * the game under it takes no tap or Tab (the screen flow puts the focus on Play again). Display only: whoever owns
- * the level decides what playing again means (onRestart), and what a star landing sounds like (onStarLanded).
+ * score, each goal as the HUD shows it (a missed one in coral) with how far it got, and a button to play again. Out
+ * of moves, it says what to try next. It dims the whole screen and its card scales with the stage (--ui-scale).
+ *
+ * It is a modal dialog: named by its title and described by the score, the goals and the tip, and while it's up the
+ * game under it takes no tap or Tab (the screen flow puts the focus on Play again). Display only: whoever owns the
+ * level decides what playing again means (onRestart), and what a star landing sounds like (onStarLanded).
  */
 export class ResultCard implements ResultDisplay {
   private readonly root: HTMLElement;
@@ -20,14 +30,18 @@ export class ResultCard implements ResultDisplay {
   private readonly title = el('h2', 'number result__title');
   private readonly stars = [0, 1, 2].map(() => el('span', 'star result__star'));
   private readonly starRow = el('div', 'result__stars', ...this.stars);
-  private readonly score = el('p', 'number result__score');
+  private readonly score = el('span', 'number result__score');
+  private readonly total = el('p', 'result__total', this.score, el('span', 'label', 'score'));
+  private readonly goals = el('div', 'result__goals');
   private readonly detail = el('p', 'label result__detail');
+  private readonly tip = el('p', 'result__tip');
   private readonly again = button('btn', undefined, 'Play again');
   /** The card's own timeouts (its stars landing, its taps opening): cancelled when it closes, so none fires later. */
   private readonly timers = new Timers();
   /** Taps count once the card is fully up, so a last swipe on the board can't press Play again by accident. */
   private takesTaps = false;
   private starLanded: ((k: number) => void) | null = null;
+  private game: CardGame | null = null;
 
   constructor(private readonly host: HTMLElement) {
     for (const star of this.stars) setIcon(star, STAR);
@@ -36,14 +50,21 @@ export class ResultCard implements ResultDisplay {
       'panel result__card',
       this.title,
       this.starRow,
-      this.score,
+      this.total,
+      this.goals,
       this.detail,
+      this.tip,
       this.again,
     );
     this.root = el('div', 'result', this.card);
     this.root.hidden = true;
     this.makeDialog();
     host.appendChild(this.root);
+  }
+
+  /** The game the card ends, once it's loaded (the card is made before it, for the screen flow). */
+  setGame(game: CardGame): void {
+    this.game = game;
   }
 
   /** What Play again does, once the card takes taps. */
@@ -61,8 +82,10 @@ export class ResultCard implements ResultDisplay {
   show(outcome: 'won' | 'lost', status: GameStatus): void {
     const won = outcome === 'won';
     this.title.textContent = won ? 'Pond complete!' : 'Out of moves';
-    this.score.textContent = `${status.score}`;
-    this.detail.textContent = status.goals.map(goalLine).join(' · ');
+    this.score.textContent = status.score.toLocaleString();
+    this.showGoals(status.goals);
+    this.tip.textContent = won ? '' : this.tipFor(status.goals);
+    this.tip.hidden = this.tip.textContent === '';
     this.starRow.hidden = !won;
     this.starRow.setAttribute('aria-label', `${status.stars} of ${this.stars.length} stars`);
     this.root.hidden = false;
@@ -83,6 +106,7 @@ export class ResultCard implements ResultDisplay {
     this.timers.cancelAll();
     this.takesTaps = false;
     this.root.hidden = true;
+    this.goals.replaceChildren(); // the HUD's chips are the only goal chips on the page while the game is played
     this.holdGame(false);
   }
 
@@ -91,15 +115,42 @@ export class ResultCard implements ResultDisplay {
     this.again.focus();
   }
 
-  /** The card is a modal dialog, named by its title and described by its score and goals. */
+  /** Each goal as the HUD shows it (a check, or how many were still to go; a missed one in coral), then in words. */
+  private showGoals(goals: readonly GoalProgress[]): void {
+    const icons = this.game?.goalIcons;
+    const chips = icons
+      ? goals.map((goal) => {
+          const chip = new GoalChip(goal, goalPicture(goal, icons));
+          chip.element.classList.toggle('chip--missed', goal.done < goal.target);
+          return chip.element;
+        })
+      : [];
+    this.goals.replaceChildren(...chips);
+    this.detail.textContent = goals.map(goalLine).join(' · ');
+  }
+
+  /** What to try next: a tip for the first goal missed, and the free boosters left unused. */
+  private tipFor(goals: readonly GoalProgress[]): string {
+    const missed = goals.find((goal) => goal.done < goal.target);
+    const tip = missed ? RESULT_CARD.tips[missed.kind].replace('{goal}', goalName(missed)) : '';
+    const unused = this.game?.boostersLeft() ?? 0;
+    const nudge =
+      unused === 0
+        ? ''
+        : unused === 1
+          ? RESULT_CARD.unusedBooster
+          : RESULT_CARD.unusedBoosters.replace('{n}', `${unused}`);
+    return [tip, nudge].filter((line) => line !== '').join(' ');
+  }
+
+  /** The card is a modal dialog, named by its title and described by its score, goals and tip. */
   private makeDialog(): void {
-    this.title.id = 'result-title';
-    this.score.id = 'result-score';
-    this.detail.id = 'result-detail';
+    const parts = { title: this.title, total: this.total, detail: this.detail, tip: this.tip };
+    for (const [name, part] of Object.entries(parts)) part.id = `result-${name}`;
     this.card.setAttribute('role', 'dialog');
     this.card.setAttribute('aria-modal', 'true');
     this.card.setAttribute('aria-labelledby', this.title.id);
-    this.card.setAttribute('aria-describedby', `${this.score.id} ${this.detail.id}`);
+    this.card.setAttribute('aria-describedby', `${this.total.id} ${this.detail.id} ${this.tip.id}`);
     this.starRow.setAttribute('role', 'img');
   }
 
@@ -128,13 +179,9 @@ export class ResultCard implements ResultDisplay {
   }
 }
 
-/** One goal on the card: how far it got (one line per goal type: a new goal asks for its line here). */
-const GOAL_LINE: Readonly<Record<GoalType, (goal: GoalProgress) => string>> = {
-  lotus: (goal) => `lotus ${goal.done} / ${goal.target}`,
-  koi: (goal) => `koi ${goal.done} / ${goal.target}`,
-  score: (goal) => `goal ${goal.target}`,
-};
-
+/** One goal in words, how far it got: "Lotuses 2/3", "Red koi 7/10", "Points 2,400/3,000". */
 function goalLine(goal: GoalProgress): string {
-  return GOAL_LINE[goal.kind](goal);
+  const name = goalName(goal);
+  const done = Math.min(goal.done, goal.target).toLocaleString();
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${done}/${goal.target.toLocaleString()}`;
 }

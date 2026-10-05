@@ -74,9 +74,6 @@
 }
 
 .goal {
-  --chip-icon: var(--size-goalIcon);
-  --chip-count: var(--text-lg);
-  --chip-gap: var(--space-xs);
   display: grid;
   justify-items: center;
   gap: 1px;
@@ -86,7 +83,11 @@
 .goal--many {
   --chip-icon: calc(var(--size-goalIcon) * 0.8);
   --chip-count: var(--text-md);
-  --chip-gap: calc(var(--space-xs) / 2);
+}
+
+.goal--many .goal__chips,
+.goal--many .chip {
+  gap: calc(var(--space-xs) / 2);
 }
 
 .goal--many .chip {
@@ -95,27 +96,25 @@
 
 .goal__chips {
   display: flex;
-  gap: var(--chip-gap);
+  gap: var(--space-xs);
 }
 
-.goal__chips > .chip {
-  gap: var(--chip-gap);
-}
-
+/* A goal chip's parts (the HUD's, and the end card's): sized by --chip-icon and --chip-count, when its row sets them. */
 .chip__icon {
+  --box: var(--chip-icon, var(--size-goalIcon));
   display: grid;
   place-items: center;
-  width: var(--chip-icon);
-  height: var(--chip-icon);
+  width: var(--box);
+  height: var(--box);
   color: var(--color-gold);
 }
 
 /* A goal's picture, --image-scale times the icon's box (from the config), centered on it and spilling out of it. */
 .chip__image {
-  --image: calc(var(--chip-icon) * var(--image-scale));
+  --image: calc(var(--box) * var(--image-scale));
   width: var(--image);
   height: var(--image);
-  margin: calc((var(--chip-icon) - var(--image)) / 2);
+  margin: calc((var(--box) - var(--image)) / 2);
 }
 
 .chip__image--koi {
@@ -128,7 +127,7 @@
   place-items: center;
   min-width: 18px;
   height: 22px;
-  font-size: var(--chip-count);
+  font-size: var(--chip-count, var(--text-lg));
 }
 
 /* A met goal's bonus: it pops out of the middle of its chip, then flies into the score. */
@@ -151,6 +150,16 @@
 
 .chip--done .chip__count {
   color: var(--color-gold);
+}
+
+/* A goal missed, on the end card: its rim and count in coral, like the last moves. */
+.chip--missed {
+  --rim-color: var(--color-coral);
+  --rim-width: var(--line-normal);
+}
+
+.chip--missed .chip__count {
+  color: var(--color-coral);
 }
 
 /* The star bar, inset by half a star at each end, so the stars at its ends stay inside the panel. */

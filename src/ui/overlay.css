@@ -47,12 +47,31 @@
   margin-bottom: var(--space-sm); /* the middle star sits up, bigger */
 }
 
+/* The score, big, with its caption under it like the HUD's counters. */
+.result__total {
+  display: grid;
+  justify-items: center;
+}
+
 .result__score {
   font-size: var(--text-display);
 }
 
+.result__goals {
+  display: flex;
+  gap: var(--space-xs);
+}
+
 .result__detail {
   font-size: var(--text-sm);
+}
+
+/* Out of moves: what to try next. */
+.result__tip {
+  font-size: var(--text-md);
+  line-height: 1.35;
+  text-align: center;
+  color: var(--color-goldLight);
 }
 
 .result__card > .btn {
