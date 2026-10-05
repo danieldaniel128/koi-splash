@@ -53,4 +53,24 @@ describe('ringAlongShore', () => {
     for (let i = 1; i < stones.length; i++)
       expect(stones[i]?.at[1]).toBeGreaterThanOrEqual(stones[i - 1]?.at[1] ?? 0);
   });
+
+  it('piles no stones on a notch one cell wide: the strip of bank there gets one along it', () => {
+    // a notch in the left side, one row tall: the bank there is a strip much thinner than a stone
+    const shore = traceShore(parseShape(['#####', '#####', '.####', '#####', '#####']), BOARD, {
+      margin: { left: MARGIN, right: MARGIN, top: MARGIN, bottom: MARGIN },
+      cornerRadius: RADIUS,
+    });
+    const notchRow = BOARD.y + 2.5 * BOARD.cell;
+    const sitsOn = (a: ShorePiece, b: ShorePiece): boolean =>
+      Math.abs(a.at[0] - b.at[0]) < b.radius[0] && Math.abs(a.at[1] - b.at[1]) < b.radius[1];
+    for (let seed = 1; seed <= 20; seed++) {
+      const rng = new Random(seed);
+      const stones = ringAlongShore(shore, LOOK, () => rng.next());
+      const onNotch = stones.filter(
+        ({ at: [x, y] }) => x < BOARD.x + BOARD.cell && Math.abs(y - notchRow) < BOARD.cell / 2,
+      );
+      expect(onNotch.length).toBeGreaterThan(0);
+      for (const a of onNotch) for (const b of onNotch) if (a !== b) expect(sitsOn(a, b)).toBe(false);
+    }
+  });
 });

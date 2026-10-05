@@ -53,7 +53,7 @@ screen's real pixel density, so the whole border is one texture and one draw cal
 Changing the look is meant to be config, not surgery:
 
 - **A different board shape:** draw it in `LEVEL.shape` (`#` a cell, `.` bank). The water, the stones and the
-  rules all follow; keep notches at least 2 cells wide so the stones fit.
+  rules all follow; a notch one cell wide is too thin for stones on both its sides, so it gets one along it.
 - **A different border** (planks, bushes, lanterns): write a painter for one piece in `src/art`, add it to
   `SHORE_STYLES` and set `POND.shore.style`. Piece sizes, spacing, how far they sit out on the bank and the corner
   pieces are in `POND.shore`; `LAYOUT.shoreWidth` keeps room for them on screen.

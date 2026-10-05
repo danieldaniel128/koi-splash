@@ -12,8 +12,8 @@ export const LEVEL = {
    */
   moves: 15,
   /**
-   * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). Keep a notch or
-   * bay at least 2 cells wide, so there is room for the stones on both of its sides.
+   * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). A notch 1 cell
+   * wide is too thin for stones on both its sides, so it gets one stone along it; a wider one gets a row on each side.
    */
   shape: ['..###..', '.#####.', '#######', '#######', '.#####.', '#######', '#######', '.#####.', '..###..'],
   /**
