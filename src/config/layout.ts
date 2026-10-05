@@ -29,13 +29,22 @@ export interface LayoutConfig {
    * like the art over the board in commercial match-3s.
    */
   readonly pondAlign: number;
-  /** Bounds for a cell's size, so a tablet doesn't get giant koi and a small phone tiny ones. */
+  /**
+   * The room the garden needs: `beside` the pond on both sides (a wide screen), or else `sky` of open sky between the
+   * HUD and the pond. To keep that sky the cell gives up size, but never below minCell.
+   */
+  readonly garden: { readonly beside: number; readonly sky: number };
   readonly minCell: number;
-  readonly maxCell: number;
   /** The instruction pill shown while a booster is armed: its height, and the gap between it and the board under it. */
   readonly pillHeight: number;
   readonly pillGap: number;
 }
+
+/**
+ * The room the garden needs (px): with `beside` on both sides of the pond it moves beside it; above the pond it needs
+ * `sky` of open sky under the HUD, or the pagoda, the branch and the lantern are left out (see art/backdrop).
+ */
+export const GARDEN_ROOM = { beside: 120, sky: 70 } as const;
 
 /**
  * How the game is laid out on any screen (see layoutGame), in stage px. The stage is at least 360 x 640 (a common
@@ -58,8 +67,9 @@ export const LAYOUT = {
    */
   cellGap: 1,
   pondAlign: 1, // all the room left over goes to the garden above the pond
+  /** The garden's room: on a phone too short for it, the cell gives up size, down to minCell. */
+  garden: GARDEN_ROOM,
   minCell: 36,
-  maxCell: 60,
   pillHeight: 40,
   pillGap: 12,
 } as const satisfies Omit<LayoutConfig, 'cols' | 'rows'>; // the board's size comes from its shape

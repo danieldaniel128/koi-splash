@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { planBackdrop } from '../src/art/backdrop';
+import { GARDEN_ROOM, LAYOUT } from '../src/config/layout';
+import { LEVEL } from '../src/config/level';
 import { layoutGame } from '../src/layout/gameLayout';
+import { parseShape } from '../src/model/shape';
 import type { LayoutConfig } from '../src/config/layout';
+import type { GameLayout } from '../src/layout/gameLayout';
 
 const CONFIG: LayoutConfig = {
   cols: 7,
@@ -15,8 +20,8 @@ const CONFIG: LayoutConfig = {
   pondMargin: { left: 26, right: 26, top: 24, bottom: 70 },
   cellGap: 4,
   pondAlign: 0.5,
+  garden: { beside: 120, sky: 0 },
   minCell: 36,
-  maxCell: 56,
   pillHeight: 40,
   pillGap: 12,
 };
@@ -89,9 +94,59 @@ describe('layoutGame', () => {
     expect(low.bar.y).toBeGreaterThanOrEqual(low.pond.y + low.pond.height + CONFIG.shoreWidth);
   });
 
-  it('keeps the cell within its bounds and the gap between pieces', () => {
+  it('keeps the gap between pieces', () => {
     const tablet = layoutGame({ width: 1024, height: 1366 }, NO_INSETS, CONFIG).board;
-    expect(tablet.cell).toBeLessThanOrEqual(56);
     expect(tablet.piece).toBe(tablet.cell - 4);
+  });
+
+  it("shrinks the cell for the garden's sky only down to minCell", () => {
+    const greedy = { ...CONFIG, garden: { beside: 120, sky: 400 } };
+    expect(layoutGame({ width: 360, height: 640 }, NO_INSETS, greedy).board.cell).toBeCloseTo(CONFIG.minCell);
+  });
+});
+
+describe("layoutGame with the game's own layout", () => {
+  /** The garden's frame for a layout, as the game paints it. */
+  const gardenOf = (layout: GameLayout): ReturnType<typeof planBackdrop> & { sky: number } => {
+    const { stage, hud, pond, scene } = layout;
+    const shore = LAYOUT.shoreWidth;
+    const open = hud.y + hud.height;
+    const plan = planBackdrop({
+      width: stage.width,
+      height: stage.height,
+      open,
+      sceneBottom: scene.height,
+      pond: { left: pond.x - shore, right: pond.x + pond.width + shore },
+    });
+    return { ...plan, sky: scene.height - open };
+  };
+  const shape = parseShape(LEVEL.shape);
+  const gameConfig = { ...LAYOUT, cols: shape.cols, rows: shape.rows };
+  const noSky = { ...gameConfig, garden: { ...gameConfig.garden, sky: 0 } };
+
+  it('leaves the garden its sky above the pond on 16:9 phones and upright tablets', () => {
+    for (const screen of [
+      { width: 360, height: 640 },
+      { width: 375, height: 667 },
+      { width: 768, height: 1024 },
+    ]) {
+      const layout = layoutGame(screen, NO_INSETS, gameConfig);
+      const garden = gardenOf(layout);
+      expect(garden.wide).toBe(false);
+      expect(garden.sky).toBeGreaterThanOrEqual(GARDEN_ROOM.sky);
+      expect(layout.board.cell).toBeGreaterThanOrEqual(LAYOUT.minCell);
+      expect(layout.hud.width).toBeCloseTo(LAYOUT.designWidth - LAYOUT.sidePadding * 2); // room for the HUD
+    }
+  });
+
+  it('keeps the full-size board where the garden already has room: a tall phone, a wide screen', () => {
+    for (const screen of [
+      { width: 390, height: 844 },
+      { width: 1366, height: 768 },
+    ]) {
+      const layout = layoutGame(screen, NO_INSETS, gameConfig);
+      expect(layout.board.cell).toBeCloseTo(layoutGame(screen, NO_INSETS, noSky).board.cell);
+    }
+    expect(gardenOf(layoutGame({ width: 1366, height: 768 }, NO_INSETS, gameConfig)).wide).toBe(true);
   });
 });
