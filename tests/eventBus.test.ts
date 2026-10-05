@@ -31,7 +31,7 @@ describe('EventBus', () => {
     stop();
     bus.emit('match', { round: 2 });
     expect(heard).toEqual([1, 10, 20]);
-    expect(error).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledOnce(); // a broken listener is logged once, not on every emit
     error.mockRestore();
   });
 });
