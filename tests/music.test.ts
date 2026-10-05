@@ -78,6 +78,13 @@ describe('the composer', () => {
     expect((melodic(cadence ?? []).at(-1)?.pitches[0] ?? 1) % 12).toBe(0);
   });
 
+  it('stays on the home chord after the win cadence, under the pad it holds', () => {
+    const [, , , , after] = compose(['calm', 'calm', 'calm', 'cadence', 'rest']);
+    const [home] = MUSIC.progression;
+    expect(after?.find((n) => n.part === 'bass')?.pitches).toEqual([home.root]);
+    expect(after?.some((n) => n.part === 'pad')).toBe(false);
+  });
+
   it('plays the same for the same seed', () => {
     expect(compose(['calm', 'calm', 'tense'], 3)).toEqual(compose(['calm', 'calm', 'tense'], 3));
   });
