@@ -29,7 +29,7 @@ type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
 interface LevelState {
   movesLeft: number;
   score: number;
-  readonly goal: Goal;
+  readonly goals: Goal;
 }
 
 /**
@@ -40,7 +40,7 @@ const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'idle', to: 'swapping', when: (level) => level.movesLeft > 0 },
   { from: 'swapping', to: 'resolving' },
   { from: 'swapping', to: 'idle' }, // the swap made no match and went back
-  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goal.isComplete() },
+  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goals.isComplete() },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
   { from: 'won', to: 'idle' }, // play again
@@ -152,7 +152,7 @@ export class GameScene implements BoosterGame, SwapGame {
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
-    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoals(deps.level.goals) };
+    this.level = { movesLeft: deps.level.moves, score: 0, goals: createGoals(deps.level.goals) };
     this.turn = new StateMachine<TurnState, LevelState>(
       'idle',
       TURN_TRANSITIONS,
@@ -210,7 +210,7 @@ export class GameScene implements BoosterGame, SwapGame {
     resetBoard(this.board, this.deps.spec, this.deps.rng, this.pads.cells);
     this.level.movesLeft = this.deps.level.moves;
     this.level.score = 0;
-    this.level.goal.reset();
+    this.level.goals.reset();
     this.deps.result.hide();
     this.turn.transition('idle');
     this.showLevel();
@@ -318,7 +318,7 @@ export class GameScene implements BoosterGame, SwapGame {
     }
 
     this.level.movesLeft--;
-    const lap = this.level.goal.isComplete(); // every goal met before this move: the moves left are a victory lap
+    const lap = this.level.goals.isComplete(); // every goal met before this move: the moves left are a victory lap
     const spent = this.status(); // the move is spent at once; the score climbs as the rounds play
     const turn = this.count(result);
     this.deps.events.emit('swap');
@@ -363,17 +363,17 @@ export class GameScene implements BoosterGame, SwapGame {
    * goals it met, numbered by when (0 = the first met).
    */
   private countRound(round: CascadeRound, roundIndex: number): CountedRound {
-    const { goal } = this.level;
+    const { goals } = this.level;
     const points = scoreRound(round, roundIndex, this.deps.level.pointsPerPiece);
     // a rainbow koi has no colour of its own: it counts toward no colour goal
     const cleared = round.cleared.map(({ piece }) => colorOf(piece)).filter((color) => color !== null);
-    const metBefore = goalsMet(goal.progress());
+    const metBefore = goalsMet(goals.progress());
     this.level.score += recordRound(
-      goal,
+      goals,
       { points, padEvents: round.padEvents, cleared },
       this.deps.level.goalBonus,
     );
-    const metAfter = goalsMet(goal.progress());
+    const metAfter = goalsMet(goals.progress());
     const met = Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
     return { round, roundIndex, points, met, status: this.status() };
   }
@@ -389,13 +389,13 @@ export class GameScene implements BoosterGame, SwapGame {
     if (pads.has('bloom')) events.emit('bloom');
     if (pads.has('drift')) events.emit('padDrift');
     for (const n of met) events.emit('goalMet', { n });
-    if (met.at(-1) === this.level.goal.progress().length - 1) events.emit('allGoalsMet');
+    if (met.at(-1) === this.level.goals.progress().length - 1) events.emit('allGoalsMet');
   }
 
   private status(): GameStatus {
-    const { movesLeft, score, goal } = this.level;
+    const { movesLeft, score, goals } = this.level;
     const { moves, stars } = this.deps.level;
-    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goal.progress() };
+    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goals.progress() };
   }
 
   /** True where a koi meets the bank: off the board, or a hole in its shape. */
