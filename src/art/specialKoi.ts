@@ -7,7 +7,7 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
-import { blank, context, freshContext, transparent } from './canvas';
+import { blank, context, copyCanvas, freshContext, transparent } from './canvas';
 import { spineOffset } from './koiBank';
 import type { BakeOptions } from './koiBank';
 
@@ -99,7 +99,7 @@ export function bodySpan(body: HTMLCanvasElement): { left: number; right: number
  * stay, its hues become the rainbow's. A dressing for bakeInkedKoi.
  */
 export function rainbow(part: HTMLCanvasElement): void {
-  const original = copy(part);
+  const original = copyCanvas(part);
   const ctx = freshContext(part);
   const spectrum = ctx.createLinearGradient(0, part.height * 0.15, 0, part.height * 0.85);
   SPECTRUM.forEach((colour, i) => {
@@ -120,7 +120,7 @@ export function rainbow(part: HTMLCanvasElement): void {
 export function inEveryPose(bodies: readonly HTMLCanvasElement[]): HTMLCanvasElement {
   const [first, ...rest] = bodies;
   if (!first) throw new Error('specialKoi: no poses to overlap');
-  const canvas = copy(first);
+  const canvas = copyCanvas(first);
   const ctx = context(canvas);
   ctx.globalCompositeOperation = 'destination-in';
   for (const body of rest) ctx.drawImage(body, 0, 0);
@@ -157,7 +157,7 @@ export function sheenBar(frame: number, frames: number, width: number, height: n
  */
 export function sheenFrames(body: HTMLCanvasElement, frames: number): HTMLCanvasElement[] {
   return Array.from({ length: frames }, (_, f) => {
-    const canvas = copy(body);
+    const canvas = copyCanvas(body);
     const ctx = context(canvas);
     const { from, to } = sheenBar(f, frames, canvas.width, canvas.height);
     const bar = ctx.createLinearGradient(...from, ...to);
@@ -212,8 +212,7 @@ const CURL_WRAP = 0.95;
  */
 export function curl(koi: HTMLCanvasElement, radius: number): HTMLCanvasElement {
   const size = koi.width;
-  const source = koi.getContext('2d')?.getImageData(0, 0, size, koi.height);
-  if (!source) throw new Error('specialKoi: 2D canvas not available');
+  const source = context(koi).getImageData(0, 0, size, koi.height);
   const canvas = blank(size);
   const ctx = context(canvas);
   const out = ctx.createImageData(size, size);
@@ -317,14 +316,6 @@ function shade(ctx: Ctx, part: HTMLCanvasElement): void {
   ctx.fillRect(0, 0, part.width, part.height);
 }
 
-function copy(source: HTMLCanvasElement): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = source.width;
-  canvas.height = source.height;
-  context(canvas).drawImage(source, 0, 0); // a new canvas: its context is plain
-  return canvas;
-}
-
 /**
  * The glow under a rainbow koi: the seven colours of the spectrum round a white heart, `size` px wide. Spun slowly
  * and drawn additively.
@@ -376,9 +367,7 @@ function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, 
  * edges) and fading at both ends. Tint the sprite with the special's colour and stretch it along the line.
  */
 export function paintBeam(width: number, height: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  const canvas = blank(width, height);
   const ctx = context(canvas);
   const across = ctx.createLinearGradient(0, 0, 0, height);
   across.addColorStop(0, 'rgba(255, 255, 255, 0)');

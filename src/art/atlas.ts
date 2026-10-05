@@ -1,3 +1,4 @@
+import { blank, context } from './canvas';
 import { pieceSize } from './pondProps';
 
 /** A rectangle in the atlas, in canvas pixels. */
@@ -43,11 +44,8 @@ export function bakeAtlas(
     scale *= 0.85;
     packed = packShelves(sizesAt(pieces, scale), maxSize);
   }
-  const canvas = document.createElement('canvas');
-  canvas.width = packed.width;
-  canvas.height = packed.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('atlas: 2D canvas not available');
+  const canvas = blank(packed.width, packed.height);
+  const ctx = context(canvas);
   pieces.forEach((piece, i) => {
     const slot = packed.slots[i];
     if (!slot) return;

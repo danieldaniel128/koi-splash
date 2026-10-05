@@ -1,5 +1,6 @@
 import { Sprite, Texture } from 'pixi.js';
 import { paintBackdrop, planBackdrop } from '../art/backdrop';
+import { blank, context } from '../art/canvas';
 import type { BackdropFrame, BackdropLook } from '../art/backdrop';
 import { seeded } from '../core/Random';
 
@@ -17,11 +18,8 @@ export function createBackdrop(
   const { height } = planBackdrop(frame);
   const { resolution, maxSize } = pixels;
   const scale = Math.min(resolution, maxSize / frame.width, maxSize / Math.max(height, 1));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.ceil(frame.width * scale));
-  canvas.height = Math.max(1, Math.ceil(height * scale));
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('backdrop: 2D canvas not available');
+  const canvas = blank(frame.width * scale, height * scale);
+  const ctx = context(canvas);
   ctx.scale(scale, scale);
   const rng = seeded(seed);
   paintBackdrop(ctx, frame, look, rng);

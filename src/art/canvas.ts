@@ -15,6 +15,13 @@ export function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   return ctx;
 }
 
+/** A copy of a canvas's pixels on a fresh canvas (whose context is plain). */
+export function copyCanvas(source: HTMLCanvasElement): HTMLCanvasElement {
+  const canvas = blank(source.width, source.height);
+  context(canvas).drawImage(source, 0, 0);
+  return canvas;
+}
+
 /**
  * A canvas's context, saved and reset to plain pixels: the koi painter leaves its own scale and settings on it.
  * Restore it when done.

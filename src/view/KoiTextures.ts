@@ -1,5 +1,6 @@
 import { Texture } from 'pixi.js';
 import { drawBlurred } from '../art/blur';
+import { blank, context } from '../art/canvas';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact } from '../art/koiInk';
@@ -132,11 +133,7 @@ export function stillPose(bake: KoiBake): BakeOptions {
 export function bakeShadow(koi: HTMLCanvasElement, bake: KoiBake): Texture {
   const blurPx = bake.shadowBlur * bake.resolution;
   const pad = blurPx * 2;
-  const canvas = document.createElement('canvas');
-  canvas.width = koi.width + pad * 2;
-  canvas.height = koi.height + pad * 2;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas not available');
-  drawBlurred(ctx, koi, [pad, pad], blurPx, '#fff');
+  const canvas = blank(koi.width + pad * 2, koi.height + pad * 2);
+  drawBlurred(context(canvas), koi, [pad, pad], blurPx, '#fff');
   return Texture.from(canvas);
 }

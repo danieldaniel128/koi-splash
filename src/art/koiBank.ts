@@ -8,11 +8,14 @@
  * name its id in KOI_SET (src/config/koi.ts).
  *
  * Only the five koi on the board are kept here, so the bundle carries no koi the
- * game never shows. Bake a canvas once with `bakeKoi` and upload it as a texture.
+ * game never shows. It has no framework code (it shares only the art folder's
+ * canvas helpers): bake a canvas once with `bakeKoi` and upload it as a texture.
  *
  * Painting is deterministic: the same variety + seed always gives the same
  * pattern, and the tail wag never changes the pattern, only the pose.
  */
+
+import { blank, context } from './canvas';
 
 // ============================================================================
 // Types: the declarative look of a variety
@@ -280,10 +283,8 @@ export function paintKoi(ctx: Ctx, variety: KoiVariety, opts: PaintOptions): voi
 /** Paint a koi into a fresh canvas (ready for PIXI.Texture.from(canvas)). */
 export function bakeKoi(variety: KoiVariety, opts: BakeOptions): HTMLCanvasElement {
   const res = opts.resolution ?? 1;
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = Math.max(1, Math.ceil(opts.size * res));
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('koiBank: 2D canvas not available');
+  const canvas = blank(opts.size * res);
+  const ctx = context(canvas);
   ctx.scale(res, res);
   paintKoi(ctx, variety, opts);
   return canvas;

@@ -1,4 +1,5 @@
 import { Texture } from 'pixi.js';
+import { blank, context, copyCanvas } from '../art/canvas';
 import { paintGlow } from '../art/glow';
 import { bakeInkedKoi } from '../art/koiInk';
 import type { Dressing } from '../art/koiInk';
@@ -300,9 +301,8 @@ interface Place {
 /** The pictures, by key, drawn side by side on one canvas. Null when there are none. */
 function drawSideBySide(pictures: readonly (readonly [string, HTMLCanvasElement])[]): PictureSheet | null {
   if (pictures.length === 0) return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = pictures.reduce((sum, [, picture]) => sum + picture.width, 0);
-  canvas.height = Math.max(...pictures.map(([, picture]) => picture.height));
+  const width = pictures.reduce((sum, [, picture]) => sum + picture.width, 0);
+  const canvas = blank(width, Math.max(...pictures.map(([, picture]) => picture.height)));
   const ctx = context(canvas);
   const places: Place[] = [];
   let x = 0;
@@ -316,20 +316,12 @@ function drawSideBySide(pictures: readonly (readonly [string, HTMLCanvasElement]
 
 /** One picture cut out of the sheet's pixels, as an image URL. */
 function cutOut(sheet: ImageData, at: Place): string {
-  const canvas = document.createElement('canvas');
-  canvas.width = at.width;
-  canvas.height = at.height;
+  const canvas = blank(at.width, at.height);
   // kept on the CPU: the pixels are already here, so encoding them needs nothing from the GPU
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('special previews: 2D canvas not available');
   ctx.putImageData(sheet, -at.x, 0, at.x, 0, at.width, at.height);
   return canvas.toDataURL();
-}
-
-function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('special textures: 2D canvas not available');
-  return ctx;
 }
 
 /** The canvas a texture was made from (every special texture is painted on one). */
@@ -341,22 +333,16 @@ function canvasOf(texture: Texture): HTMLCanvasElement {
 
 /** A whirlpool's koi drawn in its eddy's eye, on one canvas the eddy's size. */
 function onEddy(eddy: HTMLCanvasElement, koi: HTMLCanvasElement): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = eddy.width;
-  canvas.height = eddy.height;
+  const canvas = copyCanvas(eddy);
   const ctx = context(canvas);
-  ctx.drawImage(eddy, 0, 0);
   ctx.drawImage(koi, (eddy.width - koi.width) / 2, (eddy.height - koi.height) / 2);
   return canvas;
 }
 
 /** A picture turned a quarter clockwise: a head-up koi then faces right. */
 function quarterTurned(picture: HTMLCanvasElement): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = picture.height;
-  canvas.height = picture.width;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('special preview: 2D canvas not available');
+  const canvas = blank(picture.height, picture.width);
+  const ctx = context(canvas);
   ctx.translate(canvas.width / 2, canvas.height / 2);
   ctx.rotate(Math.PI / 2);
   ctx.drawImage(picture, -picture.width / 2, -picture.height / 2);

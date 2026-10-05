@@ -1,6 +1,7 @@
 import type { PropKind } from '../config/pond';
 import { seeded } from '../core/Random';
 import { drawShadowOnly } from './blur';
+import { blank, context } from './canvas';
 
 /**
  * pondProps.ts - the things around and on the pond, painted once on a canvas like the koi: stones, and lily pads
@@ -73,11 +74,8 @@ export function bakePiece(
   paint: (ctx: CanvasRenderingContext2D) => void,
 ): HTMLCanvasElement {
   const { width, height } = pieceSize(radius);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(width * resolution);
-  canvas.height = Math.ceil(height * resolution);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('pondProps: 2D canvas not available');
+  const canvas = blank(width * resolution, height * resolution);
+  const ctx = context(canvas);
   ctx.scale(resolution, resolution);
   ctx.translate(width / 2, height / 2);
   ctx.lineJoin = 'round';
@@ -204,8 +202,7 @@ export function bakeLotusPad(
   resolution: number,
 ): HTMLCanvasElement {
   const canvas = bakeProp({ kind: 'pad', radius: [radius, radius], seed }, resolution);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('pondProps: 2D canvas not available');
+  const ctx = context(canvas);
   ctx.setTransform(resolution, 0, 0, resolution, canvas.width / 2, canvas.height / 2);
   ctx.lineJoin = 'round';
   const rng = seeded(seed + 1);

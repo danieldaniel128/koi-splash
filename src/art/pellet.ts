@@ -1,12 +1,12 @@
+import { blank, context } from './canvas';
+
 /**
  * A fish-food pellet (after the prototype's), `size` px across: a soft warm glow, a brown bead and a highlight on the
  * moon side. Painted once and used as a texture.
  */
 export function paintPellet(size: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = Math.ceil(size);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('pellet: 2D canvas not available');
+  const canvas = blank(size);
+  const ctx = context(canvas);
   const r = size / 2;
   ctx.translate(r, r);
   const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
