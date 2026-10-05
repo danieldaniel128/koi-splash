@@ -248,6 +248,21 @@ button:focus-visible > .orb {
   background: var(--color-goldLight);
 }
 
+/*
+ * Less motion, the same feedback, for players who ask for it: transitions snap and the loops hold still (the timings
+ * go to 0). Colors still change, so low moves or an armed booster still show.
+ */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    --time-fast: 0s;
+    --time-normal: 0s;
+    --time-slow: 0s;
+    --time-pulse: 0s;
+    --time-breathe: 0s;
+    --time-tip: 0s;
+  }
+}
+
 /* Something that pops in when shown and fades out when hidden; it comes from --reveal-from. */
 .reveal {
   opacity: 0;

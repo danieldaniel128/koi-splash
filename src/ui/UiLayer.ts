@@ -85,8 +85,10 @@ export function setRect(element: HTMLElement, rect: Rect): void {
   });
 }
 
-/** The player has asked the system for less motion. */
-const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+/** Whether the player asked for less motion (a system setting): then the UI leaves out its swells and flights. */
+export function wantsLessMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 /**
  * Fades an element in or out over `seconds`, at once for players who ask for less motion, and resolves when it's
@@ -97,7 +99,7 @@ export async function fade(element: HTMLElement, to: 'in' | 'out', seconds: numb
   const animation = element.animate(
     opacity.map((value) => ({ opacity: value })),
     {
-      duration: window.matchMedia(LESS_MOTION).matches ? 0 : seconds * 1000,
+      duration: wantsLessMotion() ? 0 : seconds * 1000,
       easing: 'ease',
       fill: to === 'out' ? 'forwards' : 'none',
     },
@@ -105,8 +107,12 @@ export async function fade(element: HTMLElement, to: 'in' | 'out', seconds: numb
   await animation.finished;
 }
 
-/** Plays a quick swell on an element (a counter that changed). Web Animations: no class juggling, restarts cleanly. */
+/**
+ * Plays a quick swell on an element (a counter that changed), unless the player wants less motion. Web Animations:
+ * no class juggling, restarts cleanly.
+ */
 export function bump(element: HTMLElement, scale: number, seconds: number): void {
+  if (wantsLessMotion()) return;
   element.animate([{ transform: `scale(${scale})` }, { transform: 'scale(1)' }], {
     duration: seconds * 1000,
     easing: THEME.ease.back,
