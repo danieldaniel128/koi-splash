@@ -6,11 +6,12 @@ import { BOOSTER_ICONS, setIcon } from './icons';
 import type { UiLayer } from './UiLayer';
 import { bump, button, el, shake } from './UiLayer';
 
-/** One button's parts. */
+/** One button's parts, and what a screen reader calls it. */
 interface Button {
   readonly element: HTMLButtonElement;
   readonly orb: HTMLElement;
   readonly badge: HTMLElement;
+  readonly label: string;
 }
 
 /**
@@ -38,7 +39,10 @@ export class BoosterBar implements BoosterButtons {
   }
 
   setArmed(type: BoosterType | null): void {
-    for (const [key, button] of this.buttons) button.element.classList.toggle('booster--armed', key === type);
+    for (const [key, button] of this.buttons) {
+      button.element.classList.toggle('booster--armed', key === type);
+      button.element.setAttribute('aria-pressed', `${key === type}`);
+    }
   }
 
   setLeft(type: BoosterType, left: number): void {
@@ -47,6 +51,7 @@ export class BoosterBar implements BoosterButtons {
     const spent = left <= 0;
     const wasSpent = button.element.classList.contains('booster--used');
     button.element.classList.toggle('booster--used', spent);
+    button.element.setAttribute('aria-label', `${button.label}, ${spent ? 'used' : `${left} left`}`);
     button.badge.textContent = `${left}`;
     if (spent && !wasSpent) bump(button.orb, BAR_MOTION.spentBump, BAR_MOTION.spentSettle);
   }
@@ -61,18 +66,14 @@ export class BoosterBar implements BoosterButtons {
     setIcon(orb, BOOSTER_ICONS[slot.type]);
     const badge = el('b', 'badge booster__badge', `${slot.count}`);
     const name = el('span', 'label booster__name', slot.name);
-    const element = button(
-      'control pressable booster',
-      `${slot.name} booster: ${slot.tip}`,
-      orb,
-      badge,
-      name,
-    );
+    const label = `${slot.name} booster: ${slot.tip}`;
+    const element = button('control pressable booster', `${label}, ${slot.count} left`, orb, badge, name);
+    element.setAttribute('aria-pressed', 'false');
     element.addEventListener('click', () => {
       bump(orb, BAR_MOTION.pressBump, BAR_MOTION.pressSettle);
       this.pressed?.(slot.type);
     });
-    const parts = { element, orb, badge };
+    const parts = { element, orb, badge, label };
     this.buttons.set(slot.type, parts);
     return parts;
   }

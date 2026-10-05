@@ -1,3 +1,4 @@
+import { KOI_NAMES } from '../config/koi';
 import { GOAL_TRAY, HUD_MOTION } from '../config/ui';
 import type { GoalProgress, GoalType } from '../model/goals';
 import { CHECK, STAR, setIcon } from './icons';
@@ -52,12 +53,13 @@ export class GoalTray {
   }
 }
 
-/** One goal's chip. */
+/** One goal's chip. To a screen reader it is one picture, named by its goal and how far it has to go. */
 class GoalChip {
   readonly element: HTMLElement;
   readonly icon = el('span', 'chip__icon');
   readonly kind: GoalProgress['kind'];
   private readonly count = el('span', 'number chip__count');
+  private readonly name: string;
   private left: number;
 
   constructor(
@@ -66,9 +68,11 @@ class GoalChip {
     private readonly bonus: number,
   ) {
     this.kind = goal.kind;
+    this.name = goalName(goal);
     if (picture) this.icon.append(chipImage(goal.kind, picture));
     else setIcon(this.icon, STAR);
     this.element = el('div', 'chip', this.icon, this.count);
+    this.element.setAttribute('role', 'img');
     this.left = leftOf(goal);
     this.show();
   }
@@ -85,6 +89,7 @@ class GoalChip {
   private show(): void {
     const done = this.left === 0;
     this.element.classList.toggle('chip--done', done);
+    this.element.setAttribute('aria-label', `${this.name}: ${done ? 'done' : `${this.left} to go`}`);
     if (done) setIcon(this.count, CHECK);
     else this.count.textContent = `${this.left}`;
   }
@@ -110,6 +115,13 @@ class GoalChip {
 /** How many a goal still needs. */
 function leftOf(goal: GoalProgress): number {
   return Math.max(0, goal.target - goal.done);
+}
+
+/** What a goal is called out loud: lotuses, red koi, points. */
+function goalName(goal: GoalProgress): string {
+  if (goal.kind === 'lotus') return 'lotuses';
+  if (goal.kind === 'koi') return `${KOI_NAMES[goal.koi ?? 0] ?? ''} koi`;
+  return 'points';
 }
 
 /** A goal's picture, shown at the size its painting was made for (it spills out of the chip's icon box). */

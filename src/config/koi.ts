@@ -7,6 +7,9 @@ export const KOI_SET = ['m3-red', 'm3-gold', 'dream-rose-gold', 'dream-jade', 'd
 /** One entry per kind, in KOI_SET order: a list of another length doesn't compile. */
 type OnePerKind<T, Set extends readonly unknown[] = typeof KOI_SET> = { readonly [K in keyof Set]: T };
 
+/** What a player calls each kind, in KOI_SET order: a screen reader says "red koi". */
+export const KOI_NAMES = ['red', 'gold', 'pink', 'green', 'purple'] as const satisfies OnePerKind<string>;
+
 /**
  * Each kind's colours as a special koi, in KOI_SET order: its glow (under a striped koi, a whirlpool's arms, beams)
  * and the band of a striped koi (the other bands are white).

@@ -4,7 +4,8 @@ import { bump, el } from './UiLayer';
 
 /**
  * Moves left, big, in a glass orb. It pops each time a move is spent, and warns when only a few are left, unless
- * every goal is met already (the moves left are a victory lap).
+ * every goal is met already (the moves left are a victory lap). A screen reader hears each new count, politely (a
+ * status).
  */
 export class MovesCounter {
   readonly element: HTMLElement;
@@ -13,6 +14,7 @@ export class MovesCounter {
 
   constructor() {
     this.element = el('div', 'orb moves', this.value, el('span', 'label moves__label', 'moves'));
+    this.element.setAttribute('role', 'status');
   }
 
   /** Shows the moves a new level starts with, without the pop. */
