@@ -100,6 +100,11 @@ export class KoiTextures {
     return shapes;
   }
 
+  /** Every texture baked so far: each color's poses, shadow and contact shapes (for the GPU to take them early). */
+  allTextures(): Texture[] {
+    return [...this.poses.flat(), ...this.shadows, ...this.contacts.flat()];
+  }
+
   /** A color's beat, every other pose, with the poses between them put in their places. */
   private interleave(color: PieceColor, between: readonly Texture[]): void {
     const poses = this.poses[color];

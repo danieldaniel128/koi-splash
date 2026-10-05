@@ -73,6 +73,11 @@ export class PadView extends Container implements PadDisplay {
     }
   }
 
+  /** Every look's textures: each bud's opening stages and the pad on its own (for the GPU to take them early). */
+  allTextures(): Texture[] {
+    return this.looks.flatMap((look) => [...look.stages, look.empty]);
+  }
+
   /** Plays one cascade round's pad events together; resolves when the last one has finished. */
   async play(events: readonly PadEvent[]): Promise<void> {
     await Promise.all(events.map((event) => this.playEvent(event)));
