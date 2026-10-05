@@ -93,6 +93,30 @@ export function rainbow(part: HTMLCanvasElement): void {
   ctx.restore();
 }
 
+/** Where the sheen sweeps, as shares of the koi's square: from past the tail root up to just over the snout. */
+const SHEEN_SWEEP = [0.78, 0.02] as const;
+
+/** A sheen frame's light bar on a `width` x `height` head-up koi body: where it crosses the body's centre line. */
+export interface SheenBar {
+  /** The row (px) where the bar's middle crosses the centre line. */
+  readonly centre: number;
+  /** The gradient's two ends (px), across the bar: a slanted bar, centred on the body. */
+  readonly from: readonly [number, number];
+  readonly to: readonly [number, number];
+}
+
+/** The light bar of sheen frame `frame` of `frames`, tail (low) to head (high), so every frame crosses the body. */
+export function sheenBar(frame: number, frames: number, width: number, height: number): SheenBar {
+  const [tail, head] = SHEEN_SWEEP;
+  const centre = height * (tail + (head - tail) * (frame / Math.max(1, frames - 1)));
+  const across: readonly [number, number] = [width * 0.1, height * 0.09];
+  return {
+    centre,
+    from: [width / 2 - across[0], centre - across[1]],
+    to: [width / 2 + across[0], centre + across[1]],
+  };
+}
+
 /**
  * Frames of a glossy light bar sweeping a head-up koi body from tail to head, cut to its silhouette. Shown on top
  * of the koi, additively, one after another: the sheen of a striped koi.
@@ -101,13 +125,8 @@ export function sheenFrames(body: HTMLCanvasElement, frames: number): HTMLCanvas
   return Array.from({ length: frames }, (_, f) => {
     const canvas = copy(body);
     const ctx = context(canvas);
-    const y = canvas.height * (0.78 - 0.62 * (f / Math.max(1, frames - 1))); // tail (low) to head (high)
-    const bar = ctx.createLinearGradient(
-      0,
-      y - canvas.height * 0.09,
-      canvas.width * 0.2,
-      y + canvas.height * 0.09,
-    );
+    const { from, to } = sheenBar(f, frames, canvas.width, canvas.height);
+    const bar = ctx.createLinearGradient(...from, ...to);
     bar.addColorStop(0, 'rgba(255, 253, 242, 0)');
     bar.addColorStop(0.5, 'rgba(255, 253, 242, 0.85)');
     bar.addColorStop(1, 'rgba(255, 253, 242, 0)');
