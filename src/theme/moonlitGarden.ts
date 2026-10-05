@@ -62,8 +62,8 @@ export const MOONLIT_GARDEN = {
   },
   /** The two weights of the bundled font: bold for labels and names, black for numbers and titles. */
   weight: { bold: 700, black: 900 },
-  /** Type scale (px): `display` is the big numbers (moves left, the final score). */
-  text: { xs: 8, sm: 11, md: 14, lg: 21, xl: 26, title: 30, display: 34 },
+  /** Type scale (px): `sm` is the smallest a phone shows readably (captions), `display` the big numbers. */
+  text: { sm: 11, md: 14, lg: 21, xl: 26, title: 30, display: 34 },
   /** Spacing scale (px). */
   space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
   radius: { sm: 8, lg: 22, round: 999 },
