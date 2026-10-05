@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
 import { Board } from '../src/model/Board';
-import { createBoard, findMatches, findMove, resetBoard, swapMakesMatch, trySwap } from '../src/model/rules';
+import {
+  createBoard,
+  findMatches,
+  findMove,
+  hasAnyMove,
+  resetBoard,
+  swapMakesMatch,
+  trySwap,
+} from '../src/model/rules';
 import type { BoardSpec } from '../src/model/rules';
 import { parseShape } from '../src/model/shape';
 
@@ -75,6 +83,20 @@ describe('findMatches', () => {
   });
 });
 
+describe('Board.swap', () => {
+  it('trades two pieces, and throws without changing either cell when one cannot take the other', () => {
+    const board = boardFrom(['12']);
+    const [left, right] = [board.get({ col: 0, row: 0 }), board.get({ col: 1, row: 0 })];
+    board.swap({ col: 0, row: 0 }, { col: 1, row: 0 });
+    expect(board.get({ col: 0, row: 0 })).toBe(right);
+    board.setBlocked({ col: 0, row: 0 }, true);
+    expect(() => {
+      board.swap({ col: 1, row: 0 }, { col: 0, row: 0 });
+    }).toThrow(RangeError);
+    expect(board.get({ col: 1, row: 0 })).toBe(left);
+  });
+});
+
 describe('swapMakesMatch', () => {
   const board = boardFrom(['1121', '2334', '4312']);
 
@@ -95,6 +117,24 @@ describe('swapMakesMatch', () => {
   });
 });
 
+describe('hasAnyMove', () => {
+  it('counts a special as a move only when a koi beside it can be swapped with it', () => {
+    // a special between a pad and the bank, with a koi under it on the second board
+    const special = (board: Board): void => {
+      board.setBlocked({ col: 0, row: 0 }, true);
+      board.set({ col: 1, row: 0 }, { ...board.createPiece(1), special: { type: 'whirl' } });
+    };
+    const boxedIn = new Board(3, 1, [{ col: 2, row: 0 }]);
+    special(boxedIn);
+    expect(hasAnyMove(boxedIn)).toBe(false);
+
+    const withKoi = new Board(3, 2, [{ col: 2, row: 0 }]);
+    special(withKoi);
+    withKoi.set({ col: 1, row: 1 }, withKoi.createPiece(2));
+    expect(hasAnyMove(withKoi)).toBe(true);
+  });
+});
+
 describe('trySwap', () => {
   it('refuses an invalid swap and changes nothing', () => {
     const board = createBoard(SPEC, new Random(7));
@@ -102,6 +142,24 @@ describe('trySwap', () => {
     const result = trySwap(board, { col: 0, row: 0 }, { col: 3, row: 3 }, SPEC, new Random(1));
     expect(result).toEqual({ valid: false, reason: 'not-adjacent' });
     expect(kindsOf(board)).toEqual(before);
+  });
+
+  it('refuses a swap into a lily pad or the bank, even a special, and changes nothing', () => {
+    const board = new Board(3, 1, [{ col: 2, row: 0 }]);
+    board.setBlocked({ col: 0, row: 0 }, true); // a pad on the left, the bank on the right
+    const special = { ...board.createPiece(1), special: { type: 'whirl' as const } };
+    board.set({ col: 1, row: 0 }, special);
+    const spec = { cols: 3, rows: 1, kinds: 5 };
+    for (const into of [
+      { col: 0, row: 0 },
+      { col: 2, row: 0 },
+    ]) {
+      expect(trySwap(board, { col: 1, row: 0 }, into, spec, new Random(1))).toEqual({
+        valid: false,
+        reason: 'blocked',
+      });
+      expect(board.get({ col: 1, row: 0 })).toBe(special);
+    }
   });
 
   it('clears, drops and refills until the board settles', () => {

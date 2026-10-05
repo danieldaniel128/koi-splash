@@ -56,8 +56,7 @@ export class Board {
   }
 
   set(cell: Cell, piece: Piece | null): void {
-    if (!this.inBounds(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is off the board`);
-    if (piece && this.isBlocked(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is blocked`);
+    this.checkFits(cell, piece);
     this.slots[this.index(cell)] = piece;
   }
 
@@ -67,9 +66,13 @@ export class Board {
     return piece && piece.special?.type !== 'rainbow' ? piece.kind : null;
   }
 
+  /** Trades the pieces of two cells. Both are checked first, so a swap that can't happen changes nothing. */
   swap(a: Cell, b: Cell): void {
     const pa = this.get(a);
-    this.set(a, this.get(b));
+    const pb = this.get(b);
+    this.checkFits(a, pb);
+    this.checkFits(b, pa);
+    this.set(a, pb);
     this.set(b, pa);
   }
 
@@ -83,6 +86,12 @@ export class Board {
     for (let row = 0; row < this.rows; row++) {
       for (let col = 0; col < this.cols; col++) yield { col, row };
     }
+  }
+
+  /** Throws unless `cell` is on the board and can take `piece` (an empty cell anywhere on it can). */
+  private checkFits(cell: Cell, piece: Piece | null): void {
+    if (!this.inBounds(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is off the board`);
+    if (piece && this.isBlocked(cell)) throw new RangeError(`cell ${cell.col},${cell.row} is blocked`);
   }
 
   private index(cell: Cell): number {

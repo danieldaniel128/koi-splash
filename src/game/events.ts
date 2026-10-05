@@ -48,6 +48,8 @@ export interface GameEvents {
   /** Special booster: the petals open; a koi spins up into a special. */
   petalsOpened: undefined;
   koiMorphed: undefined;
+  /** A level starts: the first one, and each again after Play again. */
+  levelStarted: undefined;
   /** The level ends; a star lands on the end card (the kth, from 0). */
   won: undefined;
   lost: undefined;

@@ -15,7 +15,8 @@ export interface PadWater extends WaterSurface {
 /** Where the view sits and where a bloomed lotus flies to, in the view's own space. */
 export interface PadViewLayout {
   readonly cellSize: number;
-  readonly goalTarget: PointData;
+  /** The lotus goal's chip, asked as each lotus takes off (the HUD may have changed since the game started). */
+  readonly goalTarget: () => PointData;
   /** Turns a point in this view's space into a stage point, for pushing the water. */
   readonly toStage: (point: PointData) => PointData;
 }
@@ -129,7 +130,7 @@ export class PadView extends Container {
       duration: BOARD_PADS.bloomRise,
       ease: 'back.out(2)',
     });
-    const { x, y } = this.layout.goalTarget;
+    const { x, y } = this.layout.goalTarget();
     await gsap.to(sprite, {
       x,
       y,

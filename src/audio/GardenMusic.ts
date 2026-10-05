@@ -27,17 +27,25 @@ export class GardenMusic implements Track {
   }
 
   setMood(mood: Mood): void {
-    if (mood === 'won' && this.mood !== 'won') this.cadenceDue = true;
+    // a win plays its cadence at the next bar line, unless the game has moved on by then
+    if (mood !== 'won') this.cadenceDue = false;
+    else if (this.mood !== 'won') this.cadenceDue = true;
     this.mood = mood;
   }
 
+  /**
+   * Schedules the bars due before the lookahead. While the voice can't play, the bar line is kept: the bars already
+   * scheduled still play when it's back (a hidden page's clock stops and goes on where it stopped), so starting a
+   * fresh one would play two at once. A bar line the clock has passed (it ran on with nothing scheduled) starts afresh
+   * just ahead, so no bar is ever scheduled in the past.
+   */
   update(): void {
     const now = this.voice.now();
     if (now === null) {
-      this.nextBar = null; // off or asleep: start again on a fresh bar line when it's back
+      this.cadenceDue = false; // a win the player didn't hear isn't played later, in the middle of the next game
       return;
     }
-    if (this.nextBar === null || this.nextBar < now - 1) this.nextBar = now + 0.1;
+    if (this.nextBar === null || this.nextBar < now) this.nextBar = now + 0.1;
     while (this.nextBar < now + AUDIO.lookahead) {
       this.play(this.nextBar - now);
       this.nextBar += this.stepSeconds * STEPS_PER_BAR;

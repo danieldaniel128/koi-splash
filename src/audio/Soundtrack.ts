@@ -10,6 +10,7 @@ export interface Ducker {
 
 /** The events that move the music, and the mood each brings. */
 const MOOD_OF: { readonly [K in keyof GameEvents]?: (event: GameEvents[K]) => Mood } = {
+  levelStarted: () => 'calm',
   moveSpent: ({ movesLeft }) => (movesLeft <= AUDIO.lowMoves ? 'tense' : 'calm'),
   won: () => 'won',
   lost: () => 'lost',

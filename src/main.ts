@@ -259,7 +259,6 @@ function createAnimator(parts: GameParts, screen: Screen, bar: BoosterBar): Boar
     cell: board.cell,
     water: pond,
     popups,
-    pointsPerPiece: SCORE.pointsPerPiece,
     specials,
     boosters: { motions: boosters.motions, feedFrom },
     events,
@@ -451,8 +450,10 @@ function createSpecialEffects(on: {
 
 /** The points each match earns, over the board; they fly to the score in the HUD. */
 function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
-  const score = hud.scoreAnchor();
-  const popups = new ScorePopups({ x: score.x - boardOrigin.x, y: score.y - boardOrigin.y });
+  const popups = new ScorePopups(() => {
+    const score = hud.scoreAnchor();
+    return { x: score.x - boardOrigin.x, y: score.y - boardOrigin.y };
+  });
   popups.position.set(boardOrigin.x, boardOrigin.y);
   return popups;
 }
@@ -462,11 +463,13 @@ function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
  * to the goal in the HUD.
  */
 function createPads(app: Application, pond: PondWater, hud: Hud, board: GameLayout['board']): PadView {
-  const goal = hud.goalAnchor();
   const pads = new PadView(
     {
       cellSize: board.cell,
-      goalTarget: { x: goal.x - board.x, y: goal.y - board.y },
+      goalTarget: () => {
+        const goal = hud.goalAnchor();
+        return { x: goal.x - board.x, y: goal.y - board.y };
+      },
       toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,

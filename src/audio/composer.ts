@@ -96,6 +96,8 @@ export class Composer {
 
   /** The next bar's notes. */
   next(mood: BarMood): MusicNote[] {
+    // the cadence is the first bar of the home chord, so the bars after it go on in that chord
+    if (mood === 'cadence') this.bar = 0;
     const notes = mood === 'cadence' ? cadence() : this.compose(mood);
     this.bar++;
     return notes;
@@ -186,7 +188,7 @@ function arpeggio(pad: readonly number[], steps: readonly number[]): MusicNote[]
   return steps.map((step, k) => ({ part: 'arp', step, length: 2, pitches: [upper[k % upper.length] ?? 0] }));
 }
 
-/** A win: the melody climbs the scale home to D, over the first chord held long. */
+/** A win: the melody climbs the scale home to D, over the first chord (its pad held for the chord's bars, as usual). */
 function cadence(): MusicNote[] {
   const [home] = MUSIC.progression;
   const climb = [5, 7, 8, 10].map((degree, k) => ({
@@ -196,8 +198,8 @@ function cadence(): MusicNote[] {
     pitches: [semitonesOf(degree)],
   }));
   return [
-    { part: 'pad', step: 0, length: STEPS * 2, pitches: home.pad },
-    { part: 'bass', step: 0, length: STEPS * 2, pitches: [home.root] },
+    { part: 'pad', step: 0, length: STEPS * MUSIC.bars, pitches: home.pad },
+    { part: 'bass', step: 0, length: STEPS, pitches: [home.root] },
     ...climb,
   ];
 }

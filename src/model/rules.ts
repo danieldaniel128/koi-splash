@@ -76,14 +76,20 @@ export function findMove(board: Board): [Cell, Cell] | null {
   return null;
 }
 
-/** True when the player can move: a swap makes a match, or a special is on the board (swapping it fires it). */
+/**
+ * True when the player can move: a swap makes a match, or a special has a koi beside it to swap with (swapping it
+ * fires it). A special boxed in by pads and bank is no move.
+ */
 export function hasAnyMove(board: Board): boolean {
-  for (const cell of board.cells()) if (board.get(cell)?.special) return true;
+  for (const cell of board.cells()) {
+    if (board.get(cell)?.special && neighbours(cell).some((next) => board.get(next))) return true;
+  }
   return findMove(board) !== null;
 }
 
 /**
- * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then settles the board (see settle)
+ * Plays a swap. An invalid swap leaves the board untouched: cells not side by side, a cell with no koi (a pad or the
+ * bank), or a swap that makes no match and fires no special. A valid one swaps, then settles the board (see settle)
  * and returns every round as data so the view can animate it step by step.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
@@ -96,6 +102,7 @@ export function trySwap(
   pads?: PadField,
 ): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
+  if (!board.get(a) || !board.get(b)) return { valid: false, reason: 'blocked' };
   const triggers = swapTriggers(board, a, b); // a swapped special fires even without a match
   if (!swapMakesMatch(board, a, b) && triggers.length === 0) return { valid: false, reason: 'no-match' };
 
@@ -113,9 +120,9 @@ export interface SettleStart {
 
 /**
  * Clears, fires, drops and refills until nothing matches and nothing is left to fire, one round at a time, and
- * reshuffles a board left with no move. Each round hits the pads next to the cleared koi (and under a blast); a pad
- * that blooms or drifts away opens its cell, and the koi above fall into it in that same round. Shared by swaps and
- * boosters. O(S * N).
+ * reshuffles a board left with no move. Each round hits the pads next to the koi it took (cleared, or turned into a
+ * new special) and under a blast; a pad that blooms or drifts away opens its cell, and the koi above fall into it in
+ * that same round. Shared by swaps and boosters. O(S * N).
  */
 export function settle(
   board: Board,
@@ -134,7 +141,11 @@ export function settle(
     // the first round puts its special where the player swapped; later rounds in the middle of the shape
     const round = resolveRound(board, matches, steps.length === 0 ? (start.swap ?? []) : [], firing);
     firing = [];
-    const struck = [...round.cleared.map((c) => c.at), ...round.struckPads];
+    const struck = [
+      ...round.cleared.map((c) => c.at),
+      ...round.created.map((c) => c.at),
+      ...round.struckPads,
+    ];
     const padEvents = hitPads(board, start.pads, struck);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
@@ -208,6 +219,16 @@ function runsInLine(board: Board, cells: readonly Cell[], direction: Match['dire
     start = i;
   }
   return matches;
+}
+
+/** The four cells up, down, left and right of `cell` (some may be off the board). */
+function neighbours(cell: Cell): Cell[] {
+  return [
+    { col: cell.col, row: cell.row - 1 },
+    { col: cell.col, row: cell.row + 1 },
+    { col: cell.col - 1, row: cell.row },
+    { col: cell.col + 1, row: cell.row },
+  ];
 }
 
 /** True when the piece at `cell` is part of a horizontal or vertical run of 3+. */

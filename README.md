@@ -53,7 +53,7 @@ screen's real pixel density, so the whole border is one texture and one draw cal
 Changing the look is meant to be config, not surgery:
 
 - **A different board shape:** draw it in `LEVEL.shape` (`#` a cell, `.` bank). The water, the stones and the
-  rules all follow; keep notches at least 2 cells wide so the stones fit.
+  rules all follow; a notch one cell wide is too thin for stones on both its sides, so it gets one along it.
 - **A different border** (planks, bushes, lanterns): write a painter for one piece in `src/art`, add it to
   `SHORE_STYLES` and set `POND.shore.style`. Piece sizes, spacing, how far they sit out on the bank and the corner
   pieces are in `POND.shore`; `LAYOUT.shoreWidth` keeps room for them on screen.
@@ -80,9 +80,9 @@ and every effect also moves the water. The timings and sizes are in `TIMING.spec
 
 MVP with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. On a swipe it works out the
 whole cascade at once and returns it as data: a list of steps, each with what matched, what cleared, what fell and
-what spawned. The presenter (`GameScene`) plays those steps through the animator one at a time. The view never
-decides anything, so the board on screen can't drift from the real one, and the rules can be tested without a
-browser.
+what spawned. The presenter (`GameScene`) scores each step and plays it through the animator with its points, one at
+a time. The view never decides anything, so the board on screen can't drift from the real one (and the points that
+pop up add up to the score), and the rules can be tested without a browser.
 
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
 if it's complete, without knowing which goal it is. A goal can be lotuses to bloom, points to score or koi of one
@@ -153,11 +153,11 @@ its shape on any phone, tablet or desktop. Phones play upright; turned sideways 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
 I modelled the HUD on the casual match-3s I studied: moves big in a glass orb (it warns when they run low), the
 score, a chip per goal that ticks down to a check, and a star bar that fills with the score and unlocks a star at
-each of three scores (`starsFor`). A met goal pays a 500-point bonus, and the level plays to its last move, so
-meeting the goals early leaves moves to chase the stars. Under the pond, the booster bar uses the prototype's
-icons with count badges. It's all small components on a little CSS kit (glass panel, orb, chip, badge, track, button)
-that only reads theme tokens (`src/theme`), with the same tokens used by the Pixi side, so a new look is a change of
-tokens, not of components. The rounded font (Nunito) is bundled, so it's the same on every phone.
+each of three scores (`starsFor`); a win is worth one star at least. A met goal pays a 500-point bonus, and the level
+plays to its last move, so meeting the goals early leaves moves to chase the stars. Under the pond, the booster bar
+uses the prototype's icons with count badges. It's all small components on a little CSS kit (glass panel, orb, chip,
+badge, track, button) that only reads theme tokens (`src/theme`), with the same tokens used by the Pixi side, so a new
+look is a change of tokens, not of components. The rounded font (Nunito) is bundled, so it's the same on every phone.
 
 Effects are layered separately: the animator only knows two small interfaces, the water it pushes and the score
 popups (`ScorePopups`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes
@@ -231,4 +231,3 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 - Earning more boosters (a level gives one of each for now).
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
-- Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

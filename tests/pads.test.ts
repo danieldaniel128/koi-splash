@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
+import { Board } from '../src/model/Board';
 import { PadField } from '../src/model/pads';
 import type { Pad } from '../src/model/pads';
 import { createBoard, findMove, trySwap } from '../src/model/rules';
@@ -63,6 +64,26 @@ describe('PadField', () => {
         }
       }
     }
+  });
+
+  it('is hit by a match that makes its special on the cell beside it', () => {
+    // swapping (2, 2) up makes 1111 in row 1; its striped koi forms at (2, 1), the only cell of it next to the bud
+    const rows = ['02.340', '113102', '231423', '340234', '402340', '023401'];
+    const field = new PadField([bud(1, 2, 0)]);
+    const board = new Board(6, 6);
+    board.setBlocked({ col: 2, row: 0 }, true);
+    rows.forEach((line, row) => {
+      for (let col = 0; col < line.length; col++) {
+        const mark = line.charAt(col);
+        if (mark !== '.') board.set({ col, row }, board.createPiece(Number(mark)));
+      }
+    });
+    const spec = { cols: 6, rows: 6, kinds: 5 };
+    const result = trySwap(board, { col: 2, row: 2 }, { col: 2, row: 1 }, spec, new Random(1), field);
+    if (!result.valid) throw new Error('refused');
+    const [first] = result.steps;
+    expect(first?.created.map((made) => made.at)).toEqual([{ col: 2, row: 1 }]);
+    expect(first?.padEvents.map((event) => event.type)).toEqual(['hit']);
   });
 
   it('frees a bloomed pad cell and fills it in the same cascade round', () => {

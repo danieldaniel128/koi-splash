@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createGoal, createGoals, goalsMet } from '../src/model/goals';
+import { BOARD } from '../src/config/board';
+import { LEVEL } from '../src/config/level';
+import { checkGoals, createGoal, createGoals, goalsMet, recordRound } from '../src/model/goals';
 import type { RoundOutcome } from '../src/model/goals';
 import type { PadEvent } from '../src/model/pads';
 
@@ -60,6 +62,30 @@ describe('goals', () => {
     expect(goalsMet(goal.progress())).toBe(0);
     goal.record(round({ padEvents: [bloom], cleared: [0] }));
     expect(goalsMet(goal.progress())).toBe(1);
+  });
+
+  it('pays a bonus for each goal a round meets, and a score goal counts the bonuses too', () => {
+    const goal = createGoals([
+      { type: 'lotus', count: 1 },
+      { type: 'score', target: 600 },
+    ]);
+    expect(recordRound(goal, round({ points: 50 }), 500)).toBe(50);
+    // the bloom meets the lotus goal; its bonus takes the score to 650, which meets the score goal and pays again
+    expect(recordRound(goal, round({ points: 100, padEvents: [bloom] }), 500)).toBe(1100);
+    expect(goal.isComplete()).toBe(true);
+  });
+
+  it('refuses goals the board cannot meet, and passes the shipped level', () => {
+    const board = { buds: 2, kinds: 5 };
+    expect(() => {
+      checkGoals([{ type: 'lotus', count: 3 }], board);
+    }).toThrow(/3 lotuses/);
+    expect(() => {
+      checkGoals([{ type: 'koi', kind: 5, count: 10 }], board);
+    }).toThrow(/colour 5/);
+    expect(() => {
+      checkGoals(LEVEL.goals, { buds: LEVEL.pads.buds, kinds: BOARD.kinds });
+    }).not.toThrow();
   });
 
   it('reset starts every goal over', () => {

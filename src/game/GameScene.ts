@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoals, goalsMet } from '../model/goals';
+import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
@@ -11,7 +11,7 @@ import type { BoosterType, BoosterUse } from '../model/boosters';
 import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
-import { starsFor } from '../model/stars';
+import { starsFor, starsForWin } from '../model/stars';
 import type { StarRule } from '../model/stars';
 import type { CascadeStep, Cell } from '../model/types';
 import type { BoardAnimator, PlacedPiece } from '../view/BoardAnimator';
@@ -98,6 +98,7 @@ export class GameScene {
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
+    checkGoals(deps.level.goals, { buds: deps.level.pads.buds, kinds: deps.spec.kinds });
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
@@ -114,7 +115,10 @@ export class GameScene {
       },
       won: {
         onEnter: () => {
-          deps.result.show('won', this.status());
+          deps.result.show('won', {
+            ...this.status(),
+            stars: starsForWin(this.level.score, deps.level.stars),
+          });
           deps.events.emit('won');
         },
       },
@@ -129,6 +133,7 @@ export class GameScene {
     deps.view.setPlayable(true);
     deps.pads.reset(this.pads.pads);
     deps.status.update(this.status());
+    deps.events.emit('levelStarted');
   }
 
   /** Swipe handler for the input. Ignored while a turn is playing or after the level has ended. */
@@ -177,6 +182,7 @@ export class GameScene {
     this.deps.status.update(this.status());
     this.deps.result.hide();
     this.turn.transition('idle');
+    this.deps.events.emit('levelStarted');
   }
 
   /** True when the board takes a swap: it is still and the level is on. */
@@ -259,24 +265,30 @@ export class GameScene {
    * cell too), and the goal counts it.
    */
   private async playRound(step: CascadeStep, round: number): Promise<void> {
-    const met = this.countRound(step, round);
+    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+    const met = this.countRound(step, points);
     this.announce(step, round, met);
-    await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
+    await Promise.all([this.deps.animator.playStep(step, points), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
   }
 
-  /** Scores a round and feeds it to the goals. Returns the goals it met, numbered by when (0 = the first met). */
-  private countRound(step: CascadeStep, round: number): number[] {
-    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
-    this.level.score += points;
+  /**
+   * Feeds a round to the goals and adds its points to the score, with the bonus of each goal it met. Returns the goals
+   * it met, numbered by when (0 = the first met).
+   */
+  private countRound(step: CascadeStep, points: number): number[] {
+    const { goal } = this.level;
     // a rainbow koi has no colour of its own: it counts toward no colour goal
     const cleared = step.cleared
       .filter(({ piece }) => piece.special?.type !== 'rainbow')
       .map(({ piece }) => piece.kind);
-    const metBefore = goalsMet(this.level.goal.progress());
-    this.level.goal.record({ points, padEvents: step.padEvents, cleared });
-    const metAfter = goalsMet(this.level.goal.progress());
-    this.level.score += (metAfter - metBefore) * this.deps.level.goalBonus; // a goal met this round pays its bonus
+    const metBefore = goalsMet(goal.progress());
+    this.level.score += recordRound(
+      goal,
+      { points, padEvents: step.padEvents, cleared },
+      this.deps.level.goalBonus,
+    );
+    const metAfter = goalsMet(goal.progress());
     return Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
   }
 

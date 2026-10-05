@@ -5,7 +5,8 @@ import type { Cell, Kind, Piece, Special } from './types';
 /**
  * The boosters, as in the prototype: free tools that change the board without spending a move. Each is a plan here
  * (pure board logic, no timing); the scene applies it and settles the board after (see settle).
- * - swap: any two koi trade places, however far apart
+ * - swap: any two koi trade places, however far apart, even two of one colour; a special it moves fires only if it
+ *   lands in a match
  * - special: one koi becomes the special the player picks
  * - feed: every koi of one colour swims into lines of 3 by the food, so it always makes a match
  */

@@ -14,13 +14,15 @@ import { createGameEvents } from '../src/game/events';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
 
-/** A voice on a clock the test moves, counting what it was asked to play. */
-function clockedVoice(): Voice & { time: number | null; tones: number } {
+/** A voice on a clock the test moves, counting what it was asked to play and when (its delays). */
+function clockedVoice(): Voice & { time: number | null; tones: number; delays: number[] } {
   const voice = {
     time: 0 as number | null,
     tones: 0,
-    tone: () => {
+    delays: [] as number[],
+    tone: (_freq: number, _dur: number, _vol: number, opts?: { delay?: number }) => {
       voice.tones++;
+      voice.delays.push(opts?.delay ?? 0);
     },
     noise: () => undefined,
     pluck: () => undefined,
@@ -76,6 +78,13 @@ describe('the composer', () => {
     expect((melodic(cadence ?? []).at(-1)?.pitches[0] ?? 1) % 12).toBe(0);
   });
 
+  it('stays on the home chord after the win cadence, under the pad it holds', () => {
+    const [, , , , after] = compose(['calm', 'calm', 'calm', 'cadence', 'rest']);
+    const [home] = MUSIC.progression;
+    expect(after?.find((n) => n.part === 'bass')?.pitches).toEqual([home.root]);
+    expect(after?.some((n) => n.part === 'pad')).toBe(false);
+  });
+
   it('plays the same for the same seed', () => {
     expect(compose(['calm', 'calm', 'tense'], 3)).toEqual(compose(['calm', 'calm', 'tense'], 3));
   });
@@ -106,6 +115,55 @@ describe('GardenMusic', () => {
     voice.time = 10 + (60 / MUSIC.tempo) * 4;
     music.update();
     expect(voice.tones).toBeGreaterThan(first);
+  });
+
+  it('plays no bar twice when the voice comes back from a pause (a hidden tab, a quick off and on)', () => {
+    const voice = clockedVoice();
+    const music = new GardenMusic(voice, () => 0.5);
+    voice.time = 10;
+    music.update();
+    const first = voice.tones;
+    voice.time = null;
+    music.update();
+    voice.time = 10.05; // the bar scheduled before the pause is still to come
+    music.update();
+    expect(voice.tones).toBe(first);
+  });
+
+  it('plays the win cadence only while it can be heard, and not once the game has moved on', () => {
+    // the first bar after these moods (a win first, unheard, when `silentWin`)
+    const bar = (silentWin: boolean, moods: readonly Mood[]): number[] => {
+      const voice = clockedVoice();
+      const music = new GardenMusic(voice, () => 0.5);
+      if (silentWin) {
+        voice.time = null;
+        music.setMood('won');
+        music.update();
+      }
+      voice.time = 10;
+      for (const mood of moods) music.setMood(mood);
+      music.update();
+      return voice.delays;
+    };
+    expect(bar(true, ['won'])).toEqual(bar(false, ['lost'])); // won while silent: the chords just rest
+    expect(bar(false, ['won', 'calm'])).toEqual(bar(false, ['calm'])); // played again before the bar line
+    expect(bar(false, ['won'])).not.toEqual(bar(false, ['lost'])); // heard: the cadence plays
+  });
+
+  it('never schedules a bar in the past, when frames stalled or the clock ran on while it was silent', () => {
+    for (const pause of [false, true]) {
+      const voice = clockedVoice();
+      const music = new GardenMusic(voice, () => 0.5);
+      voice.time = 10;
+      music.update();
+      if (pause) {
+        voice.time = null;
+        music.update();
+      }
+      voice.time = 10 + (60 / MUSIC.tempo) * 4 + 0.5; // half a second past the next bar line
+      music.update();
+      expect(Math.min(...voice.delays)).toBeGreaterThanOrEqual(0);
+    }
   });
 });
 
@@ -138,5 +196,16 @@ describe('Soundtrack', () => {
       ['music', MUSIC.duck.match],
       ['music', MUSIC.duck.special],
     ]);
+  });
+
+  it('turns the music calm as soon as a level starts again, before any move', () => {
+    const events = createGameEvents();
+    const moods: Mood[] = [];
+    const track: Track = { update: () => undefined, setMood: (mood) => void moods.push(mood) };
+    new Soundtrack(events, [track], { duck: () => undefined });
+    events.emit('moveSpent', { movesLeft: 1 });
+    events.emit('won');
+    events.emit('levelStarted');
+    expect(moods).toEqual(['tense', 'won', 'calm']);
   });
 });
