@@ -19,7 +19,6 @@ export interface PropPaint {
   readonly seed: number;
 }
 
-type Ctx = CanvasRenderingContext2D;
 type Pt = readonly [number, number];
 
 /** Room around the body for the shadow and the blur. */
@@ -89,7 +88,11 @@ export function bakePiece(
  * face catches the light, standing on a darker side band, all in one bold outline. Always drawn upright (the light
  * comes from above), so stones along any side of the pond read the same.
  */
-export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random: () => number): void {
+export function paintStone(
+  ctx: CanvasRenderingContext2D,
+  [rx, ry]: readonly [number, number],
+  random: () => number,
+): void {
   const depth = ry * STONE_DEPTH;
   const face = slab(rx, ry - depth / 2, random);
   const lift = -depth / 2; // the top face sits up, the side shows below it
@@ -126,7 +129,12 @@ export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random
 }
 
 /** The stone's top face: cream, shading away from the light, with a soft shine near the top edge. */
-function paintFace(ctx: Ctx, face: readonly CanvasPoint[], rx: number, ry: number): void {
+function paintFace(
+  ctx: CanvasRenderingContext2D,
+  face: readonly CanvasPoint[],
+  rx: number,
+  ry: number,
+): void {
   const fill = ctx.createLinearGradient(rx * 0.3, -ry, -rx * 0.4, ry);
   fill.addColorStop(0, STONE.top);
   fill.addColorStop(0.55, STONE.top);
@@ -147,7 +155,7 @@ function paintFace(ctx: Ctx, face: readonly CanvasPoint[], rx: number, ry: numbe
 
 // ---------------------------------------------------------------------------- lily pads and the lotus
 
-function paintPad(ctx: Ctx, radius: number, random: () => number): void {
+function paintPad(ctx: CanvasRenderingContext2D, radius: number, random: () => number): void {
   const notch = random() * TAU;
   const leaf = (): void => {
     ctx.beginPath();
@@ -177,7 +185,7 @@ function paintPad(ctx: Ctx, radius: number, random: () => number): void {
   ctx.stroke();
 }
 
-function veins(ctx: Ctx, radius: number, notch: number): void {
+function veins(ctx: CanvasRenderingContext2D, radius: number, notch: number): void {
   ctx.strokeStyle = PAD.vein;
   ctx.lineWidth = 0.8;
   for (let i = 1; i < 12; i++) {
@@ -208,7 +216,12 @@ export function bakeLotusPad(
 }
 
 /** Petals grow longer and wider and the heart shows as the lotus opens; a closed bud is a tight pink cup. */
-function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: number): void {
+function paintOpeningLotus(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  openness: number,
+  turn: number,
+): void {
   const open = Math.min(Math.max(openness, 0), 1);
   paintShadow(ctx, () => {
     ctx.beginPath();
@@ -225,7 +238,7 @@ function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: numbe
   ctx.fill();
 }
 
-function petal(ctx: Ctx, angle: number, length: number, width: number): void {
+function petal(ctx: CanvasRenderingContext2D, angle: number, length: number, width: number): void {
   ctx.save();
   ctx.rotate(angle);
   ctx.beginPath();
@@ -246,7 +259,7 @@ function petal(ctx: Ctx, angle: number, length: number, width: number): void {
 // ---------------------------------------------------------------------------- shared
 
 /** A soft shadow of whatever `shape` traces, cast away from the moon. */
-function paintShadow(ctx: Ctx, shape: () => void): void {
+function paintShadow(ctx: CanvasRenderingContext2D, shape: () => void): void {
   drawShadowOnly(
     ctx,
     () => {

@@ -11,8 +11,6 @@ import { blank, context, copyCanvas, fillRadial, freshContext, transparent, wash
 import { spineOffset } from './koiBank';
 import type { BakeOptions } from './koiBank';
 
-type Ctx = CanvasRenderingContext2D;
-
 /**
  * How a striped koi's bands look (after the prototype's): `count` bands across its body, the band colour at both
  * edges and white between, with a fine dark line between them; `body` is where the body spans across the canvas
@@ -274,7 +272,7 @@ interface PointLike {
 
 /** One tapered ribbon spiralling into the centre: wide in the middle, thin at both ends. */
 function arm(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   shape: { start: number; reach: number; turn: number; width: number },
   colour: string,
   alpha: number,
@@ -297,7 +295,7 @@ function arm(
 }
 
 /** Light from the moon side, shade at the far edge, over a part's paint: gives the bands some roundness. */
-function shade(ctx: Ctx, part: HTMLCanvasElement): void {
+function shade(ctx: CanvasRenderingContext2D, part: HTMLCanvasElement): void {
   const light = ctx.createRadialGradient(
     part.width * 0.42,
     part.height * 0.4,
@@ -348,7 +346,14 @@ export function paintSparkle(size: number): HTMLCanvasElement {
   return canvas;
 }
 
-function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, alpha: number): void {
+function glowAt(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  colour: string,
+  alpha: number,
+): void {
   ctx.globalAlpha = alpha;
   fillRadial(
     ctx,
