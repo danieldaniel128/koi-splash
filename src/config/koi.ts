@@ -32,8 +32,13 @@ export const KOI_LOOK = {
    */
   bakeHeadroom: 1.25,
   maxBakeResolution: 4,
-  /** Poses in one baked tail beat, and how far the tail swings in them (1 = the painter's widest). */
-  swimFrames: 12,
+  /**
+   * Poses in one baked tail beat, enough that the slow beat at rest moves smoothly, and how many contact shapes the
+   * beat gets (they are soft, so fewer do).
+   */
+  swimFrames: 24,
+  contactFrames: 12,
+  /** How far the tail swings in the beat (1 = the painter's widest). */
   tailSwing: 0.55,
   /**
    * The cartoon outline: one even stroke of dark ink around each koi (px), so the shapes read crisply on a phone;

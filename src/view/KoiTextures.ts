@@ -26,6 +26,8 @@ export interface KoiBake {
    */
   readonly contact: KoiContactShape;
   readonly contactResolution: number;
+  /** Contact shapes in one tail beat: soft, so fewer than the poses. */
+  readonly contactFrames: number;
 }
 
 /**
@@ -45,9 +47,9 @@ export class KoiTextures {
   private readonly contacts: Texture[][];
 
   /**
-   * O(kinds x frames) canvas paints, twice: the inked poses and their blurred contact masks, plus one shadow per
-   * kind, then GPU uploads. Done once while the game loads: about 0.15 s in a laptop's Chrome, and the GPU's drawing
-   * of the canvases on top, when they're first uploaded.
+   * O(kinds x frames) canvas paints: the inked poses, their blurred contact masks (half as many) and one shadow per
+   * kind, then GPU uploads. Done once while the game loads, with the GPU's drawing of the canvases on top, when
+   * they're first uploaded.
    */
   constructor(varietyIds: readonly string[], bake: KoiBake) {
     this.contactScale = bake.resolution / bake.contactResolution;
@@ -69,7 +71,7 @@ export class KoiTextures {
     return texture;
   }
 
-  /** Where a koi of this kind meets the water, one shape per pose (see bakeKoiContact), at contactResolution. */
+  /** Where a koi of this kind meets the water through its tail beat (see bakeKoiContact), at contactResolution. */
   contact(kind: Kind): readonly Texture[] {
     const shapes = this.contacts[kind];
     if (!shapes) throw new RangeError(`no koi contact for kind ${kind}`);
@@ -81,11 +83,7 @@ export class KoiTextures {
  * One full tail beat: pose i swings the tail by sin(2 PI i / frames), so the poses loop smoothly. `dress` gives a
  * special koi its look (see specialKoi).
  */
-export function bakePoses(
-  varietyId: string,
-  bake: KoiBake,
-  dress?: Dressing,
-): Texture[] {
+export function bakePoses(varietyId: string, bake: KoiBake, dress?: Dressing): Texture[] {
   return Array.from({ length: bake.frames }, (_, i) => Texture.from(bakePose(varietyId, bake, i, dress)));
 }
 
@@ -98,16 +96,16 @@ export function bakePose(
 ): HTMLCanvasElement {
   return bakeInkedKoi(
     getVariety(varietyId),
-    { ...stillPose(bake), tailWag: tailWag(pose, bake) },
+    { ...stillPose(bake), tailWag: tailWag(pose / bake.frames, bake) },
     bake.ink,
     dress,
   );
 }
 
-/** The contact shape of every pose, so the foam follows the body as it bends. */
+/** Contact shapes through the tail beat, so the foam follows the body as it bends. */
 function bakeContacts(varietyId: string, bake: KoiBake): Texture[] {
-  return Array.from({ length: bake.frames }, (_, i) =>
-    Texture.from(bakeContact(varietyId, bake, tailWag(i, bake))),
+  return Array.from({ length: bake.contactFrames }, (_, i) =>
+    Texture.from(bakeContact(varietyId, bake, tailWag(i / bake.contactFrames, bake))),
   );
 }
 
@@ -117,9 +115,9 @@ export function bakeContact(varietyId: string, bake: KoiBake, wag: number): HTML
   return bakeKoiContact(getVariety(varietyId), pose, bake.contact);
 }
 
-/** How far pose `pose` of a tail beat swings the tail (koiBank's tailWag). */
-export function tailWag(pose: number, bake: KoiBake): number {
-  return Math.sin((pose / bake.frames) * Math.PI * 2) * bake.tailSwing;
+/** How far the tail swings (koiBank's tailWag) at a place in the beat (0..1). */
+export function tailWag(beat: number, bake: KoiBake): number {
+  return Math.sin(beat * Math.PI * 2) * bake.tailSwing;
 }
 
 /** The straight pose, with no shadow: the shadow is its own sprite on the pond bottom. */

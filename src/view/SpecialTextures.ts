@@ -138,7 +138,7 @@ export class SpecialTextures {
       const variety = getVariety(this.variety(kind));
       const body = { ...stillPose(this.bake), parts: 'body' } as const;
       const bodies = Array.from({ length: this.bake.frames }, (_, i) =>
-        bakeKoi(variety, { ...body, tailWag: tailWag(i, this.bake) }),
+        bakeKoi(variety, { ...body, tailWag: tailWag(i / this.bake.frames, this.bake) }),
       );
       return sheenFrames(inEveryPose(bodies), SPECIAL_LOOK.sheen.frames).map((canvas) =>
         Texture.from(canvas),

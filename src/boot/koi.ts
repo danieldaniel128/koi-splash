@@ -25,6 +25,7 @@ export function koiBake(koiSize: number, resolution: number): KoiBake {
     resolution,
     build: KOI_LOOK.build,
     frames: KOI_LOOK.swimFrames,
+    contactFrames: KOI_LOOK.contactFrames,
     tailSwing: KOI_LOOK.tailSwing,
     shadowBlur: WATER.shadowBlur,
     ink: koiInk(),

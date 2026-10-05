@@ -14,7 +14,7 @@ export interface KoiMarks {
 interface Marks {
   readonly shadow: Sprite;
   readonly contact: Sprite;
-  /** The contact shapes, one per pose. */
+  /** The contact shapes through the tail beat. */
   readonly contactPoses: readonly Texture[];
   /** Where the koi was last frame, to tell how fast it moves. */
   readonly last: Point;
@@ -93,7 +93,7 @@ export class KoiWaterline {
       moved / Math.max(deltaSeconds, 1e-3) / WATER.contactStirSpeed,
       (lift - 1) * WATER.contactLiftStir,
     );
-    contact.texture = marks.contactPoses[koi.pose] ?? contact.texture;
+    contact.texture = marks.contactPoses[koi.poseOf(marks.contactPoses.length)] ?? contact.texture;
     contact.position.copyFrom(koi.position);
     const coarse = this.textures.contactScale;
     contact.scale.set(koi.scale.x * coarse, koi.scale.y * coarse);
