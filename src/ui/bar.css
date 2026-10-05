@@ -12,7 +12,6 @@
 
 /* A booster lifts with translate and scale, so a press (transform) or a shake plays on top of its lift. */
 .booster {
-  position: relative;
   width: var(--size-boosterOrb);
   transition-property: transform, translate, scale;
 }

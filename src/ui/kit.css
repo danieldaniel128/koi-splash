@@ -30,6 +30,17 @@
   touch-action: manipulation;
 }
 
+/* Every button takes taps at least a finger wide, however small it is drawn: its tap area reaches past its edges. */
+button {
+  position: relative;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((100% - var(--size-touch)) / 2));
+}
+
 /*
  * Keyboard focus, on every button alike: a gold ring that follows the button's shape, or its orb's when it has one
  * (a booster's name sits under its orb). --focus-offset moves the ring in or out.
