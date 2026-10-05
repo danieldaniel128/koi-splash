@@ -31,7 +31,7 @@ export class SpecialFx extends Container {
   private readonly board: FxBoard;
   private readonly textures: SpecialTextures;
   private readonly water: WaterSurface;
-  private readonly cell: number;
+  private readonly cellSize: number;
   private readonly length: number;
   private readonly events: GameEventBus;
 
@@ -40,7 +40,7 @@ export class SpecialFx extends Container {
     readonly textures: SpecialTextures;
     readonly water: WaterSurface;
     /** A cell's size, and the board's longest side (px): how far a beam reaches. */
-    readonly cell: number;
+    readonly cellSize: number;
     readonly length: number;
     /** Where it says when each blast's moments happen (the sounds follow them). */
     readonly events: GameEventBus;
@@ -49,7 +49,7 @@ export class SpecialFx extends Container {
     this.board = deps.board;
     this.textures = deps.textures;
     this.water = deps.water;
-    this.cell = deps.cell;
+    this.cellSize = deps.cellSize;
     this.length = deps.length;
     this.events = deps.events;
   }
@@ -78,10 +78,10 @@ export class SpecialFx extends Container {
       )
       .fromTo(
         flash,
-        { width: this.cell * 0.4, height: this.cell * 0.4 },
+        { width: this.cellSize * 0.4, height: this.cellSize * 0.4 },
         {
-          width: this.cell * look.flash,
-          height: this.cell * look.flash,
+          width: this.cellSize * look.flash,
+          height: this.cellSize * look.flash,
           duration: look.life,
           immediateRender: false,
         },
@@ -116,8 +116,8 @@ export class SpecialFx extends Container {
       ease: 'none',
       onUpdate: () => {
         const reach = Math.min(1, 2.2 * grow.k);
-        beam.width = this.length * look.length * easeOutCubic(reach) + this.cell;
-        beam.height = this.cell * look.width * (1 - 0.6 * grow.k);
+        beam.width = this.length * look.length * easeOutCubic(reach) + this.cellSize;
+        beam.height = this.cellSize * look.width * (1 - 0.6 * grow.k);
         beam.alpha = 1 - grow.k;
       },
       onComplete: () => {
@@ -155,7 +155,7 @@ export class SpecialFx extends Container {
       onUpdate: () => {
         const grow = easeOutBack(Math.min(1, time.t / whirlSpin), 1.9);
         const out = Math.max(0, (time.t - stay) / look.fade);
-        eddy.setSize(this.cell * (look.from + (look.to - look.from) * grow) * (1 + 0.2 * out));
+        eddy.setSize(this.cellSize * (look.from + (look.to - look.from) * grow) * (1 + 0.2 * out));
         eddy.rotation = spinAngle(time.t, whirlSpin, look.spin0, look.spinMax);
         eddy.alpha = 1 - out * out;
       },

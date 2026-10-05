@@ -18,7 +18,7 @@ export interface ImpactParts {
   /** The sparkles a win bursts into, and where the board's middle is and how big a cell is (stage px). */
   readonly sparkles: Sparkles;
   readonly boardCentre: PointData;
-  readonly cell: number;
+  readonly cellSize: number;
 }
 
 /**
@@ -78,11 +78,11 @@ export class Impact {
 
   /** The pond is won: sparkles burst from its middle as the camera pushes in on it, with a flash and a buzz. */
   private celebrate(): void {
-    const { camera, sparkles, boardCentre, cell } = this.parts;
+    const { camera, sparkles, boardCentre, cellSize } = this.parts;
     camera.punch(boardCentre);
     camera.shake(IMPACT.shake.win);
     this.parts.flash.alpha = IMPACT.flash.win;
-    sparkles.burst(boardCentre, CELEBRATION.count, CELEBRATION.reach * cell);
+    sparkles.burst(boardCentre, CELEBRATION.count, CELEBRATION.reach * cellSize);
     this.parts.haptics.pulse(IMPACT.vibrate.win);
   }
 

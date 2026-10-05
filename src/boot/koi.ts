@@ -68,7 +68,11 @@ export function createBoardView(
   spec: BoardSpec,
   board: GameLayout['board'],
 ): BoardView {
-  const view = new BoardView(textures, specials, { ...spec, cellSize: board.cell, koiSize: board.piece });
+  const view = new BoardView(textures, specials, {
+    ...spec,
+    cellSize: board.cellSize,
+    koiSize: board.koiSize,
+  });
   view.position.set(board.x, board.y);
   return view;
 }

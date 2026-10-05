@@ -23,7 +23,7 @@ import type { WaterSurface } from './water/PondWater';
 export interface AnimatorDeps {
   readonly view: BoardView;
   /** A cell's size (px): how far things travel. */
-  readonly cell: number;
+  readonly cellSize: number;
   readonly water: WaterSurface;
   /** The points that pop up over the matches. */
   readonly popups: MatchEffects;
@@ -69,7 +69,7 @@ export class BoardAnimator implements TurnAnimator {
 
   constructor(deps: AnimatorDeps) {
     this.view = deps.view;
-    this.cellSize = deps.cell;
+    this.cellSize = deps.cellSize;
     this.water = deps.water;
     this.fx = deps.popups;
     this.specials = deps.specials;

@@ -54,7 +54,7 @@ export class SpecialMenu implements SpecialPicker {
     private readonly layer: UiLayer,
     private readonly board: MenuBoard,
     private readonly choices: readonly PetalChoice[],
-    private readonly cell: number,
+    private readonly cellSize: number,
   ) {
     this.root.addEventListener('pointerdown', () => {
       this.pressed = true;
@@ -73,7 +73,7 @@ export class SpecialMenu implements SpecialPicker {
     const centre = this.board.cellCentre(at);
     const look = SPECIAL_MENU;
     const spots = petalSpots(centre, at.row < look.topRows, {
-      reach: look.reach * this.cell,
+      reach: look.reach * this.cellSize,
       spread: look.spread,
       edge: look.edge,
       stageWidth: this.board.stageWidth,
@@ -107,7 +107,7 @@ export class SpecialMenu implements SpecialPicker {
     { spot, from }: { spot: PointData; from: PointData },
     k: number,
   ): HTMLElement {
-    const size = SPECIAL_MENU.petal * this.cell;
+    const size = SPECIAL_MENU.petal * this.cellSize;
     const picture = image(choice.type === 'line' ? 'petal__koi petal__koi--line' : 'petal__koi', preview);
     picture.draggable = false; // a click that drifts a little still picks the petal
     const petal = button('control petal', choice.name, picture, el('span', 'petal__name', choice.name));

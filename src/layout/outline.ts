@@ -46,11 +46,15 @@ export interface ShoreSpec {
  * each island of bank inside the pond. A plain rectangle gives one rounded rectangle.
  * O(cols * rows) to trace, O(corners) to round.
  */
-export function traceShore(shape: BoardShape, board: Rect & { cell: number }, spec: ShoreSpec): Outline[] {
+export function traceShore(
+  shape: BoardShape,
+  board: Rect & { cellSize: number },
+  spec: ShoreSpec,
+): Outline[] {
   return boundaryLoops(shape).map((corners) => {
     const placed = corners.map(({ at, dirIn, dirOut }) => {
-      const x = board.x + at[0] * board.cell;
-      const y = board.y + at[1] * board.cell;
+      const x = board.x + at[0] * board.cellSize;
+      const y = board.y + at[1] * board.cellSize;
       const nIn = outward(dirIn);
       const nOut = outward(dirOut);
       const push = (n: Vec): number => marginFor(n, spec.margin);

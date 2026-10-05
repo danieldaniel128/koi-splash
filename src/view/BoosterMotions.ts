@@ -38,7 +38,7 @@ export class BoosterMotions extends Container {
 
   private readonly view: BoardView;
   private readonly water: WaterSurface;
-  private readonly cell: number;
+  private readonly cellSize: number;
   private readonly sparkle: Texture;
   private readonly events: GameEventBus;
   private readonly hitStop: HitStop;
@@ -47,7 +47,7 @@ export class BoosterMotions extends Container {
   constructor(deps: {
     readonly view: BoardView;
     readonly water: WaterSurface;
-    readonly cell: number;
+    readonly cellSize: number;
     /** The sparkle the special booster swirls in. */
     readonly sparkle: Texture;
     /** Where it says when each motion's moments happen (the sounds follow them). */
@@ -60,12 +60,12 @@ export class BoosterMotions extends Container {
     super();
     this.view = deps.view;
     this.water = deps.water;
-    this.cell = deps.cell;
+    this.cellSize = deps.cellSize;
     this.sparkle = deps.sparkle;
     this.events = deps.events;
     this.hitStop = deps.hitStop;
     this.centre = deps.centre;
-    const size = Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet);
+    const size = Math.ceil(deps.cellSize * BOOSTER_MOTION.feed.pellet);
     this.pellet = Texture.from(paintPellet(size, THEME.scene.light.dir));
   }
 
@@ -142,7 +142,7 @@ export class BoosterMotions extends Container {
       ease: 'none',
       onUpdate: () => {
         const up = Math.sin(Math.PI * k.t);
-        koi.y = home.y - up * look.rise * this.cell;
+        koi.y = home.y - up * look.rise * this.cellSize;
         koi.scale.set(rest * (1 + 0.42 * up * look.rise));
         koi.heading = heading + Math.PI * 2 * look.spinTurns * easeInOutCubic(k.t);
       },
@@ -176,7 +176,7 @@ export class BoosterMotions extends Container {
         const up = Math.sin(Math.PI * k.t);
         const bow = leap.bow * length * up;
         koi.x = from.x + (to.x - from.x) * along + normal.x * bow;
-        koi.y = from.y + (to.y - from.y) * along + normal.y * bow - leap.height * this.cell * up;
+        koi.y = from.y + (to.y - from.y) * along + normal.y * bow - leap.height * this.cellSize * up;
         koi.scale.set(rest * (1 + look.grow * leap.height * up));
         koi.heading = leap.spin(k.t);
       },
@@ -225,7 +225,7 @@ export class BoosterMotions extends Container {
     const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     const centre = this.centre;
     const inward = (centre.x - mid.x) * normal.x + (centre.y - mid.y) * normal.y >= 0 ? 1 : -1;
-    const reach = Math.min(share * length, BOOSTER_MOTION.feed.maxBow * this.cell) * inward;
+    const reach = Math.min(share * length, BOOSTER_MOTION.feed.maxBow * this.cellSize) * inward;
     return { x: mid.x + normal.x * reach, y: mid.y + normal.y * reach };
   }
 
@@ -234,7 +234,7 @@ export class BoosterMotions extends Container {
     const look = BOOSTER_MOTION.feed;
     for (let i = 0; i < look.pellets; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const reach = Math.sqrt(Math.random()) * look.scatter * this.cell;
+      const reach = Math.sqrt(Math.random()) * look.scatter * this.cellSize;
       const land = { x: food.x + Math.cos(angle) * reach, y: food.y + Math.sin(angle) * reach };
       const pellet = new Sprite(this.pellet);
       pellet.anchor.set(0.5);
@@ -251,9 +251,9 @@ export class BoosterMotions extends Container {
           duration: look.throw * (0.85 + Math.random() * 0.27),
           ease: 'none',
           onUpdate: () => {
-            const z = Math.sin(Math.PI * k.t) * look.lob * this.cell; // the lob's height
+            const z = Math.sin(Math.PI * k.t) * look.lob * this.cellSize; // the lob's height
             pellet.position.set(from.x + (land.x - from.x) * k.t, from.y + (land.y - from.y) * k.t - z);
-            pellet.scale.set(1 + z / (this.cell * 3));
+            pellet.scale.set(1 + z / (this.cellSize * 3));
           },
           onComplete: () => {
             this.water.push(this.onStage(land), WATER.surfacePush, WATER.diveRadius);
@@ -275,10 +275,10 @@ export class BoosterMotions extends Container {
       const sparkle = new Sprite(this.sparkle);
       sparkle.anchor.set(0.5);
       sparkle.blendMode = 'add';
-      sparkle.setSize(this.cell * (0.18 + Math.random() * 0.08));
+      sparkle.setSize(this.cellSize * (0.18 + Math.random() * 0.08));
       this.addChild(sparkle);
       const start = Math.random() * Math.PI * 2;
-      const reach = this.cell * (0.7 + Math.random() * 0.4);
+      const reach = this.cellSize * (0.7 + Math.random() * 0.4);
       const k = { t: 0 };
       gsap.to(k, {
         t: 1,

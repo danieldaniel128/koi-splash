@@ -59,7 +59,7 @@ export async function loadGame(
   wiring: GameWiring,
   onProgress: (done: number) => void,
 ): Promise<LoadedGame> {
-  const bake = koiBake(screen.layout.board.piece, screen.resolution.art);
+  const bake = koiBake(screen.layout.board.koiSize, screen.resolution.art);
   const specials = createSpecialKoi(bake);
   const { koi } = await new BootPipeline()
     .step('fonts', 1, loadFonts)
@@ -159,7 +159,7 @@ function createImpact(
     flash: on.flash,
     sparkles: on.sparkles,
     boardCentre: { x: board.x + board.width / 2, y: board.y + board.height / 2 },
-    cell: board.cell,
+    cellSize: board.cellSize,
   });
 }
 

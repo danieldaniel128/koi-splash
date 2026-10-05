@@ -5,7 +5,7 @@ import { ringAlongShore } from '../src/layout/shore';
 import type { ShoreLook, ShorePiece } from '../src/layout/shore';
 import { parseShape } from '../src/model/shape';
 
-const BOARD = { x: 22, y: 96, width: 308, height: 396, cell: 44 };
+const BOARD = { x: 22, y: 96, width: 308, height: 396, cellSize: 44 };
 const MARGIN = 14;
 const RADIUS = 24;
 const POND = { x: BOARD.x - MARGIN, y: BOARD.y - MARGIN, width: 308 + 2 * MARGIN, height: 396 + 2 * MARGIN };
@@ -60,14 +60,14 @@ describe('ringAlongShore', () => {
       margin: { left: MARGIN, right: MARGIN, top: MARGIN, bottom: MARGIN },
       cornerRadius: RADIUS,
     });
-    const notchRow = BOARD.y + 2.5 * BOARD.cell;
+    const notchRow = BOARD.y + 2.5 * BOARD.cellSize;
     const sitsOn = (a: ShorePiece, b: ShorePiece): boolean =>
       Math.abs(a.at[0] - b.at[0]) < b.radius[0] && Math.abs(a.at[1] - b.at[1]) < b.radius[1];
     for (let seed = 1; seed <= 20; seed++) {
       const rng = seeded(seed);
       const stones = ringAlongShore(shore, LOOK, rng);
       const onNotch = stones.filter(
-        ({ at: [x, y] }) => x < BOARD.x + BOARD.cell && Math.abs(y - notchRow) < BOARD.cell / 2,
+        ({ at: [x, y] }) => x < BOARD.x + BOARD.cellSize && Math.abs(y - notchRow) < BOARD.cellSize / 2,
       );
       expect(onNotch.length).toBeGreaterThan(0);
       for (const a of onNotch) for (const b of onNotch) if (a !== b) expect(sitsOn(a, b)).toBe(false);

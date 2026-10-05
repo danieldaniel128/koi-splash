@@ -110,8 +110,8 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
 
 /** The banner lane: as wide as the board, over its top rows. */
 function bannerRect(board: GameLayout['board']): Rect {
-  const { x, width, cell } = board;
-  return { x, y: board.y + cell * BANNER.top, width, height: cell * BANNER.height };
+  const { x, width, cellSize } = board;
+  return { x, y: board.y + cellSize * BANNER.top, width, height: cellSize * BANNER.height };
 }
 
 /** What the banner lane announces: combos and specials made, a reshuffle, every goal met, the pond won. */
@@ -171,7 +171,7 @@ function startGame(
   const swaps = new SwapControl(scene, parts.boosters.marks);
   listenToPlayer(
     { scene, control, swaps },
-    { bar, screenFlow, boardView, animator, canvas, cell: screen.layout.board.cell },
+    { bar, screenFlow, boardView, animator, canvas, cellSize: screen.layout.board.cellSize },
   );
   return { control, bar };
 }
@@ -195,7 +195,7 @@ function listenToPlayer(
     boardView: BoardView;
     animator: BoardAnimator;
     canvas: HTMLCanvasElement;
-    cell: number;
+    cellSize: number;
   },
 ): void {
   const gestures = (): BoardGestures => (control.armed ? control : swaps);
@@ -204,7 +204,7 @@ function listenToPlayer(
     const cell = on.boardView.pointToCell(on.boardView.toLocal(event.global));
     if (cell && scene.canSwap && scene.hasKoi(cell)) on.animator.touch(cell);
   });
-  new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
+  new SwipeInput(on.boardView, on.canvas, on.cellSize * INPUT.swipeThreshold, {
     swipe: (from, to) => {
       gestures().swipe(from, to);
     },
@@ -236,7 +236,7 @@ function createAnimator(parts: GameParts, screen: GameScreen, bar: BoosterBar): 
   const { boardView, pond, popups, specials, boosters, events } = parts;
   return new BoardAnimator({
     view: boardView,
-    cell: board.cell,
+    cellSize: board.cellSize,
     water: pond,
     popups,
     specials,
@@ -258,17 +258,17 @@ function createBoosterViews(on: {
   hitStop: HitStop;
 }): { motions: BoosterMotions; marks: BoardMarks } {
   const { boardView, events, board } = on;
-  const { cell } = board;
+  const { cellSize } = board;
   const motions = new BoosterMotions({
     view: boardView,
     water: on.pond,
-    cell,
+    cellSize,
     sparkle: on.specials.sparkle,
     events,
     hitStop: on.hitStop,
     centre: { x: board.width / 2, y: board.height / 2 },
   });
-  const marks = new BoardMarks(boardView, cell);
+  const marks = new BoardMarks(boardView, cellSize);
   for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);
   return { motions, marks };
 }
@@ -291,8 +291,8 @@ function createBoosterControl(scene: GameScene, views: BoosterViews): BoosterCon
   const pill = new InstructionPill(ui, layout.pill);
   const menuBoard = {
     cellCentre: (cell: Cell) => ({
-      x: board.x + (cell.col + 0.5) * board.cell,
-      y: board.y + (cell.row + 0.5) * board.cell,
+      x: board.x + (cell.col + 0.5) * board.cellSize,
+      y: board.y + (cell.row + 0.5) * board.cellSize,
     }),
     stageWidth: layout.stage.width,
     preview: (cell: Cell, special: Special) => views.boardView.previewAt(cell, special),
@@ -302,7 +302,7 @@ function createBoosterControl(scene: GameScene, views: BoosterViews): BoosterCon
     buttons: views.bar,
     pill,
     marks: views.marks,
-    picker: new SpecialMenu(ui, menuBoard, SPECIAL_MENU.choices, board.cell),
+    picker: new SpecialMenu(ui, menuBoard, SPECIAL_MENU.choices, board.cellSize),
     sounds: boosterSounds(events),
     slots: BOOSTERS,
     feedLines: BOOSTER_MOTION.feed.lines,
@@ -348,7 +348,7 @@ function createSpecialEffects(on: {
     board: on.boardView,
     textures: on.textures,
     water: on.pond,
-    cell: board.cell,
+    cellSize: board.cellSize,
     length: Math.max(board.width, board.height),
     events: on.events,
   });
@@ -370,7 +370,7 @@ function createScorePopups(flights: FlyingPoints, boardOrigin: PointData, resolu
 function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resolution: number): PadView {
   const pads = new PadView(
     {
-      cellSize: board.cell,
+      cellSize: board.cellSize,
       goalTarget: () => {
         const goal = hud.goalAnchor();
         return { x: goal.x - board.x, y: goal.y - board.y };
