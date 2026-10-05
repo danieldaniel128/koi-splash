@@ -22,19 +22,24 @@ const ROUND_COLORS = [THEME.color.combo1, THEME.color.combo2, THEME.color.combo3
  */
 export class ScorePopups extends Container implements MatchEffects {
   /** Making a Text draws a canvas, too slow to do for every match: labels are drawn once and reused. */
-  private readonly labels = new Pool<Text>({
-    create: createLabel,
-    reset: (label) => {
-      label.alpha = 1;
-    },
-    cap: POINTS.pool,
-    discard: (label) => {
-      label.destroy();
-    },
-  });
+  private readonly labels: Pool<Text>;
 
-  constructor(private readonly flights: ScoreFlights) {
+  constructor(
+    private readonly flights: ScoreFlights,
+    /** Screen pixels per stage px: the labels are drawn that sharp, like the koi and the HUD. */
+    resolution: number,
+  ) {
     super();
+    this.labels = new Pool<Text>({
+      create: () => createLabel(resolution),
+      reset: (label) => {
+        label.alpha = 1;
+      },
+      cap: POINTS.pool,
+      discard: (label) => {
+        label.destroy();
+      },
+    });
   }
 
   /** The points `amount` made at `at` show as `look` says. */
@@ -80,9 +85,10 @@ export function roundColor(round: number): string {
   return ROUND_COLORS[Math.min(ROUND_COLORS.length - 1, Math.max(0, round))] ?? THEME.color.gold;
 }
 
-function createLabel(): Text {
+function createLabel(resolution: number): Text {
   const label = new Text({
     text: '',
+    resolution,
     style: {
       fill: POINTS.fill,
       fontSize: POINTS.sizeMax,
