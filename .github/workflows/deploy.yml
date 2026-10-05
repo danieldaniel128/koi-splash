@@ -12,9 +12,10 @@ permissions:
   pages: write
   id-token: write
 
+# One deploy at a time; a newer one waits for the one publishing, so a page upload is never cut off halfway
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
