@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { Random, seedFromQuery } from '../src/core/Random';
 
 const draws = (random: Random, count: number): number[] => Array.from({ length: count }, () => random.next());
 
@@ -47,5 +47,18 @@ describe('Random', () => {
     const seen = new Set(Array.from({ length: 200 }, () => random.pick(['a', 'b', 'c', 'd'])));
     expect([...seen].sort()).toEqual(['a', 'b', 'c', 'd']);
     expect(() => random.pick([])).toThrow('pick() from an empty list');
+  });
+});
+
+describe('seedFromQuery', () => {
+  it('reads the seed a page address asks for', () => {
+    expect(seedFromQuery('?seed=42', 7)).toBe(42);
+    expect(seedFromQuery('?level=1&seed=-3', 7)).toBe(-3);
+  });
+
+  it('falls back when the address asks for no seed, or for one that is not a whole number', () => {
+    for (const query of ['', '?', '?level=1', '?seed=', '?seed=abc', '?seed=1.5', '?seed=12px']) {
+      expect(seedFromQuery(query, 7)).toBe(7);
+    }
   });
 });

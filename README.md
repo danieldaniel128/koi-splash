@@ -19,6 +19,9 @@ npm run build    # static web build in dist/
 npm run preview  # serves that build
 ```
 
+The board is dealt from the clock; add `?seed=42` (any whole number) to the address to deal the same board every
+time, to play a bug again.
+
 ## Stack & assets
 
 TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. Apart from the page's icon there are no image files:
