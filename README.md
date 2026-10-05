@@ -309,6 +309,45 @@ A first touch starts the sound, and it sleeps while the tab is hidden. The speak
 opens a small menu with a switch per channel, and each choice is kept between visits. An iPhone in silent mode mutes
 web audio, so there the game plays silently until the ring switch is turned back on.
 
+### Performance
+
+The goal: smooth 60 fps on a mid-range phone, and no stutter once the loading bar is gone.
+
+- **Everything heavy happens behind the loading bar.**
+  - The boot pipeline (`src/core/BootPipeline.ts`, steps in `src/boot/loading.ts`) runs named, weighted steps. Each
+    one is a list of small jobs, and the page gets to paint every 50 ms, so the bar keeps moving.
+  - The steps bake all the koi poses, every special koi, the lily pad stages, the garden and the shore.
+  - A last step sends every baked texture to the GPU and builds the effect shaders. The first frames of play don't
+    upload or compile anything.
+- **Baked once, shared everywhere (flyweight).**
+  - The art is painted on canvases once, at the screen's real pixel density (one bake resolution worked out at boot).
+  - Every sprite shares those textures: 60 koi on the board use one set of poses per color. Nothing is rebuilt on
+    replay.
+  - The audio does the same: one noise buffer and one set of channels shared by every sound.
+- **Fewer draw calls.**
+  - The stones around the pond are packed into one atlas (`src/art/atlas.ts`), so the whole ring is one texture and
+    one draw call.
+  - The bank under the water is a shader pass cached as a texture (`cacheAsTexture`), drawn once rather than every
+    frame.
+  - Koi, pads and effects are sprites on shared textures, so Pixi batches them.
+  - The art is baked canvases, not shapes redrawn each frame.
+  - A full frame is about 13 draw calls.
+- **Object pools.** Effects that come and go many times a second come from a generic `Pool<T>` (`src/core/Pool.ts`)
+  instead of being created and destroyed: the score popups, the points that fly to the score, and the win sparkles.
+  No garbage-collection hitches in a big cascade.
+- **The shore as a distance field.**
+  - The pond's outline is baked once into a distance texture (about 25 ms, `src/art/distanceField.ts`).
+  - Every water shader reads "how far from the shore" in one texture fetch, instead of looping over the outline for
+    every pixel.
+- **The water.**
+  - The wave simulation runs on the GPU at a fixed 60 steps a second, with a cap on catch-up steps after a slow frame.
+  - The frame rate is capped at 60, so 120 Hz phones don't draw the same water twice as often.
+  - GSAP runs on the same clock as Pixi, so animation and rendering never drift apart.
+- **A lean download.**
+  - No image or sound files.
+  - The koi painter keeps only the five koi the game uses.
+  - Pixi and GSAP ship as their own cached chunks (about 270 kB gzipped in total).
+
 ### How to add…
 
 - **A level:** `LEVEL` in `src/config/level.ts`. Draw the board in `shape` (`#` a cell, `.` bank) and the water, the
