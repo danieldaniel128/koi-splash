@@ -162,13 +162,15 @@ export class PadView extends Container implements PadDisplay {
 
   /**
    * Where a pad meets the water, in stage px. A blooming lotus lifts out (its scale grows past the resting one) and
-   * a drifting pad fades, so the foam closes in on them as they go; a hit's pop leaves it as it is.
+   * a drifting pad fades, so the foam closes in on them and the shallows round them fade as they go; a hit's pop
+   * leaves them as they are.
    */
   private waterline(sprite: Sprite): Circle {
     const lift = this.blooming.has(sprite) ? Math.max(0, sprite.scale.x / this.scaleOf - 1) : 0;
     const floats = Math.max(0, 1 - lift * BOARD_PADS.foamLetGo) * sprite.alpha;
     const { x, y } = this.layout.toStage(sprite.position);
-    return { x, y, radius: this.layout.cellSize * BOARD_PADS.radius * BOARD_PADS.foamFit * floats };
+    const radius = this.layout.cellSize * BOARD_PADS.radius * BOARD_PADS.foamFit * floats;
+    return { x, y, radius, afloat: floats };
   }
 
   private remove(sprite: Sprite): void {

@@ -45,13 +45,15 @@ export interface PondLayout {
   readonly moonAt: readonly [number, number];
 }
 
-/** Something the koi and the matches push: the pond's water. */
-/** A round thing floating on the water, in stage px. */
+/** A round thing floating on the water, in stage px, and how much of it is still on the water (0..1). */
 export interface Circle {
   readonly x: number;
   readonly y: number;
   readonly radius: number;
+  readonly afloat: number;
 }
+
+/** Something the koi and the matches push: the pond's water. */
 
 export interface WaterSurface {
   /** Presses the surface down by `strength` (water-height units; negative lifts it) over `radius` px at a stage point. */
@@ -142,12 +144,15 @@ export class PondWater implements WaterSurface {
    * O(MAX_PROPS).
    */
   float(circles: readonly Circle[]): void {
-    const shapes = this.shape.pond.uniforms.uProps as Float32Array;
-    const axes = this.shape.pond.uniforms.uPropAxes as Float32Array;
+    const { uniforms } = this.shape.pond;
+    const shapes = uniforms.uProps as Float32Array;
+    const axes = uniforms.uPropAxes as Float32Array;
+    const afloat = uniforms.uPropAfloat as Float32Array;
     for (let slot = this.fixedProps; slot < MAX_PROPS; slot++) {
       const circle = circles[slot - this.fixedProps];
       shapes.set(circle ? [circle.x, circle.y, circle.radius, circle.radius] : [0, 0, 0, 0], slot * 4);
       axes.set([1, 0], slot * 2);
+      afloat[slot] = circle?.afloat ?? 0;
     }
   }
 
@@ -282,7 +287,7 @@ export function bakeShoreField(pond: SimArea, shore: readonly Outline[]): Distan
 }
 
 /**
- * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend, uProps, uPropAxes in common.glsl): the
+ * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend and the uProp arrays in common.glsl): the
  * shore's distance field and the stones and pads in the water. Shared by the simulation and every pass, so they all
  * agree on the shore.
  */
@@ -295,7 +300,7 @@ function pondShape(layout: PondLayout): PondShapeResources {
     format: 'rgba8unorm',
     scaleMode: 'linear', // the distance is smooth: blending neighbours gives the distance in between
   });
-  const { shapes, axes } = waterShapes(layout.props);
+  const { shapes, axes, afloat } = waterShapes(layout.props);
   const { x, y, width, height } = field.area;
   return {
     uShoreField: source,
@@ -304,6 +309,7 @@ function pondShape(layout: PondLayout): PondShapeResources {
       uShoreBend: { value: [POND.shoreWobble, POND.shoreBend], type: 'vec2<f32>' },
       uProps: { value: shapes, type: 'vec4<f32>', size: MAX_PROPS },
       uPropAxes: { value: axes, type: 'vec2<f32>', size: MAX_PROPS },
+      uPropAfloat: { value: afloat, type: 'f32', size: MAX_PROPS },
     }),
   };
 }

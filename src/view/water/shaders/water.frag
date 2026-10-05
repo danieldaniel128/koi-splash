@@ -116,6 +116,17 @@ vec3 water(vec2 p, float edge, vec3 w) {
     return moonlight(color, seen, smoothstep(0.0, 14.0, rectEdge(p, uBoard)));
 }
 
+// Distance (px) to where the water gets shallow: the shore, or a stone or pad in it. A pad leaving the water
+// (uPropAfloat falling to 0) counts as further and further away, so the shallows round it fade out with it.
+float shallowsEdge(vec2 p, float shore) {
+    float d = 1e5;
+    for (int i = 0; i < MAX_PROPS; i++) {
+        if (uProps[i].z <= 0.0) continue;
+        d = min(d, propDistance(i, p) + (1.0 - uPropAfloat[i]) * uDepth.y);
+    }
+    return max(shore, -d);
+}
+
 void main() {
     vec2 p = vPosition;
     float edge = pondEdge(p);
@@ -124,7 +135,7 @@ void main() {
         finalColor = vec4(0.0);
         return;
     }
-    vec3 color = water(p, max(edge, -propEdge(p)), waves(p)); // lighter shallows by the shore and around stones
+    vec3 color = water(p, shallowsEdge(p, edge), waves(p)); // lighter shallows by the shore and around stones
     color *= mix(1.0, paper(p), 0.6); // the same washi grain as the bank, a little softer under the water
     finalColor = vec4(color * inside, inside); // premultiplied alpha, as Pixi blends it
 }

@@ -10,10 +10,12 @@ uniform vec4 uShoreArea;
 uniform vec2 uShoreBend;
 
 // stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and the cosine and sine of
-// the rotation. Unused slots have a zero size.
+// the rotation; and how much of each is still on the water (1, falling to 0 as a pad leaves it), which the water's
+// depth fades with. Unused slots have a zero size.
 const int MAX_PROPS = 16;
 uniform vec4 uProps[MAX_PROPS];
 uniform vec2 uPropAxes[MAX_PROPS];
+uniform float uPropAfloat[MAX_PROPS];
 
 // The water's state: a value in -WATER_RANGE..WATER_RANGE (WATER.stateRange, set by withCommon) packed into two
 // 8-bit channels, a high byte and the remainder at full 8-bit resolution, so the simulation runs on any phone GPU
@@ -70,16 +72,21 @@ float pondEdge(vec2 p) {
     return d + (bend - 0.5) * 2.0 * uShoreBend.x;
 }
 
+// Distance (px) to the edge of stone or pad `i` (a slot in use): negative inside it.
+float propDistance(int i, vec2 p) {
+    vec4 prop = uProps[i];
+    vec2 axis = uPropAxes[i];
+    vec2 q = p - prop.xy;
+    q = vec2(axis.x * q.x + axis.y * q.y, axis.x * q.y - axis.y * q.x); // into the prop's own frame
+    return (length(q / prop.zw) - 1.0) * min(prop.z, prop.w);
+}
+
 // Distance (px) to the nearest stone or lily pad: negative inside one.
 float propEdge(vec2 p) {
     float d = 1e5;
     for (int i = 0; i < MAX_PROPS; i++) {
-        vec4 prop = uProps[i];
-        if (prop.z <= 0.0) continue;
-        vec2 axis = uPropAxes[i];
-        vec2 q = p - prop.xy;
-        q = vec2(axis.x * q.x + axis.y * q.y, axis.x * q.y - axis.y * q.x); // into the prop's own frame
-        d = min(d, (length(q / prop.zw) - 1.0) * min(prop.z, prop.w));
+        if (uProps[i].z <= 0.0) continue;
+        d = min(d, propDistance(i, p));
     }
     return d;
 }
