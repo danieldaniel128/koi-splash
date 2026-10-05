@@ -80,15 +80,18 @@ export class WaterSim {
 
   /**
    * Pushes the surface at a stage point: negative `push` presses it down (a fish diving, a splash), positive lifts
-   * it. Applied on the next step. Past WATER.maxDrops in one step, it takes the place of the weakest push if it's
-   * stronger, so a splash is never crowded out by the koi's wakes. O(1), O(maxDrops) once the step is full.
+   * it, at most WATER.stateRange either way. Applied on the next step. Past WATER.maxDrops in one step, it takes the
+   * place of the weakest push if it's stronger, so a splash is never crowded out by the koi's wakes. O(1),
+   * O(maxDrops) once the step is full.
    */
   drop(stageX: number, stageY: number, radius: number, push: number): void {
     const slot = this.dropCount < WATER.maxDrops ? this.dropCount++ : this.weakestDrop(push);
     if (slot < 0) return;
     const cellX = ((stageX - this.area.x) / this.area.width) * this.cols;
     const cellY = ((stageY - this.area.y) / this.area.height) * this.rows;
-    this.drops.set([cellX, cellY, radius / WATER.cellSize, push], slot * 4);
+    const range = WATER.stateRange; // what the state can hold: a stronger push would flatten the splash's crown
+    const capped = Math.min(Math.max(push, -range), range);
+    this.drops.set([cellX, cellY, radius / WATER.cellSize, capped], slot * 4);
   }
 
   /**
@@ -177,10 +180,11 @@ export interface PondShapeResources {
  * A fragment shader with the shared helpers (noise, the pond's outline, lines) in front of it. Marked GLSL ES 3:
  * Pixi compiles anything else as WebGL 1 shaders, which lack fwidth (constant-width lines). Its textures are read at
  * high precision: left undeclared, Pixi makes them lowp, too coarse for the water state's low byte on the phone GPUs
- * that honour it (the pond would never settle).
+ * that honour it (the pond would never settle). WATER_RANGE is how far the water state reaches (see waterCodec).
  */
 export function withCommon(fragment: string): string {
-  return `#version 300 es\nprecision highp float;\nprecision highp sampler2D;\n${common}\n${fragment}`;
+  const range = `const float WATER_RANGE = ${WATER.stateRange.toFixed(1)};`;
+  return `#version 300 es\nprecision highp float;\nprecision highp sampler2D;\n${range}\n${common}\n${fragment}`;
 }
 
 /** A fragment shader with the shared helpers and the wave-reading code in front of it (high precision for unpacking). */

@@ -18,10 +18,15 @@ export const WATER = {
   shoreBand: 18,
   /** Most surface pushes per step; must match MAX_DROPS in sim.frag. */
   maxDrops: 32,
+  /**
+   * The water's height and speed are stored up to this far either way (see waterCodec): room for the biggest
+   * splashes, at 16 bits across the range. A push past it is capped.
+   */
+  stateRange: 2,
   /** How steep the drawn waves look: scales the refraction and the light on the waves together. */
   waveScale: 5,
 
-  // --- koi disturbing the water (pushes are in water-height units, -1..1; radius in px)
+  // --- koi disturbing the water (pushes are in water-height units, up to stateRange; radius in px)
   /** A moving koi pushes the water at its tail every this many px of travel, so the pushes line up into a wake. */
   wakeSpacing: 7,
   wakePush: 0.05,

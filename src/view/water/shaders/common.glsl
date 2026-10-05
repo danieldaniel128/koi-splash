@@ -15,16 +15,17 @@ const int MAX_PROPS = 16;
 uniform vec4 uProps[MAX_PROPS];
 uniform vec2 uPropAxes[MAX_PROPS];
 
-// The water's state: a value in -1..1 packed into two 8-bit channels, a high byte and the remainder at full 8-bit
-// resolution, so the simulation runs on any phone GPU (waterCodec.ts mirrors these two).
+// The water's state: a value in -WATER_RANGE..WATER_RANGE (WATER.stateRange, set by withCommon) packed into two
+// 8-bit channels, a high byte and the remainder at full 8-bit resolution, so the simulation runs on any phone GPU
+// (waterCodec.ts mirrors these two).
 vec2 packWater(float value) {
-    float x = clamp(value * 0.5 + 0.5, 0.0, 1.0) * 255.0;
+    float x = clamp(value / WATER_RANGE * 0.5 + 0.5, 0.0, 1.0) * 255.0;
     float high = min(floor(x), 254.0);
     return vec2(high / 255.0, x - high);
 }
 
 float unpackWater(vec2 channels) {
-    return (channels.x + channels.y / 255.0) * 2.0 - 1.0;
+    return ((channels.x + channels.y / 255.0) * 2.0 - 1.0) * WATER_RANGE;
 }
 
 float hash(vec2 p) {
