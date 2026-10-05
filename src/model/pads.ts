@@ -1,4 +1,5 @@
-import type { Random } from '../core/Random';
+import type { RandomSource } from '../core/Random';
+import { int } from '../core/Random';
 import type { BoardSpec, Cell, Pad, PadEvent } from './types';
 import { cellKey } from './types';
 
@@ -38,7 +39,7 @@ export class PadField {
    * Scatters the buds and empty pads over random cells at least `spacing` apart. O(N * P) for N cells, P pads.
    * Throws when they don't fit.
    */
-  static scatter(spec: PadSpec, board: BoardSpec, rng: Random): PadField {
+  static scatter(spec: PadSpec, board: BoardSpec, rng: RandomSource): PadField {
     const total = spec.buds + spec.emptyPads;
     const cells = spacedCells(shuffledCells(board, rng), spec.spacing, total);
     if (cells.length < total) throw new RangeError(`${total} pads do not fit ${spec.spacing} cells apart`);
@@ -101,7 +102,7 @@ function spacedCells(cells: readonly Cell[], spacing: number, count: number): Ce
 }
 
 /** Every cell of the board in random order (Fisher-Yates). */
-function shuffledCells(board: BoardSpec, rng: Random): Cell[] {
+function shuffledCells(board: BoardSpec, rng: RandomSource): Cell[] {
   const holes = new Set((board.holes ?? []).map(cellKey));
   const cells: Cell[] = [];
   for (let row = 0; row < board.rows; row++) {
@@ -109,7 +110,7 @@ function shuffledCells(board: BoardSpec, rng: Random): Cell[] {
       if (!holes.has(cellKey({ col, row }))) cells.push({ col, row });
   }
   for (let i = cells.length - 1; i > 0; i--) {
-    const j = rng.int(0, i);
+    const j = int(rng, 0, i);
     const swap = cells[i];
     const other = cells[j];
     if (swap && other) [cells[i], cells[j]] = [other, swap];

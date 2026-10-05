@@ -3,7 +3,8 @@ import { INPUT } from '../config/input';
 import { LEVEL, SCORE } from '../config/level';
 import { BOOSTER_MOTION } from '../config/specials';
 import { BANNER, BOOSTERS, SPECIAL_MENU } from '../config/ui';
-import { Random, seedFromQuery } from '../core/Random';
+import { seeded, seedFromQuery } from '../core/Random';
+import type { RandomSource } from '../core/Random';
 import { BoosterControl } from '../game/BoosterControl';
 import type { BoosterSounds } from '../game/BoosterControl';
 import { SwapControl } from '../game/SwapControl';
@@ -137,10 +138,12 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
   const level = { ...LEVEL, ...SCORE };
   const animator = createAnimator(parts, screen, bar);
   const view = boardView;
+  // one source of chance for the board, the pads and the boosters' coin tosses; ?seed=42 deals the same board every time
+  const random = seeded(seedFromQuery(window.location.search, Date.now()));
   const scene = new GameScene({
     spec: screen.spec,
     level,
-    rng: new Random(seedFromQuery(window.location.search, Date.now())), // ?seed=42 deals the same board every time
+    rng: random,
     view,
     animator,
     status: hud,
@@ -154,6 +157,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
     screen,
     boardView,
     events: parts.events,
+    random,
   });
   const swaps = new SwapControl(scene, parts.boosters.marks);
   listenToPlayer(
@@ -267,6 +271,7 @@ interface BoosterViews {
   readonly screen: GameScreen;
   readonly boardView: BoardView;
   readonly events: GameEventBus;
+  readonly random: RandomSource;
 }
 
 /** The boosters' presenter, wired to the bar's counts, the pill over the pond, the board's marks and the petals. */
@@ -292,7 +297,7 @@ function createBoosterControl(scene: GameScene, views: BoosterViews): BoosterCon
     sounds: boosterSounds(events),
     slots: BOOSTERS,
     feedLines: BOOSTER_MOTION.feed.lines,
-    random: Math.random,
+    random: views.random,
   });
   pill.onClose(() => {
     control.cancel();

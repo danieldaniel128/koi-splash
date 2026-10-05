@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { createGameEvents } from '../src/game/events';
 import { GameScene } from '../src/game/GameScene';
 import type { GameSceneDeps, TurnAnimator } from '../src/game/GameScene';
@@ -61,7 +61,7 @@ function stubScene(stub: StubLevel = {}): Seen & { scene: GameScene } {
       pads: { buds: 1, emptyPads: 0, hitsToBloom: 2, hitsToDrift: 1, spacing: 2 },
       stars: { scores: [100, 200, 300] },
     },
-    rng: new Random(3),
+    rng: seeded(3),
     view: {
       render: (board) => {
         seen.board = board;

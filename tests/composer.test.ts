@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Composer } from '../src/audio/composer';
 import type { BarMood, MusicNote } from '../src/audio/composer';
 import { AUDIO, MUSIC } from '../src/config/audio';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 
 /** Bars in one pass through the progression. */
 const CYCLE = MUSIC.bars * MUSIC.progression.length;
@@ -11,8 +11,8 @@ const PHRASE = 4;
 
 /** Bars from a seeded composer, one mood each. */
 function compose(moods: readonly BarMood[], seed: number): MusicNote[][] {
-  const random = new Random(seed);
-  const composer = new Composer(() => random.next());
+  const random = seeded(seed);
+  const composer = new Composer(random);
   return moods.map((mood) => composer.next(mood));
 }
 

@@ -5,7 +5,7 @@ import { SHORE_STYLES } from '../art/shoreStyles';
 import { LAYOUT } from '../config/layout';
 import { POND } from '../config/pond';
 import type { PondProp, PondPropSpot } from '../config/pond';
-import { Random } from '../core/Random';
+import { seeded } from '../core/Random';
 import { placeOn } from '../layout/anchor';
 import type { Rect } from '../layout/gameLayout';
 import type { Outline } from '../layout/outline';
@@ -86,7 +86,7 @@ function placeProps(pond: Rect, spots: readonly PondPropSpot[] = POND.props): Po
 /** The border along the pond's shore, in the style the config picks. */
 function createBorder(shore: readonly Outline[], resolution: number): ShoreRing {
   const { style, seed } = POND.shore;
-  const rng = new Random(seed);
-  const pieces = ringAlongShore(shore, POND.shore, () => rng.next());
+  const rng = seeded(seed);
+  const pieces = ringAlongShore(shore, POND.shore, rng);
   return new ShoreRing(pieces, SHORE_STYLES[style], seed, resolution);
 }

@@ -2,7 +2,7 @@ import { RESULT_CARD } from '../config/ui';
 import { StateMachine } from '../core/StateMachine';
 import type { StateHooks, Transition } from '../core/StateMachine';
 import { runDetached } from '../core/detached';
-import type { Random } from '../core/Random';
+import type { RandomSource } from '../core/Random';
 import { Timers } from '../core/Timers';
 import type { Board } from '../model/Board';
 import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
@@ -108,7 +108,7 @@ export interface LevelRules {
 export interface GameSceneDeps {
   readonly spec: BoardSpec;
   readonly level: LevelRules;
-  readonly rng: Random;
+  readonly rng: RandomSource;
   readonly view: BoardDisplay;
   readonly animator: TurnAnimator;
   readonly status: StatusDisplay;

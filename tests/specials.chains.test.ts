@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { PadField } from '../src/model/pads';
 import { findMatches, findMove, settle, trySwap } from '../src/model/rules';
 import { resolveRound } from '../src/model/specials';
@@ -114,7 +114,7 @@ describe('chains', () => {
     const board = boardFrom(STUCK);
     makeSpecial(board, cell(2, 2), { type: 'whirl' });
     makeSpecial(board, cell(3, 2), { type: 'line', along: 'row' });
-    const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, new Random(1));
+    const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const first = result.steps[0];
     if (!first) throw new Error('no round');
@@ -143,7 +143,7 @@ describe('chains', () => {
       { id: 1, at: cell(4, 1), kind: 'empty', hitsLeft: 2, hitsNeeded: 2 },
       { id: 2, at: cell(5, 1), kind: 'bud', hitsLeft: 2, hitsNeeded: 2 }, // next to the other pad and the bank
     ]);
-    const { steps } = settle(board, { ...SPEC, rows: 4 }, new Random(1), {
+    const { steps } = settle(board, { ...SPEC, rows: 4 }, seeded(1), {
       pads,
       firing: [{ at: cell(0, 1) }],
     });
@@ -161,7 +161,7 @@ describe('two specials swapped together', () => {
     const board = boardFrom(STUCK);
     makeSpecial(board, cell(2, 2), { type: 'rainbow' });
     makeSpecial(board, cell(2, 3), { type: 'rainbow' });
-    const result = trySwap(board, cell(2, 2), cell(2, 3), SPEC, new Random(1));
+    const result = trySwap(board, cell(2, 2), cell(2, 3), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const first = result.steps[0];
     expect(first?.fired.map((f) => f.target)).toEqual(['all', 'all']);
@@ -173,7 +173,7 @@ describe('two specials swapped together', () => {
     makeSpecial(board, cell(2, 2), { type: 'rainbow' });
     const striped = makeSpecial(board, cell(3, 2), { type: 'line', along: 'col' }); // on a kind-3 koi
     const threes = [...board.cells()].filter((c) => board.get(c)?.kind === 3);
-    const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, new Random(1));
+    const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const first = result.steps[0];
     if (!first) throw new Error('no round');

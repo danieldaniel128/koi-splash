@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import type { Board } from '../src/model/Board';
 import { findMatches, findMove, hasAnyMove, settle, trySwap } from '../src/model/rules';
 import type { BoardSpec } from '../src/model/types';
@@ -24,7 +24,7 @@ describe('a stuck board', () => {
   it('is dealt again when it settles: full, with no ready-made match and at least one move', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const board = boardFrom(STUCK);
-      const { steps, reshuffled } = settle(board, SPEC, new Random(seed));
+      const { steps, reshuffled } = settle(board, SPEC, seeded(seed));
       expect(reshuffled).toBe(true);
       expect(steps).toEqual([]);
       for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
@@ -40,7 +40,7 @@ describe('a stuck board', () => {
     ];
     for (let seed = 1; seed <= 50; seed++) {
       const board = boardFrom(['012301', '2*0123', '0123*1', '230123']);
-      expect(settle(board, SPEC, new Random(seed)).reshuffled).toBe(true);
+      expect(settle(board, SPEC, seeded(seed)).reshuffled).toBe(true);
       for (const cell of board.cells()) {
         const isPad = pads.some((pad) => pad.col === cell.col && pad.row === cell.row);
         expect(board.get(cell) === null).toBe(isPad);
@@ -56,7 +56,7 @@ describe('a stuck board', () => {
     expect(findMove(board)).toBeNull();
     expect(hasAnyMove(board)).toBe(true);
     const before = piecesOf(board);
-    expect(settle(board, SPEC, new Random(1)).reshuffled).toBe(false);
+    expect(settle(board, SPEC, seeded(1)).reshuffled).toBe(false);
     expect(piecesOf(board)).toEqual(before);
   });
 });
@@ -75,7 +75,7 @@ describe('trySwap refusing a swap', () => {
         { col: 3, row: 3 },
       ],
     ] as const) {
-      expect(trySwap(board, a, b, SPEC, new Random(1))).toEqual({ valid: false, reason: 'no-match' });
+      expect(trySwap(board, a, b, SPEC, seeded(1))).toEqual({ valid: false, reason: 'no-match' });
       expect(piecesOf(board)).toEqual(before);
     }
   });
@@ -83,7 +83,7 @@ describe('trySwap refusing a swap', () => {
   it('takes a swap with a special beside a koi, though it makes no match', () => {
     const board = boardFrom(STUCK);
     makeSpecial(board, { col: 2, row: 1 }, { type: 'line', along: 'row' });
-    const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, new Random(1));
+    const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, seeded(1));
     expect(result.valid).toBe(true);
     if (result.valid) expect(result.steps[0]?.matches).toEqual([]);
   });
@@ -94,13 +94,13 @@ describe('the cascade cap', () => {
     // one koi colour: every new koi matches the ones beside it, round after round
     const oneColour: BoardSpec = { cols: 4, rows: 3, kinds: 1 };
     const board = boardFrom(['0000', '0000', '0000']);
-    expect(() => settle(board, oneColour, new Random(1))).toThrow('cascade did not settle');
+    expect(() => settle(board, oneColour, seeded(1))).toThrow('cascade did not settle');
   });
 
   it('lets a board that matches everywhere settle, however many rounds its new koi chain', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const board = boardFrom(['000111', '222333', '000111', '222333']);
-      const { steps } = settle(board, { ...SPEC, kinds: 4 }, new Random(seed));
+      const { steps } = settle(board, { ...SPEC, kinds: 4 }, seeded(seed));
       expect(steps.length).toBeGreaterThan(0);
       expect(findMatches(board)).toEqual([]);
       expect(drawBoard(board).join('')).not.toContain('-');
