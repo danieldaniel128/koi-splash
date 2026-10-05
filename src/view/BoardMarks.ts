@@ -16,7 +16,8 @@ export interface MarkedBoard {
 /**
  * The board's answer while a booster is armed (after the prototype): the koi it can't take dim, the ones it can pulse
  * in a slow wave across the pond, the picked koi lifts out of the water over a gold ring, and a tap it can't take
- * makes that koi wobble. Follows the koi every frame; lives in the board's space, under the koi (the ring).
+ * makes that koi wobble. A koi picked to swap by hand lifts over the same ring. Follows the koi every frame; lives in
+ * the board's space, under the koi (the ring).
  */
 export class BoardMarks extends Container {
   private test: ((cell: Cell) => boolean) | null = null;

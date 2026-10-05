@@ -46,10 +46,12 @@ import { SpecialTextures } from './view/SpecialTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
+import type { BoardGestures } from './view/SwipeTracker';
 import { BoardMarks } from './view/BoardMarks';
 import { BoosterMotions } from './view/BoosterMotions';
 import { BoosterControl } from './game/BoosterControl';
 import type { BoosterSounds } from './game/BoosterControl';
+import { SwapControl } from './game/SwapControl';
 import { InstructionPill } from './ui/InstructionPill';
 import { SpecialMenu } from './ui/SpecialMenu';
 import { SoundSettings } from './ui/SoundSettings';
@@ -171,8 +173,8 @@ function keepFitted(
 }
 
 /**
- * The game: the scene (presenter) wired to every display it drives, and the swipe input that feeds it. Returns the
- * boosters' presenter, for the Escape key.
+ * The game: the scene (presenter) wired to every display it drives, and the player's input that feeds it. Returns
+ * the boosters' presenter, for the Escape key.
  */
 function startGame(parts: GameParts, screen: Screen, canvas: HTMLCanvasElement): BoosterControl {
   const { boardView, hud, pads, result } = parts;
@@ -198,21 +200,47 @@ function startGame(parts: GameParts, screen: Screen, canvas: HTMLCanvasElement):
     boardView,
     events: parts.events,
   });
-  result.onRestart(() => {
-    scene.restart();
-    control.reset();
-  });
-  // while a booster is armed, the board's taps and drags are its own
-  new SwipeInput(boardView, canvas, screen.layout.board.cell * INPUT.swipeThreshold, {
+  const swaps = new SwapControl(scene, parts.boosters.marks);
+  listenToPlayer(
+    { scene, control, swaps },
+    { bar, result, boardView, canvas, cell: screen.layout.board.cell },
+  );
+  return control;
+}
+
+/** The presenters the player's input goes to: the scene, the boosters, and the swap by hand. */
+interface Presenters {
+  readonly scene: GameScene;
+  readonly control: BoosterControl;
+  readonly swaps: SwapControl;
+}
+
+/**
+ * The player's input: the board's taps and drags go to the armed booster, or else to the swap. Arming a booster or
+ * starting the level over drops a picked koi.
+ */
+function listenToPlayer(
+  { scene, control, swaps }: Presenters,
+  on: { bar: BoosterBar; result: ResultCard; boardView: BoardView; canvas: HTMLCanvasElement; cell: number },
+): void {
+  const gestures = (): BoardGestures => (control.armed ? control : swaps);
+  new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
     swipe: (from, to) => {
-      if (control.armed) control.swipe(from, to);
-      else scene.handleSwipe(from, to);
+      gestures().swipe(from, to);
     },
     tap: (cell) => {
-      control.tap(cell);
+      gestures().tap(cell);
     },
   });
-  return control;
+  on.bar.onPress((type) => {
+    control.press(type);
+    if (control.armed) swaps.drop();
+  });
+  on.result.onRestart(() => {
+    scene.restart();
+    control.reset();
+    swaps.drop();
+  });
 }
 
 /**
@@ -257,7 +285,10 @@ interface Screen {
   readonly layout: GameLayout;
 }
 
-/** The boosters' views on the board: their motions (over the koi) and the marks while one is armed (under them). */
+/**
+ * The boosters' views on the board: their motions (over the koi) and the marks while one is armed (under them), which
+ * also lift a koi picked to swap by hand.
+ */
 function createBoosterViews(
   app: Application,
   on: {
@@ -284,7 +315,7 @@ function createBoosterViews(
   return { motions, marks };
 }
 
-/** The boosters' presenter, wired to the bar, the pill over the pond, the board's marks and the petal menu. */
+/** The boosters' presenter, wired to the bar's counts, the pill over the pond, the board's marks and the petals. */
 function createBoosterControl(
   scene: GameScene,
   views: { bar: BoosterBar; marks: BoardMarks; screen: Screen; boardView: BoardView; events: GameEventBus },
@@ -312,9 +343,6 @@ function createBoosterControl(
     slots: BOOSTERS,
     feedLines: BOOSTER_MOTION.feed.lines,
     random: Math.random,
-  });
-  views.bar.onPress((type) => {
-    control.press(type);
   });
   pill.onClose(() => {
     control.cancel();

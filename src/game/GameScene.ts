@@ -169,6 +169,16 @@ export class GameScene {
     this.turn.transition('idle');
   }
 
+  /** True when the board takes a swap: it is still and the level is on. */
+  get canSwap(): boolean {
+    return this.turn.can('swapping');
+  }
+
+  /** Whether a koi rests in this cell (not a lily pad, a hole or off the board). */
+  hasKoi(cell: Cell): boolean {
+    return this.board.get(cell) !== null;
+  }
+
   private async playTurn(from: Cell, to: Cell): Promise<void> {
     const piece = this.board.get(from);
     if (!piece) return; // the swipe started on a lily pad or a hole
