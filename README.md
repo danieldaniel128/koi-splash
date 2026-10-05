@@ -69,8 +69,9 @@ The special koi come from the prototype, rebuilt in layers. Their art is painted
 (`src/art/specialKoi.ts`): the koi painter takes a dressing that repaints the body and fins before they're inked, so
 a striped koi gets bands of its colour and white and a rainbow koi gets its scales recoloured with the spectrum (the
 'color' blend keeps their light and shade), under the same outline as every other koi. A whirlpool is a painted eddy
-with the koi curled into its eye. They're all baked while the game loads (`SpecialTextures`), so the first one a game
-makes never stalls it. At rest each has its own look (`SpecialLooks`, one class per special): a striped koi faces along
+with the koi curled into its eye. They're baked in the background once the game is shown, a colour at a time between
+frames (`SpecialTextures`, `runWhenIdle`), so loading doesn't wait for them and the first one a game makes doesn't
+stall it; one wanted sooner is baked on the spot. At rest each has its own look (`SpecialLooks`, one class per special): a striped koi faces along
 its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (a colour-matrix filter) over a
 prism glow with orbiting sparkles, a whirlpool's eddy turns. When they fire, `planRound` works out from the model's
 data when every koi goes and how (dive, spiral into the special that was made, drain into a whirlpool, zapped by a
@@ -146,9 +147,9 @@ and entering won or lost shows the end card.
 
 The game boots behind a loading screen. Its markup is in `index.html` and the theme's tokens are written into the
 page at build time, so it shows, themed, from the first paint. `src/boot/loading.ts` lists everything that's loaded
-as named steps, each weighted by about how long it takes: the special koi and their petal pictures, the koi, the
-shore's distance field, the water, the garden, the stones, the game itself, and one frame drawn unseen so every
-shader is compiled before the first real one. A small runner (`BootPipeline`) runs them in order, lets the page paint
+as named steps, each weighted by about how long it takes: the goals' icons, the koi, the shore's distance field, the
+water, the garden, the stones, the game itself, and one frame drawn unseen so every shader is compiled before the
+first real one. A small runner (`BootPipeline`) runs them in order, lets the page paint
 between them and moves the bar. Everything is made once; playing again reuses it all. The screens (loading, playing,
 the end card, playing again) are a state machine too (`ScreenFlow`), which also moves the keyboard focus.
 
