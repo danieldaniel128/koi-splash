@@ -92,8 +92,14 @@ export const BOARD_PADS = {
   radius: 0.38,
   /** Baked opening stages of a bud, from closed to full bloom. */
   stages: 4,
-  /** The seed that shapes the lotus's petals: the buds on the board and the goal's icon are the same flower. */
+  /**
+   * The seed that shapes the lotus's petals (the buds on the board and the goal's icon are the same flower), and the
+   * empty pad's. The pads are painted in `looks` looks, each with its leaf and lotus turned its own way (never the
+   * sprite, so the shadow and the moonlit rim stay where the moon puts them), from these seeds on.
+   */
   lotusSeed: 7,
+  emptySeed: 11,
+  looks: 3,
   /** Gentle rocking on the water (radians, radians per second). */
   rock: 0.06,
   rockSpeed: 0.9,

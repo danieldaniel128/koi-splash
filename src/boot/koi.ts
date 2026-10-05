@@ -4,6 +4,7 @@ import type { KoiInk } from '../art/koiInk';
 import { bakeLotusPad } from '../art/pondProps';
 import { KOI_COLORS, KOI_LOOK, KOI_SET } from '../config/koi';
 import { SCORE } from '../config/level';
+import { BOARD_PADS } from '../config/pond';
 import { GOAL_TRAY } from '../config/ui';
 import { WATER } from '../config/water';
 import type { GameLayout } from '../layout/gameLayout';
@@ -13,7 +14,6 @@ import { KoiTextures } from '../view/KoiTextures';
 import type { KoiBake } from '../view/KoiTextures';
 import { SpecialTextures } from '../view/SpecialTextures';
 import type { BoardSpec } from '../model/types';
-import { BOARD_PADS } from '../config/pond';
 
 /** A lotus fully open (0 is a closed bud). */
 const FULL_BLOOM = 1;

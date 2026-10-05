@@ -32,8 +32,9 @@ export class PadView extends Container implements PadDisplay {
   private readonly floating = new Set<Sprite>();
   /** The lotuses lifting out of the water to bloom: only they let go of the foam as they grow (not a hit's pop). */
   private readonly blooming = new Set<Sprite>();
-  private readonly budStages: Texture[];
-  private readonly emptyPad: Texture;
+  private readonly looks: readonly PadLook[];
+  /** Each pad's look, by pad id. */
+  private readonly lookOf = new Map<number, PadLook>();
   /** The pad textures are baked at the screen's resolution; this scales them back to stage px. */
   private readonly scaleOf: number;
   private time = 0;
@@ -44,12 +45,9 @@ export class PadView extends Container implements PadDisplay {
     resolution: number,
   ) {
     super();
-    const radius = layout.cellSize * BOARD_PADS.radius;
-    // O(stages) canvas paints, once at startup
-    this.budStages = Array.from({ length: BOARD_PADS.stages }, (_, i) =>
-      Texture.from(bakeLotusPad(radius, i / (BOARD_PADS.stages - 1), BOARD_PADS.lotusSeed, resolution)),
+    this.looks = Array.from({ length: BOARD_PADS.looks }, (_, k) =>
+      bakePadLook(layout.cellSize * BOARD_PADS.radius, k, resolution),
     );
-    this.emptyPad = Texture.from(bakeProp({ kind: 'pad', radius: [radius, radius], seed: 11 }, resolution));
     this.scaleOf = 1 / resolution;
   }
 
@@ -57,13 +55,16 @@ export class PadView extends Container implements PadDisplay {
   reset(pads: readonly Pad[]): void {
     for (const sprite of this.floating) this.remove(sprite);
     this.sprites.clear();
+    this.lookOf.clear();
     for (const pad of pads) {
-      const sprite = new Sprite(pad.kind === 'bud' ? this.stageFor(pad) : this.emptyPad);
+      // a look of its own (its leaf and lotus turned): the sprite itself never turns, so its light stays the moon's
+      const look = this.looks[Math.floor(Math.random() * this.looks.length)];
+      if (look) this.lookOf.set(pad.id, look);
+      const sprite = new Sprite(pad.kind === 'bud' ? this.stageFor(pad) : (look ?? this.anyLook()).empty);
       sprite.anchor.set(0.5);
       sprite.scale.set(this.scaleOf);
       const { cellSize } = this.layout;
       sprite.position.set((pad.at.col + 0.5) * cellSize, (pad.at.row + 0.5) * cellSize); // centred on its cell
-      sprite.rotation = Math.random() * Math.PI * 2;
       this.sprites.set(pad.id, sprite);
       this.floating.add(sprite);
       this.addChild(sprite);
@@ -188,16 +189,45 @@ export class PadView extends Container implements PadDisplay {
     return undefined;
   }
 
-  /** The baked stage that matches how far a bud has opened (hits taken / hits needed). */
+  /** The baked stage of its look that matches how far a bud has opened (hits taken / hits needed). */
   private stageFor(pad: Pad): Texture {
+    const { stages } = this.lookOf.get(pad.id) ?? this.anyLook();
     const opened = (pad.hitsNeeded - pad.hitsLeft) / pad.hitsNeeded;
-    const stage = Math.round(opened * (this.budStages.length - 1));
-    const texture = this.budStages[stage];
+    const stage = Math.round(opened * (stages.length - 1));
+    const texture = stages[stage];
     if (!texture) throw new RangeError(`no bud stage ${stage}`);
     return texture;
+  }
+
+  private anyLook(): PadLook {
+    const [look] = this.looks;
+    if (!look) throw new Error('no lily pad looks (BOARD_PADS.looks)');
+    return look;
   }
 
   private push(sprite: Sprite, strength: number): void {
     this.water.push(this.layout.toStage(sprite.position), strength, BOARD_PADS.pushRadius);
   }
+}
+
+/** One look of a lily pad: a bud's opening stages, closed to full bloom, and the pad on its own. */
+interface PadLook {
+  readonly stages: readonly Texture[];
+  readonly empty: Texture;
+}
+
+/**
+ * Look `k` of a lily pad of this radius: its own seed turns the leaf's notch and the lotus, while the shadow and the
+ * moonlit rim stay where the moon puts them. O(stages) canvas paints, once at startup.
+ */
+function bakePadLook(radius: number, k: number, resolution: number): PadLook {
+  const { stages, lotusSeed, emptySeed } = BOARD_PADS;
+  return {
+    stages: Array.from({ length: stages }, (_, i) =>
+      Texture.from(bakeLotusPad(radius, i / (stages - 1), lotusSeed + k, resolution)),
+    ),
+    empty: Texture.from(
+      bakeProp({ kind: 'pad', radius: [radius, radius], seed: emptySeed + k }, resolution),
+    ),
+  };
 }
