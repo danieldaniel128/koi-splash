@@ -30,6 +30,20 @@
   touch-action: manipulation;
 }
 
+/*
+ * Keyboard focus, on every button alike: a gold ring that follows the button's shape, or its orb's when it has one
+ * (a booster's name sits under its orb). --focus-offset moves the ring in or out.
+ */
+button:focus-visible {
+  outline: none;
+}
+
+button:focus-visible:not(:has(> .orb)),
+button:focus-visible > .orb {
+  outline: var(--line-normal) solid var(--color-gold);
+  outline-offset: var(--focus-offset, calc(2 * var(--line-normal)));
+}
+
 /* Pressed, a control squashes and springs back. */
 .pressable,
 .btn {

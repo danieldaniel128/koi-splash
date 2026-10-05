@@ -219,6 +219,7 @@
 }
 
 .sound-menu__row {
+  --focus-offset: 0;
   display: flex;
   flex: 1;
   align-items: center;
@@ -236,10 +237,6 @@
 
 .sound-menu__row[aria-checked='true'] {
   color: var(--color-ink);
-}
-
-.sound-menu__row:focus-visible {
-  outline: var(--line-normal) solid var(--color-gold);
 }
 
 .sound-menu__icon {
