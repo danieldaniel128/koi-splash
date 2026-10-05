@@ -28,7 +28,8 @@ const SPECIAL_TYPES = ['line', 'whirl', 'rainbow'] as const satisfies readonly S
 
 /**
  * The special koi's textures, from the board's own koi painter (see art/specialKoi). The game bakes them all while
- * it loads (bakeAll), so a special's first appearance never stalls play; each is kept once baked.
+ * it loads (bakeSpecial for each, then bakePreviews), so a special's first appearance never stalls play; anything
+ * asked for before then is baked on the spot. Each is kept once baked.
  */
 export class SpecialTextures {
   /** A white glow and a white sparkle (tinted per sprite), and the rainbow's prism glow. */
@@ -50,14 +51,32 @@ export class SpecialTextures {
   }
 
   /**
-   * Bakes every special of every colour now, with its petal preview, so nothing is painted during play.
-   * O(colours x specials x frames) canvas paints.
+   * Bakes one special in every colour now, with what goes with it (a striped koi's sheen, a whirlpool's eddy).
+   * O(colours x frames) canvas paints.
    */
-  bakeAll(): void {
+  bakeSpecial(type: Special['type']): void {
     for (const kind of this.varieties.keys()) {
-      for (const type of SPECIAL_TYPES) this.preview(type, kind); // bakes its poses (and a whirlpool's eddy) too
-      this.sheen(kind);
+      this.poses(specialOf(type), kind);
+      if (type === 'line') this.sheen(kind);
+      if (type === 'whirl') this.eddy(kind);
     }
+  }
+
+  /**
+   * Bakes the petal menu's pictures of every special in every colour. Reading a canvas back for its image waits for
+   * the GPU to finish drawing it, so the pictures are drawn side by side on one sheet and read back once, then each
+   * is cut out and encoded.
+   */
+  bakePreviews(): void {
+    const all = [...this.varieties.keys()].flatMap((kind) => SPECIAL_TYPES.map((type) => ({ type, kind })));
+    const pictures = all.map(({ type, kind }) => this.picture(type, kind));
+    const sheet = readSideBySide(pictures);
+    let x = 0;
+    all.forEach(({ type, kind }, i) => {
+      const { width, height } = pictures[i] ?? { width: 0, height: 0 };
+      this.previews.set(`${type}:${kind}`, cutOut(sheet, { x, width, height }));
+      x += width;
+    });
   }
 
   /** A special koi's poses: a striped or rainbow koi's tail beat, or a whirlpool's koi curled into its eye. */
@@ -103,11 +122,7 @@ export class SpecialTextures {
     const key = `${type}:${kind}`;
     const known = this.previews.get(key);
     if (known) return known;
-    const special: Special = type === 'line' ? { type, along: 'col' } : { type };
-    const [pose] = this.poses(special, kind);
-    const koi = pose ? canvasOf(pose) : null;
-    if (!koi) throw new Error(`no ${type} preview for kind ${kind}`);
-    const url = (type === 'whirl' ? onEddy(canvasOf(this.eddy(kind)), koi) : koi).toDataURL();
+    const url = this.picture(type, kind).toDataURL();
     this.previews.set(key, url);
     return url;
   }
@@ -117,6 +132,14 @@ export class SpecialTextures {
     const colors = this.colors[kind];
     if (!colors) throw new RangeError(`no special colours for kind ${kind}`);
     return colors;
+  }
+
+  /** What a preview shows: the special's first pose, and a whirlpool's on its eddy. */
+  private picture(type: Special['type'], kind: Kind): HTMLCanvasElement {
+    const [pose] = this.poses(specialOf(type), kind);
+    if (!pose) throw new Error(`no ${type} preview for kind ${kind}`);
+    const koi = canvasOf(pose);
+    return type === 'whirl' ? onEddy(canvasOf(this.eddy(kind)), koi) : koi;
   }
 
   private variety(kind: Kind): string {
@@ -132,6 +155,38 @@ export class SpecialTextures {
     this.cache.set(key, made);
     return made;
   }
+}
+
+/** A special of this type, for its textures (a striped koi's bands look the same either way). */
+function specialOf(type: Special['type']): Special {
+  return type === 'line' ? { type, along: 'col' } : { type };
+}
+
+/** The pictures drawn side by side on one canvas, read back in one go. */
+function readSideBySide(pictures: readonly HTMLCanvasElement[]): ImageData {
+  const sheet = document.createElement('canvas');
+  sheet.width = pictures.reduce((sum, picture) => sum + picture.width, 0);
+  sheet.height = Math.max(...pictures.map((picture) => picture.height));
+  const ctx = sheet.getContext('2d');
+  if (!ctx) throw new Error('special previews: 2D canvas not available');
+  let x = 0;
+  for (const picture of pictures) {
+    ctx.drawImage(picture, x, 0);
+    x += picture.width;
+  }
+  return ctx.getImageData(0, 0, sheet.width, sheet.height);
+}
+
+/** One picture cut out of the sheet's pixels, as an image URL. */
+function cutOut(sheet: ImageData, at: { x: number; width: number; height: number }): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = at.width;
+  canvas.height = at.height;
+  // kept on the CPU: the pixels are already here, so encoding them needs nothing from the GPU
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('special previews: 2D canvas not available');
+  ctx.putImageData(sheet, -at.x, 0, at.x, 0, at.width, at.height);
+  return canvas.toDataURL();
 }
 
 /** The canvas a texture was made from (every special texture is painted on one). */

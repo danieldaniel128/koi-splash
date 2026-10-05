@@ -37,7 +37,8 @@ export function bakeKoi(bake: KoiBake): KoiTextures {
 /** Every special koi of every colour, with the petal menu's pictures of them, baked once. */
 export function bakeSpecialKoi(bake: KoiBake): SpecialTextures {
   const specials = new SpecialTextures(KOI_SET, bake, KOI_COLORS);
-  specials.bakeAll();
+  for (const type of ['line', 'whirl', 'rainbow'] as const) specials.bakeSpecial(type);
+  specials.bakePreviews();
   return specials;
 }
 
