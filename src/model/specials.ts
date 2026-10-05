@@ -125,7 +125,7 @@ function fire(
   queue: Trigger[],
   kept: Set<string>,
 ): void {
-  const piece = firingPiece(board, resolution, trigger.at);
+  const piece = takeFiringPiece(board, resolution, trigger.at);
   if (!piece?.special) return;
   const { special } = piece;
   const target = special.type === 'rainbow' ? (trigger.target ?? mostCommonColor(board)) : undefined;
@@ -143,7 +143,7 @@ function fire(
  * The special at `at` about to fire, taken off the board if it's still on it (a swapped one is; a matched or caught
  * one was cleared already). Null if it has fired this round.
  */
-function firingPiece(board: Board, resolution: RoundResolution, at: Cell): Piece | null {
+function takeFiringPiece(board: Board, resolution: RoundResolution, at: Cell): Piece | null {
   const onBoard = board.get(at);
   if (onBoard?.special) {
     resolution.cleared.push({ piece: onBoard, at });
