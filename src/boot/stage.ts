@@ -10,17 +10,26 @@ import type { GameParts } from './game';
 export interface Surroundings {
   readonly garden: Container;
   readonly scenery: Container;
+  /** The white flash over everything on a big moment. */
+  readonly flash: Container;
+}
+
+/** The stage fitted to the screen, and the world in it the camera moves (everything drawn on the canvas). */
+export interface GameStage {
+  readonly root: Container;
+  readonly world: Container;
 }
 
 /**
  * The stage, back to front: the bank and the garden, the water under the koi, the boosters' marks, the koi, the
  * lily pads over them, the water's surface, the specials' light, the boosters' pellets and sparkles, the points,
- * and the stones and fireflies round the pond.
+ * the stones and fireflies round the pond, and the flash. They all sit in one world layer the camera shakes and
+ * pushes in (the HTML HUD stays still over it).
  */
-export function buildStage(parts: GameParts, around: Surroundings): Container {
+export function buildStage(parts: GameParts, around: Surroundings): GameStage {
   const { boardView, pond, pads, specials, boosters, popups } = parts;
-  const stage = new Container();
-  stage.addChild(
+  const world = new Container();
+  world.addChild(
     pond.bank,
     around.garden,
     pond.bottom,
@@ -32,8 +41,11 @@ export function buildStage(parts: GameParts, around: Surroundings): Container {
     boosters.motions, // the feed's pellets and the special booster's sparkles
     popups,
     around.scenery,
+    around.flash,
   );
-  return stage;
+  const root = new Container();
+  root.addChild(world);
+  return { root, world };
 }
 
 /**

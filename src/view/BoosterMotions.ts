@@ -9,7 +9,7 @@ import type { Moved } from '../model/boosters';
 import type { Cell, Kind, Piece } from '../model/types';
 import type { BoardView } from './BoardView';
 import type { GameEventBus } from '../game/events';
-import { hitStop } from './hitStop';
+import type { HitStop } from './HitStop';
 import type { Koi } from './Koi';
 import type { WaterSurface } from './water/PondWater';
 
@@ -40,6 +40,7 @@ export class BoosterMotions extends Container {
   private readonly cell: number;
   private readonly sparkle: Texture;
   private readonly events: GameEventBus;
+  private readonly hitStop: HitStop;
 
   constructor(deps: {
     readonly view: BoardView;
@@ -49,6 +50,8 @@ export class BoosterMotions extends Container {
     readonly sparkle: Texture;
     /** Where it says when each motion's moments happen (the sounds follow them). */
     readonly events: GameEventBus;
+    /** Holds the animations' clock as the leaping koi cross. */
+    readonly hitStop: HitStop;
   }) {
     super();
     this.view = deps.view;
@@ -56,6 +59,7 @@ export class BoosterMotions extends Container {
     this.cell = deps.cell;
     this.sparkle = deps.sparkle;
     this.events = deps.events;
+    this.hitStop = deps.hitStop;
     this.pellet = Texture.from(paintPellet(Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet)));
   }
 
@@ -72,7 +76,7 @@ export class BoosterMotions extends Container {
     const headingB = b.heading;
     this.events.emit('koiLeapt', { duration });
     gsap.delayedCall(duration * 0.47, () => {
-      hitStop(look.hitStop);
+      this.hitStop.hold(look.hitStop);
     });
     await Promise.all([
       this.arc(a, first, {

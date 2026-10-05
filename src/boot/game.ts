@@ -20,6 +20,7 @@ import { BoardAnimator } from '../view/BoardAnimator';
 import { BoardMarks } from '../view/BoardMarks';
 import type { BoardView } from '../view/BoardView';
 import { BoosterMotions } from '../view/BoosterMotions';
+import { HitStop } from '../view/HitStop';
 import type { KoiTextures } from '../view/KoiTextures';
 import { PadView } from '../view/PadView';
 import { ScorePopups } from '../view/ScorePopups';
@@ -56,6 +57,8 @@ export interface GameParts {
   readonly specials: { fx: SpecialFx; motions: SpecialMotions };
   readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
   readonly events: GameEventBus;
+  /** The one hit-stop: whatever holds the animations' clock still for a moment shares it. */
+  readonly hitStop: HitStop;
 }
 
 /** The game, started: what it's played on, and the boosters' presenter (the Escape key backs out of it). */
@@ -72,6 +75,7 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
   const { board } = screen.layout;
   const { pond, hud, events } = made;
   const boardView = createBoardView(made.koi, made.specials, screen.spec, board);
+  const hitStop = new HitStop();
   const parts: GameParts = {
     boardView,
     pond,
@@ -80,8 +84,16 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
     pads: createPads(pond, hud, board, screen.resolution.art),
     screenFlow: made.screenFlow,
     specials: createSpecialEffects({ boardView, textures: made.specials, pond, board, events }),
-    boosters: createBoosterViews({ boardView, specials: made.specials, pond, cell: board.cell, events }),
+    boosters: createBoosterViews({
+      boardView,
+      specials: made.specials,
+      pond,
+      cell: board.cell,
+      events,
+      hitStop,
+    }),
     events,
+    hitStop,
   };
   return { parts, control: startGame(parts, screen, canvas) };
 }
@@ -196,6 +208,7 @@ function createBoosterViews(on: {
   pond: PondWater;
   cell: number;
   events: GameEventBus;
+  hitStop: HitStop;
 }): { motions: BoosterMotions; marks: BoardMarks } {
   const { boardView, cell, events } = on;
   const motions = new BoosterMotions({
@@ -204,6 +217,7 @@ function createBoosterViews(on: {
     cell,
     sparkle: on.specials.sparkle,
     events,
+    hitStop: on.hitStop,
   });
   const marks = new BoardMarks(boardView, cell);
   for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);

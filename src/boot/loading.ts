@@ -4,6 +4,9 @@ import { BootPipeline } from '../core/BootPipeline';
 import type { GameEventBus } from '../game/events';
 import type { ScreenFlow } from '../game/ScreenFlow';
 import type { GoalIcons } from '../ui/GoalTray';
+import { Camera } from '../view/Camera';
+import { Haptics } from '../view/Haptics';
+import { createFlash, Impact } from '../view/Impact';
 import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
 import type { KoiTextures } from '../view/KoiTextures';
@@ -99,9 +102,16 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const { parts: game, control } = createGame(screen, materials, app.canvas);
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);
-  const stage = buildStage(game, { garden: made.garden, scenery: scenery.layer });
-  app.stage.addChild(stage);
-  keepFitted(app, { stage, ui }, layout.stage, game);
+  const flash = createFlash(layout.stage);
+  const stage = buildStage(game, { garden: made.garden, scenery: scenery.layer, flash });
+  app.stage.addChild(stage.root);
+  keepFitted(app, { stage: stage.root, ui }, layout.stage, game);
+  const impact = new Impact(events, {
+    camera: new Camera(stage.world),
+    hitStop: game.hitStop,
+    haptics: new Haptics(() => sound.mixer.isOn('sfx')),
+    flash,
+  });
   restoreAfterContextLoss(app, pond);
   const { boardView, pads, boosters } = game;
   addFrameLoop(app.ticker, {
@@ -112,6 +122,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     koiLife,
     fireflies: scenery.fireflies,
     boardView,
+    impact,
   });
 }
 

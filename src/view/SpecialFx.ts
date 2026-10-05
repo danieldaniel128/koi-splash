@@ -9,7 +9,6 @@ import type { Cell, Fired, Kind } from '../model/types';
 import type { BlastPlan } from './specialTiming';
 import type { SpecialTextures } from './SpecialTextures';
 import type { GameEventBus } from '../game/events';
-import { hitStop } from './hitStop';
 import type { WaterSurface } from './water/PondWater';
 
 /** What the effects need from the board: where its cells are, and how big it is (board space). */
@@ -23,8 +22,8 @@ export interface FxBoard {
  * The specials' light, over the koi in the board's space (after the prototype's): a striped koi's beam racing along
  * its line, a whirlpool's vortex spinning up, a rainbow koi's prism beams arcing to every koi it takes, a flash when
  * a special is born. Each also moves the water (ripples along the sweep, the eddy's pull and pop, splashes where the
- * beams land) and the big moments slow the game's clock for an instant (hit-stop). Fire and forget: every effect
- * removes itself when done.
+ * beams land) and says when each moment happens, so the camera, the hit-stop and the sounds land with it. Fire and
+ * forget: every effect removes itself when done.
  */
 export class SpecialFx extends Container {
   private readonly beamTexture = Texture.from(paintBeam(128, 32));
@@ -157,7 +156,6 @@ export class SpecialFx extends Container {
     gsap.delayedCall(at + stay, () => {
       this.splash(fired.at, look.pop, look.popRadius);
       this.events.emit('whirlPopped');
-      hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
   }
 
@@ -169,7 +167,6 @@ export class SpecialFx extends Container {
     });
     gsap.delayedCall(at + rainbowRise, () => {
       this.events.emit('rainbowFired');
-      hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
     fired.reach.forEach((cell, n) => {
       this.arc(fired, cell, n, at + rainbowRise + n * rainbowStep);
