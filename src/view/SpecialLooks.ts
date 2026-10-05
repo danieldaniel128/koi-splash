@@ -12,10 +12,14 @@ interface Look {
   destroy(): void;
 }
 
-/** The layers the looks draw in: under the koi (glows, eddies) and over them (sheen, sparkles). */
+/**
+ * What the looks draw with: the layers under the koi (glows, eddies) and over them (sheen, sparkles), and the color
+ * flow every rainbow koi shares.
+ */
 interface Layers {
   readonly under: Container;
   readonly over: Container;
+  readonly rainbowHue: RainbowHue;
 }
 
 /**
@@ -26,6 +30,7 @@ interface Layers {
 export class SpecialLooks {
   readonly under = new Container();
   readonly over = new Container();
+  readonly rainbowHue = new RainbowHue();
   private readonly looks = new Map<Koi, Look>();
   private time = 0;
 
@@ -49,7 +54,38 @@ export class SpecialLooks {
   /** Every look follows its koi. Call once per frame after the koi moved. O(specials). */
   follow(deltaSeconds: number): void {
     this.time += deltaSeconds;
+    this.rainbowHue.turn(this.time);
     for (const [koi, look] of this.looks) look.follow(koi, this.time);
+  }
+}
+
+/**
+ * The colors flowing over every rainbow koi: one hue-turning filter they all share (one program, one set of
+ * uniforms, turned once a frame), drawn at the screen's resolution like the koi. Made with the first rainbow koi and
+ * destroyed with the last.
+ */
+class RainbowHue {
+  private filter: ColorMatrixFilter | null = null;
+  private users = 0;
+
+  /** A rainbow koi takes the filter. */
+  take(): ColorMatrixFilter {
+    this.users++;
+    this.filter ??= new ColorMatrixFilter({ resolution: 'inherit' });
+    return this.filter;
+  }
+
+  /** A rainbow koi is done with it; the last one destroys it. */
+  release(): void {
+    this.users = Math.max(0, this.users - 1);
+    if (this.users > 0 || !this.filter) return;
+    this.filter.destroy();
+    this.filter = null;
+  }
+
+  /** The colors flow on with the clock (s). */
+  turn(time: number): void {
+    this.filter?.hue((time * SPECIAL_LOOK.rainbow.flow * 180) / Math.PI, false);
   }
 }
 
@@ -100,11 +136,11 @@ class StripedLook implements Look {
   }
 }
 
-/** A rainbow koi: its colours flow, over a spinning prism glow, with sparkles orbiting it. */
+/** A rainbow koi: its colors flow (RainbowHue), over a spinning prism glow, with sparkles orbiting it. */
 class RainbowLook implements Look {
   private readonly glow: Sprite;
   private readonly sparkles: Sprite[];
-  private readonly hue = new ColorMatrixFilter();
+  private readonly hue: RainbowHue;
   private readonly phase = Math.random() * Math.PI * 2;
 
   constructor(
@@ -114,14 +150,14 @@ class RainbowLook implements Look {
   ) {
     this.glow = additive(textures.prism);
     this.sparkles = Array.from({ length: SPECIAL_LOOK.rainbow.sparkles }, () => additive(textures.sparkle));
-    koi.filters = [this.hue];
+    this.hue = layers.rainbowHue;
+    koi.filters = [this.hue.take()];
     layers.under.addChild(this.glow);
     layers.over.addChild(...this.sparkles);
   }
 
   follow(koi: Koi, time: number): void {
     const look = SPECIAL_LOOK.rainbow;
-    this.hue.hue(((time * look.flow + this.phase) * 180) / Math.PI, false);
     this.glow.position.copyFrom(koi.position);
     this.glow.rotation = time * look.glowSpin;
     this.glow.setSize(koi.width * look.glow * (1 + 0.06 * Math.sin(time * 3)));
@@ -139,6 +175,7 @@ class RainbowLook implements Look {
 
   destroy(): void {
     this.koi.filters = [];
+    this.hue.release();
     this.glow.destroy();
     for (const sparkle of this.sparkles) sparkle.destroy();
   }

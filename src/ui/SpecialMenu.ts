@@ -11,7 +11,7 @@ import { button, el, image, setRect, wantsLessMotion } from './UiLayer';
 export interface MenuBoard {
   cellCentre(cell: Cell): PointData;
   readonly stageWidth: number;
-  preview(cell: Cell, type: Special['type']): string;
+  preview(cell: Cell, special: Special): string;
 }
 
 /**
@@ -64,7 +64,7 @@ export class SpecialMenu implements SpecialPicker {
     });
   }
 
-  pick(at: Cell): Promise<Special['type'] | null> {
+  pick(at: Cell, line: 'row' | 'col'): Promise<Special['type'] | null> {
     this.finish(null);
     this.leaving?.cancel();
     this.leaving = null;
@@ -78,7 +78,15 @@ export class SpecialMenu implements SpecialPicker {
       edge: look.edge,
       stageWidth: this.board.stageWidth,
     });
-    const petals = this.choices.map((choice, k) => this.petal(choice, at, spots[k] ?? centre, centre, k));
+    const petals = this.choices.map((choice, k) => {
+      const special: Special = choice.type === 'line' ? { type: 'line', along: line } : { type: choice.type };
+      return this.petal(
+        choice,
+        this.board.preview(at, special),
+        { spot: spots[k] ?? centre, from: centre },
+        k,
+      );
+    });
     this.root.replaceChildren(...petals);
     this.root.style.setProperty('--dim-at', `${centre.x}px ${centre.y}px`);
     this.layer.root.append(this.root);
@@ -92,9 +100,15 @@ export class SpecialMenu implements SpecialPicker {
     this.finish(null);
   }
 
-  private petal(choice: PetalChoice, at: Cell, spot: PointData, from: PointData, k: number): HTMLElement {
+  /** A petal with the koi's picture as its special, flying out `from` the koi to its `spot`. */
+  private petal(
+    choice: PetalChoice,
+    preview: string,
+    { spot, from }: { spot: PointData; from: PointData },
+    k: number,
+  ): HTMLElement {
     const size = SPECIAL_MENU.petal * this.cell;
-    const picture = image('petal__koi', this.board.preview(at, choice.type));
+    const picture = image(choice.type === 'line' ? 'petal__koi petal__koi--line' : 'petal__koi', preview);
     picture.draggable = false; // a click that drifts a little still picks the petal
     const petal = button('control petal', choice.name, picture, el('span', 'petal__name', choice.name));
     setRect(petal, { x: spot.x - size / 2, y: spot.y - size / 2, width: size, height: size });

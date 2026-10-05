@@ -156,6 +156,11 @@
   pointer-events: none; /* the petal takes the press, never its picture */
 }
 
+/* the striped koi shows the way its line will sweep, so it stays square to the board */
+.petal__koi--line {
+  transform: none;
+}
+
 .petal__name {
   position: absolute;
   top: calc(100% + var(--space-xs));

@@ -1,6 +1,8 @@
-import type { PropKind } from '../config/pond';
+import type { PondProp } from '../config/pond';
 import { seeded } from '../core/Random';
 import { drawShadowOnly } from './blur';
+import { blank, centerOn, context, traceSmoothClosed } from './canvas';
+import type { CanvasPoint } from './canvas';
 
 /**
  * pondProps.ts - the things around and on the pond, painted once on a canvas like the koi: stones, and lily pads
@@ -10,22 +12,26 @@ import { drawShadowOnly } from './blur';
  * No framework code: bake a canvas with `bakeProp` and upload it as a texture.
  */
 
-export interface PropPaint {
-  readonly kind: PropKind;
-  /** Half width and half height of the prop's body (px). */
-  readonly radius: readonly [number, number];
-  readonly seed: number;
-}
+/** What the painter needs of a prop (see PondProp): what it is, its half size (px) and its paint seed. */
+export type PropPaint = Pick<PondProp, 'kind' | 'radius' | 'seed'>;
 
-type Ctx = CanvasRenderingContext2D;
-type Pt = readonly [number, number];
+/** Paints a piece centered on the canvas origin, in its own px. */
+export type Painter = (ctx: CanvasRenderingContext2D) => void;
+
+/**
+ * How the stones and pads are lit and inked, from the scene: the way toward the moon and the color of the shadows it
+ * casts, how far from a prop its shadow falls and how dark (px, 0..1), and the pads' ink outline (px), as bold as
+ * the koi's so the board reads as one style.
+ */
+export interface PropLook {
+  readonly light: { readonly dir: readonly [number, number]; readonly shadow: string };
+  readonly shadow: { readonly distance: number; readonly alpha: number };
+  readonly padOutline: number;
+}
 
 /** Room around the body for the shadow and the blur. */
 const MARGIN = 10;
 const TAU = Math.PI * 2;
-/** The shadow falls away from the moon (down and to the left). */
-const SHADOW_OFFSET: Pt = [-3, 5];
-const SHADOW = 'rgba(2, 8, 18, 0.5)';
 /** How soft the shadow is (px): the same on every screen. */
 const SHADOW_BLUR = 1.5;
 
@@ -48,16 +54,16 @@ const PAD = {
   vein: 'rgba(190, 235, 190, 0.35)',
   ink: '#0b2618',
 };
-/** The pads' ink outline (px): as bold as the koi's cartoon outline, so the board reads as one style. */
-const PAD_OUTLINE = 1.9;
+/** How far the pad's lit rim shows on its moon side (px). */
+const PAD_RIM = 1.5;
 const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)', heart: '#f4cf4f' } as const;
 
 /** Paints one prop into a fresh canvas, centred; the canvas is padded for the shadow. */
-export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement {
+export function bakeProp(prop: PropPaint, resolution: number, look: PropLook): HTMLCanvasElement {
   const random = seeded(prop.seed); // the same seed always paints the same prop
   return bakePiece(prop.radius, resolution, (ctx) => {
-    if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
-    else paintPad(ctx, prop.radius[0], random);
+    if (prop.kind === 'stone') paintStone(ctx, prop.radius, random, look);
+    else paintPad(ctx, prop.radius[0], random, look);
   });
 }
 
@@ -70,18 +76,12 @@ export function pieceSize([rx, ry]: readonly [number, number]): { width: number;
 export function bakePiece(
   radius: readonly [number, number],
   resolution: number,
-  paint: (ctx: CanvasRenderingContext2D) => void,
+  paint: Painter,
 ): HTMLCanvasElement {
   const { width, height } = pieceSize(radius);
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(width * resolution);
-  canvas.height = Math.ceil(height * resolution);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('pondProps: 2D canvas not available');
-  ctx.scale(resolution, resolution);
-  ctx.translate(width / 2, height / 2);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
+  const canvas = blank(width * resolution, height * resolution);
+  const ctx = context(canvas);
+  centerOn(ctx, (width * resolution) / 2, (height * resolution) / 2, resolution);
   paint(ctx);
   return canvas;
 }
@@ -93,7 +93,12 @@ export function bakePiece(
  * face catches the light, standing on a darker side band, all in one bold outline. Always drawn upright (the light
  * comes from above), so stones along any side of the pond read the same.
  */
-export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random: () => number): void {
+export function paintStone(
+  ctx: CanvasRenderingContext2D,
+  [rx, ry]: readonly [number, number],
+  random: () => number,
+  look: PropLook,
+): void {
   const depth = ry * STONE_DEPTH;
   const face = slab(rx, ry - depth / 2, random);
   const lift = -depth / 2; // the top face sits up, the side shows below it
@@ -101,12 +106,12 @@ export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random
     for (let step = 0; step <= 6; step++) {
       ctx.save();
       ctx.translate(0, lift + (depth * step) / 6);
-      trace(ctx, face);
+      traceSmoothClosed(ctx, face);
       paint();
       ctx.restore();
     }
   };
-  paintShadow(ctx, () => {
+  paintShadow(ctx, look, () => {
     ctx.beginPath();
     ctx.ellipse(0, depth * 0.3, rx, ry - depth * 0.2, 0, 0, TAU);
   });
@@ -130,12 +135,17 @@ export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random
 }
 
 /** The stone's top face: cream, shading away from the light, with a soft shine near the top edge. */
-function paintFace(ctx: Ctx, face: readonly Pt[], rx: number, ry: number): void {
+function paintFace(
+  ctx: CanvasRenderingContext2D,
+  face: readonly CanvasPoint[],
+  rx: number,
+  ry: number,
+): void {
   const fill = ctx.createLinearGradient(rx * 0.3, -ry, -rx * 0.4, ry);
   fill.addColorStop(0, STONE.top);
   fill.addColorStop(0.55, STONE.top);
   fill.addColorStop(1, STONE.topShade);
-  trace(ctx, face);
+  traceSmoothClosed(ctx, face);
   ctx.fillStyle = fill;
   ctx.fill();
   ctx.strokeStyle = 'rgba(36, 31, 38, 0.35)'; // a soft line where the top face turns into the side
@@ -151,7 +161,7 @@ function paintFace(ctx: Ctx, face: readonly Pt[], rx: number, ry: number): void 
 
 // ---------------------------------------------------------------------------- lily pads and the lotus
 
-function paintPad(ctx: Ctx, radius: number, random: () => number): void {
+function paintPad(ctx: CanvasRenderingContext2D, radius: number, random: () => number, look: PropLook): void {
   const notch = random() * TAU;
   const leaf = (): void => {
     ctx.beginPath();
@@ -159,7 +169,7 @@ function paintPad(ctx: Ctx, radius: number, random: () => number): void {
     ctx.arc(0, 0, radius, notch + 0.2, notch - 0.2 + TAU);
     ctx.closePath();
   };
-  paintShadow(ctx, leaf);
+  paintShadow(ctx, look, leaf);
   leaf();
   ctx.fillStyle = PAD.rim;
   ctx.fill();
@@ -168,20 +178,21 @@ function paintPad(ctx: Ctx, radius: number, random: () => number): void {
   const body = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
   body.addColorStop(0, PAD.centre);
   body.addColorStop(1, PAD.edge);
-  ctx.translate(-1.2, 1.2);
+  const [towardX, towardY] = look.light.dir;
+  ctx.translate(-towardX * PAD_RIM, -towardY * PAD_RIM); // the lighter rim shows on the moon's side
   leaf();
   ctx.fillStyle = body;
   ctx.fill();
-  ctx.translate(1.2, -1.2);
+  ctx.translate(towardX * PAD_RIM, towardY * PAD_RIM);
   veins(ctx, radius, notch);
   ctx.restore();
   leaf();
   ctx.strokeStyle = PAD.ink;
-  ctx.lineWidth = PAD_OUTLINE;
+  ctx.lineWidth = look.padOutline;
   ctx.stroke();
 }
 
-function veins(ctx: Ctx, radius: number, notch: number): void {
+function veins(ctx: CanvasRenderingContext2D, radius: number, notch: number): void {
   ctx.strokeStyle = PAD.vein;
   ctx.lineWidth = 0.8;
   for (let i = 1; i < 12; i++) {
@@ -202,21 +213,25 @@ export function bakeLotusPad(
   openness: number,
   seed: number,
   resolution: number,
+  look: PropLook,
 ): HTMLCanvasElement {
-  const canvas = bakeProp({ kind: 'pad', radius: [radius, radius], seed }, resolution);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('pondProps: 2D canvas not available');
-  ctx.setTransform(resolution, 0, 0, resolution, canvas.width / 2, canvas.height / 2);
-  ctx.lineJoin = 'round';
-  const rng = seeded(seed + 1);
-  paintOpeningLotus(ctx, radius * 0.66, openness, rng() * TAU);
-  return canvas;
+  const pad = seeded(seed); // the pad's own seed, as bakeProp paints it
+  const lotus = seeded(seed + 1);
+  return bakePiece([radius, radius], resolution, (ctx) => {
+    paintPad(ctx, radius, pad, look);
+    paintOpeningLotus(ctx, radius * 0.66, { openness, turn: lotus() * TAU }, look);
+  });
 }
 
 /** Petals grow longer and wider and the heart shows as the lotus opens; a closed bud is a tight pink cup. */
-function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: number): void {
+function paintOpeningLotus(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  { openness, turn }: { openness: number; turn: number },
+  look: PropLook,
+): void {
   const open = Math.min(Math.max(openness, 0), 1);
-  paintShadow(ctx, () => {
+  paintShadow(ctx, look, () => {
     ctx.beginPath();
     ctx.arc(0, 0, size * (0.6 + 0.3 * open), 0, TAU);
   });
@@ -231,7 +246,7 @@ function paintOpeningLotus(ctx: Ctx, size: number, openness: number, turn: numbe
   ctx.fill();
 }
 
-function petal(ctx: Ctx, angle: number, length: number, width: number): void {
+function petal(ctx: CanvasRenderingContext2D, angle: number, length: number, width: number): void {
   ctx.save();
   ctx.rotate(angle);
   ctx.beginPath();
@@ -252,23 +267,29 @@ function petal(ctx: Ctx, angle: number, length: number, width: number): void {
 // ---------------------------------------------------------------------------- shared
 
 /** A soft shadow of whatever `shape` traces, cast away from the moon. */
-function paintShadow(ctx: Ctx, shape: () => void): void {
-  drawShadowOnly(
-    ctx,
-    () => {
-      shape();
-      ctx.fillStyle = '#000';
-      ctx.fill();
-    },
-    { blur: SHADOW_BLUR, color: SHADOW, offset: SHADOW_OFFSET },
-  );
+function paintShadow(ctx: CanvasRenderingContext2D, look: PropLook, shape: () => void): void {
+  const [towardX, towardY] = look.light.dir;
+  const { distance, alpha } = look.shadow;
+  const fill = (): void => {
+    shape();
+    ctx.fillStyle = '#000';
+    ctx.fill();
+  };
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  drawShadowOnly(ctx, fill, {
+    blur: SHADOW_BLUR,
+    color: look.light.shadow,
+    offset: [-towardX * distance, -towardY * distance],
+  });
+  ctx.restore();
 }
 
 /**
  * A slab's outline: a rounded rectangle (a superellipse) with gently lumpy sides, seeded. Squarer than a pebble, so a
  * row of them packs like a stone border.
  */
-function slab(rx: number, ry: number, random: () => number): Pt[] {
+function slab(rx: number, ry: number, random: () => number): CanvasPoint[] {
   const lumps = 2 + Math.floor(random() * 3);
   const phase = random() * TAU;
   const square = 2 / (2.6 + random() * 1.2); // 2 / exponent: lower is squarer
@@ -277,23 +298,9 @@ function slab(rx: number, ry: number, random: () => number): Pt[] {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     const swell = 1 + 0.05 * Math.sin(angle * lumps + phase) + 0.025 * (random() - 0.5);
-    return [
-      Math.sign(cos) * Math.abs(cos) ** square * rx * swell,
-      Math.sign(sin) * Math.abs(sin) ** square * ry * swell,
-    ] as const;
+    return {
+      x: Math.sign(cos) * Math.abs(cos) ** square * rx * swell,
+      y: Math.sign(sin) * Math.abs(sin) ** square * ry * swell,
+    };
   });
-}
-
-/** Traces a smooth closed curve through the midpoints of the outline's sides. */
-function trace(ctx: Ctx, points: readonly Pt[]): void {
-  const mid = (a: Pt, b: Pt): Pt => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const last = points[points.length - 1] ?? [0, 0];
-  const first = points[0] ?? [0, 0];
-  ctx.beginPath();
-  ctx.moveTo(...mid(last, first));
-  points.forEach((point, i) => {
-    const next = points[(i + 1) % points.length] ?? first;
-    ctx.quadraticCurveTo(point[0], point[1], ...mid(point, next));
-  });
-  ctx.closePath();
 }

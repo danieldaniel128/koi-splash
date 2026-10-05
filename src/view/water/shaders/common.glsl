@@ -1,5 +1,5 @@
-// Small helpers shared by every pond shader: hashing, smooth noise, the pond's outline and constant-width lines.
-// Positions are stage pixels.
+// Small helpers shared by every pond shader: the water state's packing, hashing, smooth noise, the pond's outline
+// and constant-width lines. Positions are stage pixels.
 
 // the pond's shape, as a distance field baked once from its traced shore (see bakeDistanceField): red holds the
 // distance out to 128 px in 1 px steps, green out to 16 px in 1/8 px steps (FIELD_REACH). uShoreArea is where the
@@ -10,10 +10,26 @@ uniform vec4 uShoreArea;
 uniform vec2 uShoreBend;
 
 // stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and the cosine and sine of
-// the rotation. Unused slots have a zero size.
+// the rotation; and how much of each is still on the water (1, falling to 0 as a pad leaves it), which the water's
+// depth fades with. Slots past uPropCount are unused, and so is a slot with a zero size.
 const int MAX_PROPS = 16;
 uniform vec4 uProps[MAX_PROPS];
 uniform vec2 uPropAxes[MAX_PROPS];
+uniform float uPropAfloat[MAX_PROPS];
+uniform float uPropCount;
+
+// The water's state: a value in -WATER_RANGE..WATER_RANGE (WATER.stateRange, set by withCommon) packed into two
+// 8-bit channels, a high byte and the remainder at full 8-bit resolution, so the simulation runs on any phone GPU
+// (waterCodec.ts mirrors these two).
+vec2 packWater(float value) {
+    float x = clamp(value / WATER_RANGE * 0.5 + 0.5, 0.0, 1.0) * 255.0;
+    float high = min(floor(x), 254.0);
+    return vec2(high / 255.0, x - high);
+}
+
+float unpackWater(vec2 channels) {
+    return ((channels.x + channels.y / 255.0) * 2.0 - 1.0) * WATER_RANGE;
+}
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -57,16 +73,22 @@ float pondEdge(vec2 p) {
     return d + (bend - 0.5) * 2.0 * uShoreBend.x;
 }
 
+// Distance (px) to the edge of stone or pad `i` (a slot in use): negative inside it.
+float propDistance(int i, vec2 p) {
+    vec4 prop = uProps[i];
+    vec2 axis = uPropAxes[i];
+    vec2 q = p - prop.xy;
+    q = vec2(axis.x * q.x + axis.y * q.y, axis.x * q.y - axis.y * q.x); // into the prop's own frame
+    return (length(q / prop.zw) - 1.0) * min(prop.z, prop.w);
+}
+
 // Distance (px) to the nearest stone or lily pad: negative inside one.
 float propEdge(vec2 p) {
     float d = 1e5;
     for (int i = 0; i < MAX_PROPS; i++) {
-        vec4 prop = uProps[i];
-        if (prop.z <= 0.0) continue;
-        vec2 axis = uPropAxes[i];
-        vec2 q = p - prop.xy;
-        q = vec2(axis.x * q.x + axis.y * q.y, axis.x * q.y - axis.y * q.x); // into the prop's own frame
-        d = min(d, (length(q / prop.zw) - 1.0) * min(prop.z, prop.w));
+        if (float(i) >= uPropCount) break; // every pixel of every pass walks this loop: only the slots in use
+        if (uProps[i].z <= 0.0) continue;
+        d = min(d, propDistance(i, p));
     }
     return d;
 }
@@ -77,7 +99,7 @@ float waterEdge(vec2 p) {
 }
 
 // Distance (px) to the edge of a rectangle (x, y, width, height): negative inside. Used to keep light and glints
-// off the board, so nothing busy sits behind the koi.
+// soft or out under the board, so nothing busy sits behind the koi.
 float rectEdge(vec2 p, vec4 rect) {
     vec2 d = abs(p - (rect.xy + rect.zw * 0.5)) - rect.zw * 0.5;
     return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);

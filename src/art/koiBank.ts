@@ -8,11 +8,15 @@
  * name its id in KOI_SET (src/config/koi.ts).
  *
  * Only the five koi on the board are kept here, so the bundle carries no koi the
- * game never shows. Bake a canvas once with `bakeKoi` and upload it as a texture.
+ * game never shows. It has no framework code (it shares only the art folder's
+ * canvas helpers): bake a canvas once with `bakeKoi` and upload it as a texture.
  *
  * Painting is deterministic: the same variety + seed always gives the same
  * pattern, and the tail wag never changes the pattern, only the pose.
  */
+
+import { drawShadowOnly } from './blur';
+import { blank, context, traceSmoothClosed } from './canvas';
 
 // ============================================================================
 // Types: the declarative look of a variety
@@ -143,9 +147,6 @@ export interface BakeOptions extends PaintOptions {
   resolution?: number;
 }
 
-/** Any 2D context: on-screen canvas or OffscreenCanvas (for workers). */
-type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-
 // ============================================================================
 // Varieties: the board's koi, each readable at 48 px by ONE dominant colour
 // ============================================================================
@@ -245,7 +246,7 @@ export function getVariety(id: string): KoiVariety {
  * Paint one koi, top-down, into the square (0,0)-(size,size) of the current
  * transform. Deterministic from variety + seed; the tail wag only bends the pose.
  */
-export function paintKoi(ctx: Ctx, variety: KoiVariety, opts: PaintOptions): void {
+export function paintKoi(ctx: CanvasRenderingContext2D, variety: KoiVariety, opts: PaintOptions): void {
   const size = opts.size;
   const wag = clamp(opts.tailWag ?? 0, -1, 1);
   const look = opts.build != null ? { ...variety.look, build: clamp(opts.build, 0.1, 0.32) } : variety.look;
@@ -280,13 +281,23 @@ export function paintKoi(ctx: Ctx, variety: KoiVariety, opts: PaintOptions): voi
 /** Paint a koi into a fresh canvas (ready for PIXI.Texture.from(canvas)). */
 export function bakeKoi(variety: KoiVariety, opts: BakeOptions): HTMLCanvasElement {
   const res = opts.resolution ?? 1;
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = Math.max(1, Math.ceil(opts.size * res));
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('koiBank: 2D canvas not available');
+  const canvas = blank(opts.size * res);
+  const ctx = context(canvas);
   ctx.scale(res, res);
   paintKoi(ctx, variety, opts);
   return canvas;
+}
+
+/**
+ * How far sideways the spine of a head-up koi is bent at each row of its square, in the square's units (0 all the
+ * way down for the straight pose): lets a painting laid over the baked body, like a special koi's bands, bend with
+ * the tail. Only the size and the tail wag shape the spine.
+ */
+export function spineOffset(opts: PaintOptions): (y: number) => number {
+  const size = opts.size;
+  const body = makeBody({ build: opts.build } as KoiLook, size, clamp(opts.tailWag ?? 0, -1, 1));
+  const top = size / 2 - SNOUT_X * size; // the snout's row; the spine runs down from it
+  return y => body.point(clamp((y - top) / body.L, 0, 1), 0).y;
 }
 
 // ============================================================================
@@ -318,7 +329,7 @@ interface Body {
    * Traces the outline of the band |s| <= k (k = 1: the whole body). Starts a new
    * path unless `append` is set (used to build compound even-odd paths).
    */
-  trace(ctx: Ctx, k?: number, append?: boolean): void;
+  trace(ctx: CanvasRenderingContext2D, k?: number, append?: boolean): void;
 }
 
 /**
@@ -366,11 +377,11 @@ function makeBody(look: KoiLook, size: number, wag: number): Body {
     return { x: x0 - t * L + (dy / len) * w, y: spineY(t) + (L / len) * w };
   };
 
-  const trace = (ctx: Ctx, k = 1, append = false): void => {
+  const trace = (ctx: CanvasRenderingContext2D, k = 1, append = false): void => {
     const ring: Vec[] = [];
     for (let i = 0; i <= OUTLINE_STEPS; i++) ring.push(point(stepT(i), k));
     for (let i = OUTLINE_STEPS; i >= 0; i--) ring.push(point(stepT(i), -k));
-    smoothClosed(ctx, ring, !append);
+    traceSmoothClosed(ctx, ring, !append);
   };
 
   return {
@@ -471,14 +482,14 @@ function blobShape(rng: () => number, t0: number, s0: number, r: number, aspect:
 
 const FACING_ANGLE: Record<Facing, number> = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 
-function paintDropShadow(ctx: Ctx, body: Body): void {
+function paintDropShadow(ctx: CanvasRenderingContext2D, body: Body): void {
   // The shadow falls "down the screen" whatever the facing, so its offset is in device space.
   const u = body.size;
   fillSoft(ctx, () => body.trace(ctx, 1.25), 'rgba(0,10,28,0.42)', 0.06 * u, { x: 0, y: 0.045 * u });
 }
 
 /** Pectoral and pelvic fins, both sides, behind the body. */
-function paintFins(ctx: Ctx, fins: FinLook, body: Body, wag: number): void {
+function paintFins(ctx: CanvasRenderingContext2D, fins: FinLook, body: Body, wag: number): void {
   for (const side of [-1, 1]) {
     // pelvic: small, near the middle, swept back
     drawFin(ctx, fins, body, body.point(0.58, side * 0.7), body.angleToTail(0.58) - side * 0.62, side, 0.1 * body.L);
@@ -488,7 +499,7 @@ function paintFins(ctx: Ctx, fins: FinLook, body: Body, wag: number): void {
   }
 }
 
-function drawFin(ctx: Ctx, fins: FinLook, _body: Body, at: Vec, angle: number, side: number, F: number): void {
+function drawFin(ctx: CanvasRenderingContext2D, fins: FinLook, _body: Body, at: Vec, angle: number, side: number, F: number): void {
   ctx.save();
   ctx.translate(at.x, at.y);
   ctx.rotate(angle);
@@ -526,7 +537,7 @@ function drawFin(ctx: Ctx, fins: FinLook, _body: Body, at: Vec, angle: number, s
 }
 
 /** Translucent fin fill: root colour -> fin colour -> optional contrasting edge. */
-function finGradient(ctx: Ctx, fins: FinLook, len: number): CanvasGradient {
+function finGradient(ctx: CanvasRenderingContext2D, fins: FinLook, len: number): CanvasGradient {
   const op = fins.opacity ?? 0.8;
   const g = ctx.createLinearGradient(0, 0, len, 0);
   g.addColorStop(0, rgba(fins.base ?? fins.color, Math.min(1, op + 0.12)));
@@ -541,7 +552,7 @@ function finGradient(ctx: Ctx, fins: FinLook, len: number): CanvasGradient {
   return g;
 }
 
-function paintTail(ctx: Ctx, fins: FinLook, body: Body, wag: number): void {
+function paintTail(ctx: CanvasRenderingContext2D, fins: FinLook, body: Body, wag: number): void {
   const T = 0.32 * body.L * (0.85 + body.build);
   const root = body.point(0.97, 0);
   const lag = -wag * 0.07 * T; // the lobes trail slightly behind the beat
@@ -588,7 +599,7 @@ function paintTail(ctx: Ctx, fins: FinLook, body: Body, wag: number): void {
 }
 
 /** The body: skin colours, scales, patches, then light and shade on top. */
-function paintBody(ctx: Ctx, look: KoiLook, body: Body, plan: Plan): void {
+function paintBody(ctx: CanvasRenderingContext2D, look: KoiLook, body: Body, plan: Plan): void {
   const { W, L } = body;
   const skin = look.body;
 
@@ -679,7 +690,7 @@ function paintBody(ctx: Ctx, look: KoiLook, body: Body, plan: Plan): void {
 }
 
 /** Reticulated scales: the rear edge of every scale, fading out towards the flanks. */
-function paintNet(ctx: Ctx, body: Body, color: Hex, alpha: number, scale: number, span: number): void {
+function paintNet(ctx: CanvasRenderingContext2D, body: Body, color: Hex, alpha: number, scale: number, span: number): void {
   const across = (scale * 0.9) / body.build; // column spacing in skin units
   ctx.strokeStyle = color;
   ctx.lineWidth = Math.max(0.5, 0.2 * scale * body.L);
@@ -703,7 +714,7 @@ function paintNet(ctx: Ctx, body: Body, color: Hex, alpha: number, scale: number
 }
 
 /** Doitsu: one row of large mirror scales on each side of the dorsal line. */
-function paintDoitsu(ctx: Ctx, body: Body, color: Hex, size: number): void {
+function paintDoitsu(ctx: CanvasRenderingContext2D, body: Body, color: Hex, size: number): void {
   for (const side of [-1, 1]) {
     for (let t = 0.26; t < 0.95; t += size * 1.05) {
       const r = size * (1 - 0.35 * t); // scales shrink towards the tail
@@ -724,13 +735,13 @@ function paintDoitsu(ctx: Ctx, body: Body, color: Hex, size: number): void {
 }
 
 /** The dorsal fin seen from above: a thin translucent ridge along the spine. */
-function paintDorsalFin(ctx: Ctx, fins: FinLook, body: Body): void {
+function paintDorsalFin(ctx: CanvasRenderingContext2D, fins: FinLook, body: Body): void {
   const pts: Vec[] = [];
   const N = 12;
   for (let i = 0; i <= N; i++) { const t = lerp(0.34, 0.74, i / N); pts.push(body.point(t, 0.09 * Math.sin((Math.PI * i) / N))); }
   for (let i = N; i >= 0; i--) { const t = lerp(0.34, 0.74, i / N); pts.push(body.point(t, -0.09 * Math.sin((Math.PI * i) / N))); }
   ctx.fillStyle = rgba(fins.base ?? fins.color, 0.25);
-  smoothClosed(ctx, pts);
+  traceSmoothClosed(ctx, pts);
   ctx.fill();
   ctx.strokeStyle = rgba(shade(fins.base ?? fins.color, -0.3), 0.18);
   ctx.lineWidth = Math.max(0.5, 0.008 * body.L);
@@ -742,7 +753,7 @@ function paintDorsalFin(ctx: Ctx, fins: FinLook, body: Body): void {
 }
 
 /** Gill covers, barbels and eyes. Fine details are skipped at small sizes. */
-function paintHeadDetails(ctx: Ctx, look: KoiLook, body: Body): void {
+function paintHeadDetails(ctx: CanvasRenderingContext2D, look: KoiLook, body: Body): void {
   const { L } = body;
   const detailed = body.size >= 96;
   const dark = luminance(look.body.color) < 0.2;
@@ -772,7 +783,7 @@ function paintHeadDetails(ctx: Ctx, look: KoiLook, body: Body): void {
 }
 
 /** The eyes: a golden iris ring, dark pupil and a glint. */
-function paintEyes(ctx: Ctx, look: KoiLook, body: Body): void {
+function paintEyes(ctx: CanvasRenderingContext2D, look: KoiLook, body: Body): void {
   const { L } = body;
   const dark = luminance(look.body.color) < 0.2;
   const r = Math.max(0.9, 0.024 * L);
@@ -792,54 +803,33 @@ function paintEyes(ctx: Ctx, look: KoiLook, body: Body): void {
 // ============================================================================
 
 /** Trace a skin-space shape (closed, smooth) into the current path. */
-function traceSkinShape(ctx: Ctx, body: Body, shape: SkinShape): void {
-  smoothClosed(ctx, shape.map(p => body.point(p.t, p.s)), false);
-}
-
-/** Closed curve through the midpoints of a polygon (smooth, no overshoot). */
-function smoothClosed(ctx: Ctx, pts: Vec[], begin = true): void {
-  if (begin) ctx.beginPath();
-  const n = pts.length;
-  const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-  const start = mid(pts[n - 1]!, pts[0]!);
-  ctx.moveTo(start.x, start.y);
-  for (let i = 0; i < n; i++) {
-    const m = mid(pts[i]!, pts[(i + 1) % n]!);
-    ctx.quadraticCurveTo(pts[i]!.x, pts[i]!.y, m.x, m.y);
-  }
-  ctx.closePath();
+function traceSkinShape(ctx: CanvasRenderingContext2D, body: Body, shape: SkinShape): void {
+  traceSmoothClosed(ctx, shape.map(p => body.point(p.t, p.s)), false);
 }
 
 /**
- * Fill a path with a blurred edge. Canvas 2D only blurs shadows portably, so
- * the path is drawn far off-canvas and only its shadow lands back in place.
- * `blur` is in canvas units; `offset` (optional) is in canvas units of screen space.
+ * Fill a path with a blurred edge (drawShadowOnly: only a shadow is blurred the
+ * same in every browser). `blur` is the shadow blur's width in canvas units
+ * (twice the standard deviation); `offset` (optional) is in canvas units of
+ * screen space.
  */
-function fillSoft(ctx: Ctx, path: () => void, color: string, blur: number, offset?: Vec, rule: CanvasFillRule = 'nonzero'): void {
+function fillSoft(ctx: CanvasRenderingContext2D, path: () => void, color: string, blur: number, offset?: Vec, rule: CanvasFillRule = 'nonzero'): void {
   if (blur <= 0.01 && !offset) {
     ctx.fillStyle = color;
     path();
     ctx.fill(rule);
     return;
   }
-  const m = ctx.getTransform();
-  const pxPerUnit = Math.hypot(m.a, m.b);
-  const FAR = 20000; // device pixels
-  const inv = m.inverse();
-  ctx.save();
-  ctx.translate(inv.a * FAR, inv.b * FAR); // user-space vector that moves FAR device pixels right
-  ctx.shadowColor = color;
-  ctx.shadowBlur = blur * pxPerUnit;
-  ctx.shadowOffsetX = -FAR + (offset ? offset.x * pxPerUnit : 0);
-  ctx.shadowOffsetY = offset ? offset.y * pxPerUnit : 0;
-  ctx.fillStyle = '#000';
-  path();
-  ctx.fill(rule);
-  ctx.restore();
+  const fill = (): void => {
+    ctx.fillStyle = '#000';
+    path();
+    ctx.fill(rule);
+  };
+  drawShadowOnly(ctx, fill, { blur: blur / 2, color, ...(offset ? { offset: [offset.x, offset.y] } : {}) });
 }
 
 /** Darken the inside of the silhouette edge (call while clipped to the body). */
-function innerShadow(ctx: Ctx, body: Body, color: string, blur: number, offset: Vec): void {
+function innerShadow(ctx: CanvasRenderingContext2D, body: Body, color: string, blur: number, offset: Vec): void {
   const u = body.size;
   fillSoft(ctx, () => {
     ctx.beginPath();
@@ -849,7 +839,7 @@ function innerShadow(ctx: Ctx, body: Body, color: string, blur: number, offset: 
 }
 
 /** A small bright crescent on one scale (metallic glints and Gin Rin). */
-function glint(ctx: Ctx, body: Body, t: number, s: number, r: number, color: string, weight = 1): void {
+function glint(ctx: CanvasRenderingContext2D, body: Body, t: number, s: number, r: number, color: string, weight = 1): void {
   ctx.strokeStyle = color;
   ctx.lineWidth = Math.max(0.6, 0.3 * weight * r * body.L);
   ctx.beginPath();

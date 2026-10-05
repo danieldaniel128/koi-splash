@@ -7,7 +7,9 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
-type Ctx = CanvasRenderingContext2D;
+import { blank, context, copyCanvas, fillRadial, freshContext, transparent, wash } from './canvas';
+import { spineOffset } from './koiBank';
+import type { BakeOptions } from './koiBank';
 
 /**
  * How a striped koi's bands look (after the prototype's): `count` bands across its body, the band colour at both
@@ -36,22 +38,40 @@ export const SPECTRUM = [
  * Bands of colour and white running along a head-up koi part (its body, its fins), like the prototype's striped koi:
  * opaque, so the koi's own pattern is gone, `count` of them across the body with the band colour at both edges, the
  * pattern carrying on over the fins, a fine dark line between bands and a light from the moon side for roundness.
- * A dressing for bakeInkedKoi, so the ink outline goes on top.
+ * Each row of bands follows the spine of the pose the part was baked in (`pose`), so they bend with the tail instead
+ * of sliding across it. A dressing for bakeInkedKoi, so the ink outline goes on top.
  */
-export function stripe(part: HTMLCanvasElement, look: StripeLook): void {
-  const ctx = fresh(part);
-  const band = (look.body.right - look.body.left) / look.count;
-  const first = look.body.left - Math.ceil(look.body.left / band) * band; // the grid, carried out to the edges
+export function stripe(part: HTMLCanvasElement, look: StripeLook, pose: BakeOptions): void {
+  const resolution = pose.resolution ?? 1;
+  const spine = spineOffset(pose);
+  const shifts = Array.from({ length: part.height }, (_, y) => spine((y + 0.5) / resolution) * resolution);
+  const margin = Math.ceil(Math.max(0, ...shifts.map(Math.abs))) + 1; // room to slide the bands either way
+  const bands = straightBands(look, part, margin);
+  const ctx = freshContext(part);
   ctx.globalCompositeOperation = 'source-atop';
-  for (let x = first; x < part.width; x += band) {
+  shifts.forEach((shift, y) => {
+    ctx.drawImage(bands, margin - shift, y, part.width, 1, 0, y, part.width, 1);
+  });
+  shade(ctx, part);
+  ctx.restore();
+}
+
+/** The bands as on a straight koi, for a part's canvas, on a canvas `margin` px wider on both sides. */
+function straightBands(look: StripeLook, part: HTMLCanvasElement, margin: number): HTMLCanvasElement {
+  const canvas = blank(part.width + margin * 2, part.height);
+  const ctx = context(canvas);
+  ctx.translate(margin, 0);
+  const band = (look.body.right - look.body.left) / look.count;
+  const first = look.body.left - Math.ceil((look.body.left + margin) / band) * band; // the grid, out to the edges
+  const end = part.width + margin;
+  for (let x = first; x < end; x += band) {
     const index = Math.round((x - look.body.left) / band);
     ctx.fillStyle = ((index % 2) + 2) % 2 === 0 ? look.band : '#ffffff';
     ctx.fillRect(x, 0, band + 0.5, part.height);
   }
   ctx.fillStyle = look.line;
-  for (let x = first; x < part.width; x += band) ctx.fillRect(x - band * 0.07, 0, band * 0.14, part.height);
-  shade(ctx, part);
-  ctx.restore();
+  for (let x = first; x < end; x += band) ctx.fillRect(x - band * 0.07, 0, band * 0.14, part.height);
+  return canvas;
 }
 
 /** Where a head-up koi body spans across its canvas (px), at its widest: what the bands fit. O(pixels), once. */
@@ -77,18 +97,54 @@ export function bodySpan(body: HTMLCanvasElement): { left: number; right: number
  * stay, its hues become the rainbow's. A dressing for bakeInkedKoi.
  */
 export function rainbow(part: HTMLCanvasElement): void {
-  const original = copy(part);
-  const ctx = fresh(part);
+  const original = copyCanvas(part);
+  const ctx = freshContext(part);
   const spectrum = ctx.createLinearGradient(0, part.height * 0.15, 0, part.height * 0.85);
   SPECTRUM.forEach((colour, i) => {
     spectrum.addColorStop(i / (SPECTRUM.length - 1), colour);
   });
-  ctx.globalCompositeOperation = 'color';
-  ctx.fillStyle = spectrum;
-  ctx.fillRect(0, 0, part.width, part.height);
+  wash(ctx, spectrum, 'color');
   ctx.globalCompositeOperation = 'destination-in'; // the blend painted the empty corners too: cut back to the koi
   ctx.drawImage(original, 0, 0);
   ctx.restore();
+}
+
+/**
+ * The part of a koi's body that every pose of its tail beat covers (`bodies`, head up): where a sheen laid over the
+ * koi stays on it however its tail bends.
+ */
+export function inEveryPose(bodies: readonly HTMLCanvasElement[]): HTMLCanvasElement {
+  const [first, ...rest] = bodies;
+  if (!first) throw new Error('specialKoi: no poses to overlap');
+  const canvas = copyCanvas(first);
+  const ctx = context(canvas);
+  ctx.globalCompositeOperation = 'destination-in';
+  for (const body of rest) ctx.drawImage(body, 0, 0);
+  return canvas;
+}
+
+/** Where the sheen sweeps, as shares of the koi's square: from past the tail root up to just over the snout. */
+const SHEEN_SWEEP = [0.78, 0.02] as const;
+
+/** A sheen frame's light bar on a `width` x `height` head-up koi body: where it crosses the body's center line. */
+export interface SheenBar {
+  /** The row (px) where the bar's middle crosses the center line. */
+  readonly center: number;
+  /** The gradient's two ends (px), across the bar: a slanted bar, centered on the body. */
+  readonly from: readonly [number, number];
+  readonly to: readonly [number, number];
+}
+
+/** The light bar of sheen frame `frame` of `frames`, tail (low) to head (high), so every frame crosses the body. */
+export function sheenBar(frame: number, frames: number, width: number, height: number): SheenBar {
+  const [tail, head] = SHEEN_SWEEP;
+  const center = height * (tail + (head - tail) * (frame / Math.max(1, frames - 1)));
+  const across: readonly [number, number] = [width * 0.1, height * 0.09];
+  return {
+    center,
+    from: [width / 2 - across[0], center - across[1]],
+    to: [width / 2 + across[0], center + across[1]],
+  };
 }
 
 /**
@@ -97,21 +153,14 @@ export function rainbow(part: HTMLCanvasElement): void {
  */
 export function sheenFrames(body: HTMLCanvasElement, frames: number): HTMLCanvasElement[] {
   return Array.from({ length: frames }, (_, f) => {
-    const canvas = copy(body);
+    const canvas = copyCanvas(body);
     const ctx = context(canvas);
-    const y = canvas.height * (0.78 - 0.62 * (f / Math.max(1, frames - 1))); // tail (low) to head (high)
-    const bar = ctx.createLinearGradient(
-      0,
-      y - canvas.height * 0.09,
-      canvas.width * 0.2,
-      y + canvas.height * 0.09,
-    );
+    const { from, to } = sheenBar(f, frames, canvas.width, canvas.height);
+    const bar = ctx.createLinearGradient(...from, ...to);
     bar.addColorStop(0, 'rgba(255, 253, 242, 0)');
     bar.addColorStop(0.5, 'rgba(255, 253, 242, 0.85)');
     bar.addColorStop(1, 'rgba(255, 253, 242, 0)');
-    ctx.globalCompositeOperation = 'source-in';
-    ctx.fillStyle = bar;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    wash(ctx, bar, 'source-in');
     return canvas;
   });
 }
@@ -126,24 +175,26 @@ export function paintWhirlpool(size: number, colour: string): HTMLCanvasElement 
   const r = size / 2;
   ctx.translate(r, r);
   ctx.scale(1, -1); // the arms below curl clockwise inward; mirrored, they curl counter-clockwise
-  const eye = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-  eye.addColorStop(0, 'rgba(0, 5, 14, 0.96)');
-  eye.addColorStop(0.22, 'rgba(2, 16, 34, 0.82)');
-  eye.addColorStop(0.6, 'rgba(8, 42, 72, 0.4)');
-  eye.addColorStop(1, 'rgba(12, 56, 90, 0)');
-  ctx.fillStyle = eye;
-  ctx.fillRect(-r, -r, size, size);
+  fillRadial(
+    ctx,
+    [0, 0],
+    [0, r],
+    [
+      [0, 'rgba(0, 5, 14, 0.96)'],
+      [0.22, 'rgba(2, 16, 34, 0.82)'],
+      [0.6, 'rgba(8, 42, 72, 0.4)'],
+      [1, 'rgba(12, 56, 90, 0)'],
+    ],
+  );
   for (let k = 0; k < 3; k++) {
     const start = (k * Math.PI * 2) / 3;
     arm(ctx, { start, reach: 0.97 * r, turn: 3.6, width: 0.34 * r }, colour, 0.6);
     arm(ctx, { start: start + 0.1, reach: 0.9 * r, turn: 3.6, width: 0.12 * r }, '#ffffff', 0.95);
   }
-  const rim = ctx.createRadialGradient(0, 0, r * 0.55, 0, 0, r);
+  const rim = ctx.createRadialGradient(r, r, r * 0.55, r, r, r); // in pixels, as wash reads it
   rim.addColorStop(0, '#000');
   rim.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.fillStyle = rim;
-  ctx.fillRect(-r, -r, size, size);
+  wash(ctx, rim, 'destination-in');
   return canvas;
 }
 
@@ -157,8 +208,7 @@ const CURL_WRAP = 0.95;
  */
 export function curl(koi: HTMLCanvasElement, radius: number): HTMLCanvasElement {
   const size = koi.width;
-  const source = koi.getContext('2d')?.getImageData(0, 0, size, koi.height);
-  if (!source) throw new Error('specialKoi: 2D canvas not available');
+  const source = context(koi).getImageData(0, 0, size, koi.height);
   const canvas = blank(size);
   const ctx = context(canvas);
   const out = ctx.createImageData(size, size);
@@ -222,7 +272,7 @@ interface PointLike {
 
 /** One tapered ribbon spiralling into the centre: wide in the middle, thin at both ends. */
 function arm(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   shape: { start: number; reach: number; turn: number; width: number },
   colour: string,
   alpha: number,
@@ -245,7 +295,7 @@ function arm(
 }
 
 /** Light from the moon side, shade at the far edge, over a part's paint: gives the bands some roundness. */
-function shade(ctx: Ctx, part: HTMLCanvasElement): void {
+function shade(ctx: CanvasRenderingContext2D, part: HTMLCanvasElement): void {
   const light = ctx.createRadialGradient(
     part.width * 0.42,
     part.height * 0.4,
@@ -257,44 +307,7 @@ function shade(ctx: Ctx, part: HTMLCanvasElement): void {
   light.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
   light.addColorStop(0.4, 'rgba(255, 255, 255, 0)');
   light.addColorStop(1, 'rgba(0, 14, 34, 0.4)');
-  ctx.globalCompositeOperation = 'source-atop';
-  ctx.fillStyle = light;
-  ctx.fillRect(0, 0, part.width, part.height);
-}
-
-function blank(size: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(size);
-  canvas.height = Math.ceil(size);
-  return canvas;
-}
-
-/**
- * A canvas's context, saved and reset to plain pixels: the koi painter leaves its own scale and settings on it.
- * Restore it when done.
- */
-function fresh(canvas: HTMLCanvasElement): Ctx {
-  const ctx = context(canvas);
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.filter = 'none';
-  return ctx;
-}
-
-function copy(source: HTMLCanvasElement): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = source.width;
-  canvas.height = source.height;
-  context(canvas).drawImage(source, 0, 0); // a new canvas: its context is plain
-  return canvas;
-}
-
-function context(canvas: HTMLCanvasElement): Ctx {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('specialKoi: 2D canvas not available');
-  return ctx;
+  wash(ctx, light, 'source-atop');
 }
 
 /**
@@ -333,13 +346,24 @@ export function paintSparkle(size: number): HTMLCanvasElement {
   return canvas;
 }
 
-function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, alpha: number): void {
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  glow.addColorStop(0, colour);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+function glowAt(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  colour: string,
+  alpha: number,
+): void {
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  fillRadial(
+    ctx,
+    [x, y],
+    [0, radius],
+    [
+      [0, colour],
+      [1, transparent(colour)],
+    ],
+  );
   ctx.globalAlpha = 1;
 }
 
@@ -348,9 +372,7 @@ function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, 
  * edges) and fading at both ends. Tint the sprite with the special's colour and stretch it along the line.
  */
 export function paintBeam(width: number, height: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  const canvas = blank(width, height);
   const ctx = context(canvas);
   const across = ctx.createLinearGradient(0, 0, 0, height);
   across.addColorStop(0, 'rgba(255, 255, 255, 0)');
@@ -365,8 +387,6 @@ export function paintBeam(width: number, height: number): HTMLCanvasElement {
   along.addColorStop(0.18, '#000');
   along.addColorStop(0.82, '#000');
   along.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.fillStyle = along;
-  ctx.fillRect(0, 0, width, height);
+  wash(ctx, along, 'destination-in');
   return canvas;
 }

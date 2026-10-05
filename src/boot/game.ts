@@ -35,6 +35,7 @@ import { SwipeInput } from '../view/SwipeInput';
 import type { BoardGestures } from '../view/SwipeTracker';
 import type { PondWater } from '../view/water/PondWater';
 import { createBoardView } from './koi';
+import { propLook } from './pond';
 import type { GameScreen } from './screen';
 
 /**
@@ -87,7 +88,7 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
   const parts: GameParts = {
     boardView,
     pond,
-    popups: createScorePopups(new FlyingPoints(screen.ui, hud), board),
+    popups: createScorePopups(new FlyingPoints(screen.ui, hud), board, screen.resolution.screen),
     hud,
     pads: createPads(pond, hud, board, screen.resolution.art),
     screenFlow: made.screenFlow,
@@ -294,7 +295,7 @@ function createBoosterControl(scene: GameScene, views: BoosterViews): BoosterCon
       y: board.y + (cell.row + 0.5) * board.cell,
     }),
     stageWidth: layout.stage.width,
-    preview: (cell: Cell, type: Special['type']) => views.boardView.previewAt(cell, type),
+    preview: (cell: Cell, special: Special) => views.boardView.previewAt(cell, special),
   };
   const control = new BoosterControl({
     game: scene,
@@ -355,9 +356,12 @@ function createSpecialEffects(on: {
   return { fx, motions: new SpecialMotions() };
 }
 
-/** The points each match earns, over the board; the big ones fly into the score in the HUD. */
-function createScorePopups(flights: FlyingPoints, boardOrigin: PointData): ScorePopups {
-  const popups = new ScorePopups(flights);
+/**
+ * The points each match earns, over the board, drawn at exactly the screen's pixels per stage px (`resolution`); the
+ * big ones fly into the score in the HUD.
+ */
+function createScorePopups(flights: FlyingPoints, boardOrigin: PointData, resolution: number): ScorePopups {
+  const popups = new ScorePopups(flights, resolution);
   popups.position.set(boardOrigin.x, boardOrigin.y);
   return popups;
 }
@@ -374,7 +378,7 @@ function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resol
       toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,
-    resolution,
+    { resolution, look: propLook() },
   );
   pads.position.set(board.x, board.y);
   return pads;

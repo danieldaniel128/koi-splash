@@ -2,9 +2,11 @@ import { Container } from 'pixi.js';
 import type { Renderer, Sprite } from 'pixi.js';
 import type { DistanceField } from '../art/distanceField';
 import { SHORE_STYLES } from '../art/shoreStyles';
+import { KOI_LOOK } from '../config/koi';
 import { LAYOUT } from '../config/layout';
 import { POND } from '../config/pond';
 import type { PondProp, PondPropSpot } from '../config/pond';
+import type { PropLook } from '../art/pondProps';
 import { seeded } from '../core/Random';
 import { placeOn } from '../layout/anchor';
 import type { Rect } from '../layout/gameLayout';
@@ -32,10 +34,10 @@ export function createPond(renderer: Renderer, { layout }: GameScreen, shoreFiel
 }
 
 /**
- * The garden around the pond (see art/backdrop), baked once at exactly the screen's pixels per stage px: above the
- * pond on a tall phone, beside it on a wide screen.
+ * The garden around the pond (see art/backdrop), baked once at exactly the screen's pixels per stage px (up to the
+ * GPU's largest texture): above the pond on a tall phone, beside it on a wide screen.
  */
-export function createGarden({ layout, resolution }: GameScreen): Sprite {
+export function createGarden({ layout, resolution, maxTextureSize }: GameScreen): Sprite {
   const { stage, hud, pond, scene } = layout;
   const shore = LAYOUT.shoreWidth;
   return createBackdrop(
@@ -47,7 +49,7 @@ export function createGarden({ layout, resolution }: GameScreen): Sprite {
       pond: { left: pond.x - shore, right: pond.x + pond.width + shore },
     },
     THEME.scene.backdrop,
-    resolution.screen,
+    { resolution: resolution.screen, maxSize: maxTextureSize },
     POND.shore.seed,
   );
 }
@@ -60,7 +62,7 @@ export interface Scenery {
 
 /** The pond's border and stones, painted once, and fireflies over the bank. */
 export function createScenery({ layout, shore, resolution }: GameScreen): Scenery {
-  const props = new PondProps(placeProps(layout.pond), resolution.art);
+  const props = new PondProps(placeProps(layout.pond), resolution.art, propLook());
   // the ring is baked at exactly the screen's pixels per stage px (the layout is made for this screen)
   const border = createBorder(shore, resolution.screen);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
@@ -78,6 +80,11 @@ export function createScenery({ layout, shore, resolution }: GameScreen): Scener
   return { layer, fireflies };
 }
 
+/** How the stones and pads are lit and inked: by the scene's moon, with the koi's ink outline. */
+export function propLook(): PropLook {
+  return { light: THEME.scene.light, shadow: POND.propShadow, padOutline: KOI_LOOK.outlineWidth };
+}
+
 /** The pond's stones in the water, each at its corner of this pond. O(props). */
 function placeProps(pond: Rect, spots: readonly PondPropSpot[] = POND.props): PondProp[] {
   return spots.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
@@ -88,5 +95,5 @@ function createBorder(shore: readonly Outline[], resolution: number): ShoreRing 
   const { style, seed } = POND.shore;
   const rng = seeded(seed);
   const pieces = ringAlongShore(shore, POND.shore, rng);
-  return new ShoreRing(pieces, SHORE_STYLES[style], seed, resolution);
+  return new ShoreRing(pieces, SHORE_STYLES[style], { seed, resolution, look: propLook() });
 }

@@ -5,7 +5,8 @@
 // - a faint moonlit sheen: broad, slow patches of light on the open water, so even the deep middle isn't flat
 // - the simulated waves as soft relief: slopes facing the moon light up, crests catch a little light, troughs
 //   darken, and only strong fronts get a clean bright rim
-// - the moon's reflection, broken by the water into a loose column of twinkling glints over a soft glow
+// - the moon's reflection, broken by the water into a loose column of twinkling glints over a soft glow; it lies
+//   under the koi in a corner of the pond (there is little open water round the board), softened there
 // The waves refract all of it. Outside the shore it's transparent (the bank shows through), antialiased.
 // common.glsl and waves.glsl are prepended to this file.
 
@@ -36,8 +37,9 @@ uniform float uTroughShade;
 // rim on strong fronts: slope where it starts and where it's full, strength
 uniform vec3 uRim;
 uniform vec3 uMoon;
-// moon reflection centre (x, y) and radius, stage px
+// moon reflection center (x, y) and radius, stage px, and how much of it shows under the board
 uniform vec3 uMoonAt;
+uniform float uMoonUnderBoard;
 
 // Soft, wide bands of light on the bottom: two layers of slow noise, slowly warped and drifting, each glowing
 // around where it crosses zero. The glow's width follows the noise (in pattern units, not screen px), so where the
@@ -58,7 +60,7 @@ float lightBands(vec2 p) {
 float shallowLight(vec2 p, float fromShore) {
     float reach = uGlowLook.w * (0.6 + 0.8 * noise(p / 70.0 + 3.0));
     float shore = 1.0 - smoothstep(0.0, reach, fromShore);
-    float underBoard = smoothstep(-2.0, -26.0, rectEdge(p, uBoard));
+    float underBoard = smoothstep(2.0, 26.0, -rectEdge(p, uBoard));
     float patches = 0.35 + 0.9 * noise(p / 120.0 + vec2(uTime * 0.03, -uTime * 0.02));
     return shore * shore * patches * mix(1.0, uGlowUnderBoard, underBoard);
 }
@@ -113,7 +115,19 @@ vec3 water(vec2 p, float edge, vec3 w) {
     color += uInk * smoothstep(0.3, 0.95, sheen) * uSheen;
     color *= 1.0 - uLip.x * (1.0 - smoothstep(0.0, uLip.y, fromShore));
     color = relief(color, w);
-    return moonlight(color, seen, smoothstep(0.0, 14.0, rectEdge(p, uBoard)));
+    return moonlight(color, seen, mix(uMoonUnderBoard, 1.0, smoothstep(0.0, 14.0, rectEdge(p, uBoard))));
+}
+
+// Distance (px) to where the water gets shallow: the shore, or a stone or pad in it. A pad leaving the water
+// (uPropAfloat falling to 0) counts as further and further away, so the shallows round it fade out with it.
+float shallowsEdge(vec2 p, float shore) {
+    float d = 1e5;
+    for (int i = 0; i < MAX_PROPS; i++) {
+        if (float(i) >= uPropCount) break;
+        if (uProps[i].z <= 0.0) continue;
+        d = min(d, propDistance(i, p) + (1.0 - uPropAfloat[i]) * uDepth.y);
+    }
+    return max(shore, -d);
 }
 
 void main() {
@@ -124,7 +138,7 @@ void main() {
         finalColor = vec4(0.0);
         return;
     }
-    vec3 color = water(p, max(edge, -propEdge(p)), waves(p)); // lighter shallows by the shore and around stones
+    vec3 color = water(p, shallowsEdge(p, edge), waves(p)); // lighter shallows by the shore and around stones
     color *= mix(1.0, paper(p), 0.6); // the same washi grain as the bank, a little softer under the water
     finalColor = vec4(color * inside, inside); // premultiplied alpha, as Pixi blends it
 }

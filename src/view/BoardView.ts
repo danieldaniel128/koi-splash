@@ -80,9 +80,9 @@ export class BoardView extends Container implements BoardDisplay {
   }
 
   /** A picture of the koi in a cell as a special (the special booster's petals). */
-  previewAt(cell: Cell, type: Special['type']): string {
+  previewAt(cell: Cell, special: Special): string {
     const koi = this.koiAt(cell);
-    return this.specials.preview(type, koi?.kind ?? 0);
+    return this.specials.preview(special, koi?.kind ?? 0);
   }
 
   /** The cell a koi rests in (nearest to where it is now), or null when it's off the board. */
@@ -111,7 +111,7 @@ export class BoardView extends Container implements BoardDisplay {
     if (!piece.special) return;
     const koi = this.spriteOf(piece.id);
     koi.setPoses(this.specials.poses(piece.special, piece.kind));
-    this.looks.add(koi, piece.special);
+    this.dress(koi, piece.special);
   }
 
   /** Adds a koi for a new piece at a cell. */
@@ -133,6 +133,21 @@ export class BoardView extends Container implements BoardDisplay {
   /** Draws a koi above all the others (the one the player drags passes over the one it swaps with). */
   bringToFront(koi: Koi): void {
     this.koiLayer.addChild(koi);
+  }
+
+  /**
+   * A koi leaps out of the water into `air`, a layer over the pads and the surface in the board's own space: out of
+   * the pond's filter (no clipping, no bending through the waves) and casting no waterline, until it lands.
+   */
+  leap(koi: Koi, air: Container): void {
+    air.addChild(koi);
+    this.waterline.setAirborne(koi, true);
+  }
+
+  /** A leaping koi drops back into the water, over the other koi. */
+  splashDown(koi: Koi): void {
+    this.koiLayer.addChild(koi);
+    this.waterline.setAirborne(koi, false);
   }
 
   /** Centre of a cell, in this container's space. */
@@ -157,8 +172,15 @@ export class BoardView extends Container implements BoardDisplay {
     this.pieces.set(id, koi);
     this.koiLayer.addChild(koi);
     this.waterline.add(koi);
-    if (special) this.looks.add(koi, special);
+    if (special) this.dress(koi, special);
     return koi;
+  }
+
+  /** A special koi's look, and what it casts into the water when its shape changed (a whirlpool's curled koi). */
+  private dress(koi: Koi, special: Special): void {
+    this.looks.add(koi, special);
+    const marks = this.specials.marks(special, koi.kind);
+    if (marks) this.waterline.reshape(koi, marks);
   }
 
   private removeSpritesNotIn(ids: ReadonlySet<number>): void {

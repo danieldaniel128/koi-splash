@@ -8,6 +8,7 @@ import {
   GlProgram,
   Mesh,
   Shader,
+  Texture,
   UniformGroup,
 } from 'pixi.js';
 import type { Container as Layer, PointData, Renderer, TextureSource } from 'pixi.js';
@@ -45,13 +46,15 @@ export interface PondLayout {
   readonly moonAt: readonly [number, number];
 }
 
-/** Something the koi and the matches push: the pond's water. */
-/** A round thing floating on the water, in stage px. */
+/** A round thing floating on the water, in stage px, and how much of it is still on the water (0..1). */
 export interface Circle {
   readonly x: number;
   readonly y: number;
   readonly radius: number;
+  readonly afloat: number;
 }
+
+/** Something the koi and the matches push: the pond's water. */
 
 export interface WaterSurface {
   /** Presses the surface down by `strength` (water-height units; negative lifts it) over `radius` px at a stage point. */
@@ -142,13 +145,17 @@ export class PondWater implements WaterSurface {
    * O(MAX_PROPS).
    */
   float(circles: readonly Circle[]): void {
-    const shapes = this.shape.pond.uniforms.uProps as Float32Array;
-    const axes = this.shape.pond.uniforms.uPropAxes as Float32Array;
+    const { uniforms } = this.shape.pond;
+    const shapes = uniforms.uProps as Float32Array;
+    const axes = uniforms.uPropAxes as Float32Array;
+    const afloat = uniforms.uPropAfloat as Float32Array;
     for (let slot = this.fixedProps; slot < MAX_PROPS; slot++) {
       const circle = circles[slot - this.fixedProps];
       shapes.set(circle ? [circle.x, circle.y, circle.radius, circle.radius] : [0, 0, 0, 0], slot * 4);
       axes.set([1, 0], slot * 2);
+      afloat[slot] = circle?.afloat ?? 0;
     }
+    uniforms.uPropCount = Math.min(this.fixedProps + circles.length, MAX_PROPS);
   }
 
   /** Wakes, tail flicks, swaps, dives and landing droplets all push the water here. */
@@ -173,6 +180,18 @@ export class PondWater implements WaterSurface {
       height: screenHeight / scale,
     };
     this.paintBank(visible, scale * resolution);
+  }
+
+  /**
+   * Lets go of the frame's filter input once the frame is drawn. Pixi leaves the last filter pass's pooled texture
+   * bound in the bind group every filter shares (the koi filter's first); when the screen is resized the pool
+   * destroys that idle texture while it is still bound, and Pixi warns about it.
+   */
+  releaseFilterInput(): void {
+    const shared = this.koiFilter.groups[0]; // set by Pixi's filter system once the filter has run
+    if (!shared) return;
+    shared.setResource(Texture.EMPTY.source, 1);
+    shared.setResource(Texture.EMPTY.source.style, 2);
   }
 
   /**
@@ -282,7 +301,7 @@ export function bakeShoreField(pond: SimArea, shore: readonly Outline[]): Distan
 }
 
 /**
- * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend, uProps, uPropAxes in common.glsl): the
+ * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend and the uProp arrays in common.glsl): the
  * shore's distance field and the stones and pads in the water. Shared by the simulation and every pass, so they all
  * agree on the shore.
  */
@@ -295,7 +314,7 @@ function pondShape(layout: PondLayout): PondShapeResources {
     format: 'rgba8unorm',
     scaleMode: 'linear', // the distance is smooth: blending neighbours gives the distance in between
   });
-  const { shapes, axes } = waterShapes(layout.props);
+  const { shapes, axes, afloat, count } = waterShapes(layout.props);
   const { x, y, width, height } = field.area;
   return {
     uShoreField: source,
@@ -304,6 +323,8 @@ function pondShape(layout: PondLayout): PondShapeResources {
       uShoreBend: { value: [POND.shoreWobble, POND.shoreBend], type: 'vec2<f32>' },
       uProps: { value: shapes, type: 'vec4<f32>', size: MAX_PROPS },
       uPropAxes: { value: axes, type: 'vec2<f32>', size: MAX_PROPS },
+      uPropAfloat: { value: afloat, type: 'f32', size: MAX_PROPS },
+      uPropCount: { value: count, type: 'f32' },
     }),
   };
 }
@@ -342,7 +363,7 @@ function waterLook({ board, moonAt }: PondLayout): UniformDefs {
     uDepth: { value: [WATER.shallowWidth, WATER.deepFrom], type: 'vec2<f32>' },
     uLip: { value: [WATER.lipShade, WATER.lipWidth], type: 'vec2<f32>' },
     uRefraction: { value: WATER.refraction, type: 'f32' },
-    uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
+    uLightDir: { value: [...THEME.scene.light.dir], type: 'vec2<f32>' },
     uBoard: { value: [board.x, board.y, board.width, board.height], type: 'vec4<f32>' },
     uGlow: { value: color(WATER.glow), type: 'vec3<f32>' },
     uGlowLook: {
@@ -360,6 +381,7 @@ function waterLook({ board, moonAt }: PondLayout): UniformDefs {
     uRim: { value: [...WATER.rimGate, WATER.rimStrength], type: 'vec3<f32>' },
     uMoon: { value: color(THEME.scene.moon), type: 'vec3<f32>' },
     uMoonAt: { value: [...moonAt, THEME.scene.moonReflection], type: 'vec3<f32>' },
+    uMoonUnderBoard: { value: WATER.moonUnderBoard, type: 'f32' },
   };
 }
 
@@ -373,7 +395,7 @@ function surfaceLook(board: SimArea, koiMask: SimArea): UniformDefs {
     },
     uKoiShift: { value: WATER.koiRefraction, type: 'f32' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
-    uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
+    uLightDir: { value: [...THEME.scene.light.dir], type: 'vec2<f32>' },
     uRim: { value: [...WATER.rimGate, WATER.rimOverKoi], type: 'vec3<f32>' },
     uFoam: { value: [WATER.foamWidth, WATER.foamStrength, WATER.foamBreath], type: 'vec3<f32>' },
     uGold: { value: color(WATER.gold), type: 'vec3<f32>' },

@@ -41,14 +41,14 @@ float shoreFoam(vec2 p, float edge, float height) {
     return max(main, outer) * uFoam.y;
 }
 
-// The waterline around the koi: the line where the koi mask crosses one half (just outside the koi's ink outline),
-// a constant width on screen. It breaks into strokes that drift along it, tapers off toward the tail (which is under
-// the water), rides out on rising water and swells where the koi or a passing wave stirs the water.
-float koiFoam(vec2 p, vec3 w) {
-    vec4 k = texture(uKoiMask, (p + w.yz * uKoiShift - uMaskArea.xy) / uMaskArea.zw);
+// The waterline around the koi: the line where the koi mask `k` crosses one half (just outside the koi's ink
+// outline), a constant width on screen (`rate` is how much the mask changes per pixel). It breaks into strokes that
+// drift along it, tapers off toward the tail (which is under the water), rides out on rising water and swells where
+// the koi or a passing wave stirs the water.
+float koiFoam(vec2 p, vec3 w, vec4 k, float rate) {
     float cover = max(k.a, 0.02);
     float level = 0.5 - clamp(w.x * uContact.z, -0.06, 0.06); // small, or the line folds into several
-    float dist = abs(k.a - level) / max(fwidth(k.a), 1e-4); // device px from the waterline
+    float dist = abs(k.a - level) / max(rate, 1e-4); // device px from the waterline
     float stir = min(k.b / cover + length(w.yz) * 4.0, 1.0);
     float breaks = smoothstep(0.32, 0.6, noise(p / uContact.w + vec2(uTime * 0.35, -uTime * 0.25)) + stir * 0.25);
     float width = uContact.x * (0.5 + 0.7 * breaks) * (1.0 + stir * 0.7) * uPixelRatio;
@@ -72,19 +72,22 @@ float goldLeaf(vec2 p) {
 
 void main() {
     vec2 p = vPosition;
+    // the koi mask, where the waves have shifted the koi to, and its rate of change are read before any pixel leaves:
+    // a derivative is only defined while every pixel of its 2x2 block is still running
+    vec3 w = waves(p);
+    vec4 koi = texture(uKoiMask, (p + w.yz * uKoiShift - uMaskArea.xy) / uMaskArea.zw);
+    float koiRate = fwidth(koi.a);
     float edge = waterEdge(p); // foam outlines the shore and every stone and pad
     if (edge > 0.0) {
         finalColor = vec4(0.0);
         return;
     }
-    vec3 w = waves(p);
     float rim = moonOnWaves(w, uLightDir, uRim.xy).y * uRim.z;
-    float foam = max(shoreFoam(p, edge, w.x), koiFoam(p, w));
+    float foam = max(shoreFoam(p, edge, w.x), koiFoam(p, w, koi, koiRate));
     float open = smoothstep(2.0, 8.0, rectEdge(p, uBoard)); // 1 on the open water past the board
     float gold = goldLeaf(p) * open * uGoldLook.x;
 
     float white = clamp(max(rim, foam), 0.0, 1.0);
-    float alpha = max(white, gold);
-    vec3 color = (uInk * white + uGold * gold * (1.0 - white)) / max(alpha, 1e-4);
-    finalColor = vec4(color * alpha, alpha); // premultiplied alpha, as Pixi blends it
+    // the foam over the gold, both premultiplied (as Pixi blends them): where they overlap neither is over-bright
+    finalColor = vec4(uInk * white + uGold * gold * (1.0 - white), white + gold * (1.0 - white));
 }

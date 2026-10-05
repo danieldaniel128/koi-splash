@@ -1,14 +1,21 @@
 import { Container, Point, Sprite } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import { WATER } from '../config/water';
+import { THEME } from '../theme/theme';
 import type { Koi } from './Koi';
 import type { KoiTextures } from './KoiTextures';
+
+/** What a koi of some shape casts into the water: its shadow, and its contact shapes, one per pose. */
+export interface KoiMarks {
+  readonly shadow: Texture;
+  readonly contacts: readonly Texture[];
+}
 
 /** What one koi casts into the water around it. */
 interface Marks {
   readonly shadow: Sprite;
   readonly contact: Sprite;
-  /** The contact shapes, one per pose. */
+  /** The contact shapes through the tail beat. */
   readonly contactPoses: readonly Texture[];
   /** Where the koi was last frame, to tell how fast it moves. */
   readonly last: Point;
@@ -25,25 +32,33 @@ export class KoiWaterline {
   readonly shadows = new Container();
   readonly contacts = new Container();
   private readonly marks = new Map<Koi, Marks>();
-  /** Contact shapes are baked coarser than the koi: their scale against the koi's. */
-  private readonly coarse: number;
-
-  constructor(private readonly textures: KoiTextures) {
-    const [pose] = textures.swim(0);
-    const [shape] = textures.contact(0);
-    this.coarse = pose && shape ? pose.width / shape.width : 1;
-  }
+  constructor(private readonly textures: KoiTextures) {}
 
   /** Starts casting a koi's marks into the water. */
   add(koi: Koi): void {
     const shadow = centred(this.textures.shadow(koi.kind));
-    shadow.tint = WATER.shadowColor;
+    shadow.tint = THEME.scene.light.shadow;
     const contactPoses = this.textures.contact(koi.kind);
     const contact = new Sprite(contactPoses[0]);
     contact.anchor.set(0.5);
     this.marks.set(koi, { shadow, contact, contactPoses, last: new Point(NaN, NaN) });
     this.shadows.addChild(shadow);
     this.contacts.addChild(contact);
+  }
+
+  /** A koi changed shape (a whirlpool's koi curls up): what it casts takes the new shape. */
+  reshape(koi: Koi, shape: KoiMarks): void {
+    const marks = this.marks.get(koi);
+    if (!marks) return;
+    marks.shadow.texture = shape.shadow;
+    marks.contact.texture = shape.contacts[0] ?? marks.contact.texture;
+    this.marks.set(koi, { ...marks, contactPoses: shape.contacts });
+  }
+
+  /** A koi out of the water (leaping) casts no waterline until it is back in. */
+  setAirborne(koi: Koi, airborne: boolean): void {
+    const marks = this.marks.get(koi);
+    if (marks) marks.contact.visible = !airborne;
   }
 
   remove(koi: Koi): void {
@@ -64,9 +79,9 @@ export class KoiWaterline {
 
   /** Same turn, scale and fade as its koi, offset away from the moon: further for a koi lifted toward the surface. */
   private followShadow(koi: Koi, shadow: Sprite, lift: number): void {
-    const [offsetX, offsetY] = WATER.shadowOffset;
-    const reach = 1 + (lift - 1) * WATER.shadowLiftReach;
-    shadow.position.set(koi.x + offsetX * reach, koi.y + offsetY * reach);
+    const [towardX, towardY] = THEME.scene.light.dir;
+    const reach = WATER.shadowDistance * (1 + (lift - 1) * WATER.shadowLiftReach);
+    shadow.position.set(koi.x - towardX * reach, koi.y - towardY * reach);
     shadow.scale.copyFrom(koi.scale); // same pixel density as the koi texture, the extra canvas is blur room
     shadow.rotation = koi.rotation;
     shadow.alpha = koi.alpha * WATER.shadowAlpha;
@@ -85,9 +100,10 @@ export class KoiWaterline {
       moved / Math.max(deltaSeconds, 1e-3) / WATER.contactStirSpeed,
       (lift - 1) * WATER.contactLiftStir,
     );
-    contact.texture = marks.contactPoses[koi.pose] ?? contact.texture;
+    contact.texture = marks.contactPoses[koi.poseOf(marks.contactPoses.length)] ?? contact.texture;
     contact.position.copyFrom(koi.position);
-    contact.scale.set(koi.scale.x * this.coarse, koi.scale.y * this.coarse);
+    const coarse = this.textures.contactScale;
+    contact.scale.set(koi.scale.x * coarse, koi.scale.y * coarse);
     contact.rotation = koi.rotation;
     contact.tint = contactTint(koi.alpha * koi.alpha, stir);
   }

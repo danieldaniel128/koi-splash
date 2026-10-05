@@ -4,10 +4,11 @@ import { WATER } from '../config/water';
 import type { Koi } from './Koi';
 import type { WaterSurface } from './water/PondWater';
 
-/** Where a koi was last frame, and where it last pushed the water. */
+/** Where a koi was last frame, whether it moved since, and where it last pushed the water. */
 interface Motion {
   x: number;
   y: number;
+  moving: boolean;
   stampX: number;
   stampY: number;
 }
@@ -37,6 +38,7 @@ export class KoiLife {
     for (const fish of koi) {
       const motion = this.motion.get(fish) ?? this.track(fish);
       const speed = Math.hypot(fish.x - motion.x, fish.y - motion.y) / deltaSeconds;
+      motion.moving = speed > 0;
       motion.x = fish.x;
       motion.y = fish.y;
       fish.swim(deltaSeconds, speed);
@@ -70,9 +72,8 @@ export class KoiLife {
   /** One resting koi flicks its tail: it turns, and a small ring leaves its tail. */
   private flickOne(koi: readonly Koi[]): void {
     const fish = koi[Math.floor(this.random() * koi.length)];
-    if (!fish || fish.alpha < 1) return; // busy (diving, surfacing): skip this flick
-    const motion = this.motion.get(fish);
-    if (motion && (motion.x !== fish.x || motion.y !== fish.y)) return;
+    // busy (diving, surfacing, swimming, swapping): skip this flick
+    if (!fish || fish.alpha < 1 || this.motion.get(fish)?.moving) return;
     const side = this.random() < 0.5 ? -1 : 1;
     fish.flick(side * this.between(KOI_SWIM.flickTurn));
     this.push(fish.tailPoint(), WATER.flickPush, WATER.flickRadius);
@@ -87,7 +88,7 @@ export class KoiLife {
   }
 
   private track(koi: Koi): Motion {
-    const motion = { x: koi.x, y: koi.y, stampX: koi.x, stampY: koi.y };
+    const motion = { x: koi.x, y: koi.y, moving: false, stampX: koi.x, stampY: koi.y };
     this.motion.set(koi, motion);
     return motion;
   }

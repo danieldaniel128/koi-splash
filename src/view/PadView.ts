@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
+import type { PropLook } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
 import type { PadDisplay } from '../game/GameScene';
 import type { Cell, Pad, PadEvent } from '../model/types';
@@ -30,8 +31,11 @@ export class PadView extends Container implements PadDisplay {
   private readonly sprites = new Map<number, Sprite>();
   /** Every pad sprite still on the water, including ones blooming or drifting away (until they are gone). */
   private readonly floating = new Set<Sprite>();
-  private readonly budStages: Texture[];
-  private readonly emptyPad: Texture;
+  /** The lotuses lifting out of the water to bloom: only they let go of the foam as they grow (not a hit's pop). */
+  private readonly blooming = new Set<Sprite>();
+  private readonly looks: readonly PadLook[];
+  /** Each pad's look, by pad id. */
+  private readonly lookOf = new Map<number, PadLook>();
   /** The pad textures are baked at the screen's resolution; this scales them back to stage px. */
   private readonly scaleOf: number;
   private time = 0;
@@ -39,15 +43,13 @@ export class PadView extends Container implements PadDisplay {
   constructor(
     private readonly layout: PadViewLayout,
     private readonly water: PadWater,
-    resolution: number,
+    paint: { readonly resolution: number; readonly look: PropLook },
   ) {
     super();
-    const radius = layout.cellSize * BOARD_PADS.radius;
-    // O(stages) canvas paints, once at startup
-    this.budStages = Array.from({ length: BOARD_PADS.stages }, (_, i) =>
-      Texture.from(bakeLotusPad(radius, i / (BOARD_PADS.stages - 1), BOARD_PADS.lotusSeed, resolution)),
+    const { resolution, look } = paint;
+    this.looks = Array.from({ length: BOARD_PADS.looks }, (_, k) =>
+      bakePadLook(layout.cellSize * BOARD_PADS.radius, k, resolution, look),
     );
-    this.emptyPad = Texture.from(bakeProp({ kind: 'pad', radius: [radius, radius], seed: 11 }, resolution));
     this.scaleOf = 1 / resolution;
   }
 
@@ -55,13 +57,16 @@ export class PadView extends Container implements PadDisplay {
   reset(pads: readonly Pad[]): void {
     for (const sprite of this.floating) this.remove(sprite);
     this.sprites.clear();
+    this.lookOf.clear();
     for (const pad of pads) {
-      const sprite = new Sprite(pad.kind === 'bud' ? this.stageFor(pad) : this.emptyPad);
+      // a look of its own (its leaf and lotus turned): the sprite itself never turns, so its light stays the moon's
+      const look = this.looks[Math.floor(Math.random() * this.looks.length)];
+      if (look) this.lookOf.set(pad.id, look);
+      const sprite = new Sprite(pad.kind === 'bud' ? this.stageFor(pad) : (look ?? this.anyLook()).empty);
       sprite.anchor.set(0.5);
       sprite.scale.set(this.scaleOf);
       const { cellSize } = this.layout;
       sprite.position.set((pad.at.col + 0.5) * cellSize, (pad.at.row + 0.5) * cellSize); // centred on its cell
-      sprite.rotation = Math.random() * Math.PI * 2;
       this.sprites.set(pad.id, sprite);
       this.floating.add(sprite);
       this.addChild(sprite);
@@ -122,6 +127,7 @@ export class PadView extends Container implements PadDisplay {
   private async bloom(sprite: Sprite, pad: Pad): Promise<void> {
     sprite.texture = this.stageFor(pad);
     this.sprites.delete(pad.id);
+    this.blooming.add(sprite);
     this.push(sprite, BOARD_PADS.bloomPush);
     const lifted = this.scaleOf * BOARD_PADS.bloomLift;
     await gsap.to(sprite.scale, {
@@ -159,17 +165,20 @@ export class PadView extends Container implements PadDisplay {
 
   /**
    * Where a pad meets the water, in stage px. A blooming lotus lifts out (its scale grows past the resting one) and
-   * a drifting pad fades, so the foam closes in on them as they go.
+   * a drifting pad fades, so the foam closes in on them and the shallows round them fade as they go; a hit's pop
+   * leaves them as they are.
    */
   private waterline(sprite: Sprite): Circle {
-    const lift = Math.max(0, sprite.scale.x / this.scaleOf - 1);
+    const lift = this.blooming.has(sprite) ? Math.max(0, sprite.scale.x / this.scaleOf - 1) : 0;
     const floats = Math.max(0, 1 - lift * BOARD_PADS.foamLetGo) * sprite.alpha;
     const { x, y } = this.layout.toStage(sprite.position);
-    return { x, y, radius: this.layout.cellSize * BOARD_PADS.radius * BOARD_PADS.foamFit * floats };
+    const radius = this.layout.cellSize * BOARD_PADS.radius * BOARD_PADS.foamFit * floats;
+    return { x, y, radius, afloat: floats };
   }
 
   private remove(sprite: Sprite): void {
     this.floating.delete(sprite);
+    this.blooming.delete(sprite);
     sprite.destroy();
   }
 
@@ -182,16 +191,45 @@ export class PadView extends Container implements PadDisplay {
     return undefined;
   }
 
-  /** The baked stage that matches how far a bud has opened (hits taken / hits needed). */
+  /** The baked stage of its look that matches how far a bud has opened (hits taken / hits needed). */
   private stageFor(pad: Pad): Texture {
+    const { stages } = this.lookOf.get(pad.id) ?? this.anyLook();
     const opened = (pad.hitsNeeded - pad.hitsLeft) / pad.hitsNeeded;
-    const stage = Math.round(opened * (this.budStages.length - 1));
-    const texture = this.budStages[stage];
+    const stage = Math.round(opened * (stages.length - 1));
+    const texture = stages[stage];
     if (!texture) throw new RangeError(`no bud stage ${stage}`);
     return texture;
+  }
+
+  private anyLook(): PadLook {
+    const [look] = this.looks;
+    if (!look) throw new Error('no lily pad looks (BOARD_PADS.looks)');
+    return look;
   }
 
   private push(sprite: Sprite, strength: number): void {
     this.water.push(this.layout.toStage(sprite.position), strength, BOARD_PADS.pushRadius);
   }
+}
+
+/** One look of a lily pad: a bud's opening stages, closed to full bloom, and the pad on its own. */
+interface PadLook {
+  readonly stages: readonly Texture[];
+  readonly empty: Texture;
+}
+
+/**
+ * Look `k` of a lily pad of this radius: its own seed turns the leaf's notch and the lotus, while the shadow and the
+ * moonlit rim stay where the moon puts them. O(stages) canvas paints, once at startup.
+ */
+function bakePadLook(radius: number, k: number, resolution: number, look: PropLook): PadLook {
+  const { stages, lotusSeed, emptySeed } = BOARD_PADS;
+  return {
+    stages: Array.from({ length: stages }, (_, i) =>
+      Texture.from(bakeLotusPad(radius, i / (stages - 1), lotusSeed + k, resolution, look)),
+    ),
+    empty: Texture.from(
+      bakeProp({ kind: 'pad', radius: [radius, radius], seed: emptySeed + k }, resolution, look),
+    ),
+  };
 }

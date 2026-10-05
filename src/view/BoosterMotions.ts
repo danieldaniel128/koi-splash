@@ -5,6 +5,7 @@ import { paintPellet } from '../art/pellet';
 import { easeInOutCubic, smoothstep } from '../core/easing';
 import { BOOSTER_MOTION } from '../config/specials';
 import { WATER } from '../config/water';
+import { THEME } from '../theme/theme';
 import type { Moved } from '../model/boosters';
 import type { Cell, Kind, Piece } from '../model/types';
 import type { BoardView } from './BoardView';
@@ -64,7 +65,8 @@ export class BoosterMotions extends Container {
     this.events = deps.events;
     this.hitStop = deps.hitStop;
     this.centre = deps.centre;
-    this.pellet = Texture.from(paintPellet(Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet)));
+    const size = Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet);
+    this.pellet = Texture.from(paintPellet(size, THEME.scene.light.dir));
   }
 
   /** Two koi leap out of the water and land in each other's cells, crossing in the air. */
@@ -79,9 +81,10 @@ export class BoosterMotions extends Container {
     const headingA = a.heading;
     const headingB = b.heading;
     this.events.emit('koiLeapt', { duration });
-    // the first koi leaps higher: it's drawn over the second where they cross
-    this.view.bringToFront(b);
-    this.view.bringToFront(a);
+    // out of the water, over the pads and the surface while they're in the air; the first koi leaps higher, so it's
+    // drawn over the second where they cross
+    this.view.leap(b, this);
+    this.view.leap(a, this);
     gsap.delayedCall(duration * 0.47, () => {
       this.hitStop.hold(look.hitStop);
     });
@@ -180,6 +183,7 @@ export class BoosterMotions extends Container {
     });
     koi.position.copyFrom(to);
     koi.scale.set(rest);
+    this.view.splashDown(koi);
     this.splash(move.to, WATER.bumpPush * 1.5);
     this.events.emit('koiLanded', { low: leap.bow < 0 }); // the second koi bows the other way and plops lower
   }

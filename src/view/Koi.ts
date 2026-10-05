@@ -53,7 +53,12 @@ export class Koi extends Sprite {
 
   /** Which of the baked poses the koi shows now (its place in the tail beat). */
   get pose(): number {
-    return Math.floor(this.tailPhase * this.poses.length) % this.poses.length;
+    return this.poseOf(this.poses.length);
+  }
+
+  /** Its place in the tail beat as one of `count` evenly spaced poses (its contact shapes are fewer than its poses). */
+  poseOf(count: number): number {
+    return Math.floor(this.tailPhase * count) % count;
   }
 
   /** Advances the swim by one frame. `speed` is how fast the animations move it (px/s). O(1). */
