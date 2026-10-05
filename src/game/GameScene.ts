@@ -265,7 +265,7 @@ export class GameScene implements BoosterGame, SwapGame {
     const koi = { piece, at: from };
     const pair = this.placedPair(from, to);
     if (this.isBank(to)) await this.runTurn(() => this.bumpBank(koi, to));
-    else if (this.board.isBlocked(to)) await this.runTurn(() => this.bumpPad(koi, to));
+    else if (this.board.hasPad(to)) await this.runTurn(() => this.bumpPad(koi, to));
     else if (pair) await this.runTurn(() => this.resolveSwap(pair));
   }
 

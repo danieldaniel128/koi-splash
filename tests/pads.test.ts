@@ -95,7 +95,7 @@ describe('PadField', () => {
       if (!move) continue;
       const result = trySwap(board, move[0], move[1], SPEC, rng, field);
       if (!result.valid || !result.rounds.some((s) => s.padEvents.some((e) => e.type === 'bloom'))) continue;
-      expect(board.isBlocked({ col: 3, row: 4 })).toBe(false);
+      expect(board.hasPad({ col: 3, row: 4 })).toBe(false);
       expect(board.get({ col: 3, row: 4 })).not.toBeNull();
       return;
     }

@@ -33,6 +33,11 @@ export class Board {
     return this.inBounds(cell) && this.holes.has(this.index(cell));
   }
 
+  /** True where a lily pad sits. */
+  hasPad(cell: Cell): boolean {
+    return this.inBounds(cell) && this.blocked.has(this.index(cell));
+  }
+
   /** True where no piece can be: a lily pad, or a hole. */
   isBlocked(cell: Cell): boolean {
     return this.inBounds(cell) && (this.blocked.has(this.index(cell)) || this.holes.has(this.index(cell)));

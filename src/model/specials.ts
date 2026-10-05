@@ -134,7 +134,7 @@ function fire(
   outcome.fired.push({ piece, at: trigger.at, reach, ...(target === undefined ? {} : { target }) });
   reach.forEach((at, order) => {
     if (kept.has(cellKey(at))) return;
-    if (board.isBlocked(at) && !board.isHole(at)) outcome.struckPads.push(at);
+    if (board.hasPad(at)) outcome.struckPads.push(at);
     else clearCell(board, at, outcome, queue, { blast, order });
   });
 }
