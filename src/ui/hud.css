@@ -48,6 +48,7 @@
 /* The panel is as tall as what it holds: the score and the goals, and the star bar under them. */
 .hud__panel {
   flex: 1;
+  min-width: 0; /* never wider than the room beside the orb */
   margin-left: calc(-1 * var(--tuck));
   padding: var(--space-xs) var(--space-md) var(--space-xs) calc(var(--tuck) + var(--space-sm));
   box-sizing: border-box;
@@ -59,6 +60,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  gap: var(--space-sm);
 }
 
 .score {
@@ -72,18 +74,35 @@
 }
 
 .goal {
+  --chip-icon: var(--size-goalIcon);
+  --chip-count: var(--text-lg);
+  --chip-gap: var(--space-xs);
   display: grid;
   justify-items: center;
   gap: 1px;
 }
 
+/* Three goals or more: compact chips, smaller and closer together, so they all fit beside the score. */
+.goal--many {
+  --chip-icon: calc(var(--size-goalIcon) * 0.8);
+  --chip-count: var(--text-md);
+  --chip-gap: calc(var(--space-xs) / 2);
+}
+
+.goal--many .chip {
+  padding-right: var(--space-xs);
+}
+
 .goal__chips {
   display: flex;
-  gap: var(--space-xs);
+  gap: var(--chip-gap);
+}
+
+.goal__chips > .chip {
+  gap: var(--chip-gap);
 }
 
 .chip__icon {
-  --chip-icon: 28px;
   display: grid;
   place-items: center;
   width: var(--chip-icon);
@@ -91,11 +110,12 @@
   color: var(--color-gold);
 }
 
-/* A goal's picture, at its --image-size from the config, centered on the icon's box and spilling out of it. */
+/* A goal's picture, --image-scale times the icon's box (from the config), centered on it and spilling out of it. */
 .chip__image {
-  width: var(--image-size);
-  height: var(--image-size);
-  margin: calc((var(--chip-icon) - var(--image-size)) / 2);
+  --image: calc(var(--chip-icon) * var(--image-scale));
+  width: var(--image);
+  height: var(--image);
+  margin: calc((var(--chip-icon) - var(--image)) / 2);
 }
 
 .chip__image--koi {
@@ -108,7 +128,7 @@
   place-items: center;
   min-width: 18px;
   height: 22px;
-  font-size: var(--text-lg);
+  font-size: var(--chip-count);
 }
 
 .chip__bonus {

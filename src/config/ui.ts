@@ -51,12 +51,14 @@ export const NOPE_SHAKE = { offsets: [-5, 4, -2], time: 0.34 } as const;
 
 /**
  * The goal chips' icons, baked from the same painters as the board (px): the lotus's radius and the size it is shown
- * at (its painting has room round it for the shadow), and a koi's size, baked and shown.
+ * at (its painting has room round it for the shadow), and a koi's size, baked and shown. Up to `roomy` goals get
+ * full-size chips; more get compact ones, so they all fit beside the score.
  */
 export const GOAL_TRAY = {
   iconRadius: 13,
   lotusSize: 38,
   koiSize: 34,
+  roomy: 2,
 } as const;
 
 /**

@@ -1,6 +1,7 @@
 import { KOI_NAMES } from '../config/koi';
 import { GOAL_TRAY, HUD_MOTION } from '../config/ui';
 import type { GoalProgress, GoalType } from '../model/goals';
+import { THEME } from '../theme/theme';
 import { CHECK, STAR, setIcon } from './icons';
 import { bump, el, image } from './UiLayer';
 
@@ -28,6 +29,7 @@ export class GoalTray {
 
   /** A new level: a fresh chip per goal, showing what's to go with no pop. */
   reset(goals: readonly GoalProgress[]): void {
+    this.element.classList.toggle('goal--many', goals.length > GOAL_TRAY.roomy);
     this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal), this.icons.bonus));
     this.row.replaceChildren(...this.chips.map((chip) => chip.element));
   }
@@ -124,10 +126,10 @@ function goalName(goal: GoalProgress): string {
   return 'points';
 }
 
-/** A goal's picture, shown at the size its painting was made for (it spills out of the chip's icon box). */
+/** A goal's picture, in proportion to the chip's icon box as its painting was made for (it spills out of the box). */
 function chipImage(kind: GoalProgress['kind'], src: string): HTMLImageElement {
   const picture = image(`chip__image chip__image--${kind}`, src);
   const size = kind === 'koi' ? GOAL_TRAY.koiSize : GOAL_TRAY.lotusSize;
-  picture.style.setProperty('--image-size', `${size}px`);
+  picture.style.setProperty('--image-scale', `${size / THEME.size.goalIcon}`);
   return picture;
 }

@@ -67,8 +67,11 @@ export const MOONLIT_GARDEN = {
   /** Spacing scale (px). */
   space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 },
   radius: { sm: 8, lg: 22, round: 999 },
-  /** Sizes (px): the booster bar's round buttons (the layout lines the sound button up with them), and a finger. */
-  size: { boosterOrb: 58, touch: 44 },
+  /**
+   * Sizes (px): the booster bar's round buttons (the layout lines the sound button up with them), a goal chip's icon
+   * (its baked picture is shown in proportion to it) and a finger.
+   */
+  size: { boosterOrb: 58, goalIcon: 28, touch: 44 },
   /** Rim widths (px): fine for the small goal chips, normal for every other piece, bold for a warning. */
   line: { fine: 1, normal: 1.5, bold: 2 },
   /** The soft shadow under panels and buttons. */
