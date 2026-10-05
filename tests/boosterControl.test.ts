@@ -107,6 +107,20 @@ describe('BoosterControl', () => {
     expect(log.at(-2)).toBe('nope:feed');
   });
 
+  it('a drag while a booster is armed counts as a tap; a drag with the swap picks both koi', async () => {
+    const swap = setup();
+    swap.control.press('swap');
+    swap.control.swipe({ col: 2, row: 2 }, { col: 3, row: 2 });
+    await swap.settle();
+    expect(swap.used).toEqual([{ type: 'swap', a: { col: 2, row: 2 }, b: { col: 3, row: 2 } }]);
+
+    const feed = setup();
+    feed.control.press('feed');
+    feed.control.swipe({ col: 1, row: 1 }, { col: 1, row: 2 });
+    await feed.settle();
+    expect(feed.used).toEqual([{ type: 'feed', at: { col: 1, row: 1 }, lines: 3 }]);
+  });
+
   it('a tap the booster cannot take shakes that koi and the pill, and keeps it armed', () => {
     const { control, log } = setup({ canTarget: () => false });
     control.press('special');

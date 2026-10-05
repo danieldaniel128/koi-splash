@@ -92,9 +92,9 @@ export const BOOSTER_STEPS: readonly Transition<BoosterStep, Arming>[] = [
 
 /**
  * The boosters' presenter, after the prototype: a button arms its booster (again, or the pill's X, cancels it at no
- * cost), the pond shows what it can take, and taps on the board go to it instead of the swipe. Swap picks two koi,
- * near or far; Feed takes a colour; Special opens petals to choose what the koi becomes. Each is free and limited per
- * level; none costs a move. Views and sounds are injected; the rules stay in the model (via BoosterGame).
+ * cost), the pond shows what it can take, and the board's taps and drags go to it instead of the swap. Swap picks
+ * two koi, near or far; Feed takes a colour; Special opens petals to choose what the koi becomes. Each is free and
+ * limited per level; none costs a move. Views and sounds are injected; the rules stay in the model (via BoosterGame).
  */
 export class BoosterControl {
   private readonly left = new Map<BoosterType, number>();
@@ -127,7 +127,7 @@ export class BoosterControl {
     this.reset();
   }
 
-  /** True while a booster is armed: board taps go here, and swipes are ignored. */
+  /** True while a booster is armed: the board's taps and drags go here. */
   get armed(): boolean {
     return !this.step.is('idle') && !this.step.is('playing');
   }
@@ -189,6 +189,15 @@ export class BoosterControl {
     if (type === 'swap') this.swapPick(cell);
     else if (type === 'feed') void this.use({ type: 'feed', at: cell, lines: this.deps.feedLines });
     else void this.choose(cell);
+  }
+
+  /**
+   * A drag on the board while a booster is armed counts as a tap on the koi it started on, so it always gets an
+   * answer. A swap's drag from a koi to its neighbour picks both.
+   */
+  swipe(from: Cell, to: Cell): void {
+    if (!this.isPicked(from)) this.tap(from);
+    if (this.arming.type === 'swap' && this.isPicked(from)) this.tap(to);
   }
 
   /** Swap: the first koi lifts; the second leaps with it. */

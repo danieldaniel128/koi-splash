@@ -196,9 +196,11 @@ function startGame(parts: GameParts, screen: Screen, canvas: HTMLCanvasElement):
     scene.restart();
     control.reset();
   });
+  // while a booster is armed, the board's taps and drags are its own
   new SwipeInput(boardView, canvas, screen.layout.board.cell * INPUT.swipeThreshold, {
     swipe: (from, to) => {
-      if (!control.armed) scene.handleSwipe(from, to); // while a booster is armed, the board takes its taps
+      if (control.armed) control.swipe(from, to);
+      else scene.handleSwipe(from, to);
     },
     tap: (cell) => {
       control.tap(cell);
