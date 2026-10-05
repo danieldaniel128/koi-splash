@@ -19,8 +19,13 @@ export const KOI_COLORS = [
 export const KOI_LOOK = {
   /** Body width (0.12 slim .. 0.28 chubby): chubby enough that the colour fills the cell. */
   build: 0.245,
-  /** Bake textures at this multiple of the screen resolution, so they stay sharp when the stage is scaled up. */
-  bakeResolution: 2,
+  /**
+   * The koi, pads and stones are baked at the screen's pixels per stage px times this, so a koi lifted in a swap or
+   * a window grown a little after the start stays sharp; never above maxBakeResolution, so a big screen doesn't bake
+   * huge textures.
+   */
+  bakeHeadroom: 1.25,
+  maxBakeResolution: 4,
   /** Poses in one baked tail beat, and how far the tail swings in them (1 = the painter's widest). */
   swimFrames: 12,
   tailSwing: 0.55,

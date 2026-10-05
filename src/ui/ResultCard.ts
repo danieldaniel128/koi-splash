@@ -76,6 +76,11 @@ export class ResultCard {
     this.root.hidden = true;
   }
 
+  /** Puts the keyboard focus on the card's button, so Enter plays again. */
+  focus(): void {
+    this.again.focus();
+  }
+
   /** The stars earned light up one after another, each popping in; the rest stay dark. */
   private landStars(earned: number): void {
     this.stars.forEach((star, i) => {

@@ -17,6 +17,8 @@ const CONFIG: LayoutConfig = {
   pondAlign: 0.5,
   minCell: 36,
   maxCell: 56,
+  pillHeight: 40,
+  pillGap: 12,
 };
 const NO_INSETS = { top: 0, bottom: 0 };
 
@@ -45,6 +47,13 @@ describe('layoutGame', () => {
     expect(pond.y - CONFIG.shoreWidth).toBeGreaterThanOrEqual(hud.y + hud.height);
     expect(bar.y).toBeGreaterThanOrEqual(pond.y + pond.height + CONFIG.shoreWidth);
     expect(bar.y + bar.height).toBeLessThanOrEqual(stage.height - 34 / stage.scale);
+  });
+
+  it('puts the instruction pill just over the board, lined up with the HUD', () => {
+    const { hud, board, pill } = layoutGame({ width: 390, height: 844 }, NO_INSETS, CONFIG);
+    expect(pill.y + pill.height + CONFIG.pillGap).toBeCloseTo(board.y);
+    expect(pill.height).toBe(CONFIG.pillHeight);
+    expect([pill.x, pill.width]).toEqual([hud.x, hud.width]);
   });
 
   it('on a tall phone the pond takes the full width, on screen, and the bar moves down to the bottom', () => {

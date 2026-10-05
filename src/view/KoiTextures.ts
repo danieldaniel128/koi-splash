@@ -41,7 +41,8 @@ export class KoiTextures {
 
   /**
    * O(kinds x frames) canvas paints, twice: the inked poses and their blurred contact masks, plus one shadow per
-   * kind, then GPU uploads. The heavy part of boot, done once (about 0.7 s on a desktop at 2.5x).
+   * kind, then GPU uploads. Done once while the game loads: about 0.15 s in a laptop's Chrome, and the GPU's drawing
+   * of the canvases on top, when they're first uploaded.
    */
   constructor(varietyIds: readonly string[], bake: KoiBake) {
     this.poses = varietyIds.map((id) => bakePoses(id, bake));
@@ -90,9 +91,21 @@ export function bakePoses(
   bake: KoiBake,
   dress?: (part: HTMLCanvasElement) => void,
 ): Texture[] {
-  const variety = getVariety(varietyId);
-  return Array.from({ length: bake.frames }, (_, i) =>
-    Texture.from(bakeInkedKoi(variety, { ...stillPose(bake), tailWag: tailWag(i, bake) }, bake.ink, dress)),
+  return Array.from({ length: bake.frames }, (_, i) => Texture.from(bakePose(varietyId, bake, i, dress)));
+}
+
+/** Pose `pose` of the tail beat, on its own canvas (see bakePoses). */
+export function bakePose(
+  varietyId: string,
+  bake: KoiBake,
+  pose: number,
+  dress?: (part: HTMLCanvasElement) => void,
+): HTMLCanvasElement {
+  return bakeInkedKoi(
+    getVariety(varietyId),
+    { ...stillPose(bake), tailWag: tailWag(pose, bake) },
+    bake.ink,
+    dress,
   );
 }
 

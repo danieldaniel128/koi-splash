@@ -1,0 +1,106 @@
+/*
+ * The screens before the game. The loading screen: the game's name under the moon, over a still pond with the moon's
+ * reflection in it, and a bar filling as the game loads. And, if the game can't start, a card saying so.
+ */
+
+.loading,
+.boot-error {
+  position: fixed;
+  inset: 0;
+  z-index: 5; /* over the game while it loads, under the rotate notice */
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl);
+  background: linear-gradient(180deg, var(--color-night), var(--color-horizon));
+  font-family: var(--font-label);
+  color: var(--color-ink);
+  text-align: center;
+}
+
+/* The pond along the bottom: the sky upside down, the moon's light on it, and a faint line of moonlight at its edge. */
+.loading::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  z-index: -1; /* behind the title and the bar */
+  height: 26%;
+  background:
+    radial-gradient(34px 70% at 50% 18%, var(--color-moonGlow), transparent 75%),
+    linear-gradient(180deg, var(--color-night), var(--color-horizon));
+  box-shadow: 0 -1px 0 var(--color-moonGlow);
+}
+
+.loading--leaving {
+  pointer-events: none; /* the game takes the touches while the loading screen fades */
+}
+
+.loading__moon {
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-xl);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, var(--color-ink), var(--color-moon) 60%);
+  box-shadow:
+    0 0 28px 6px var(--color-moonGlow),
+    0 0 90px 30px var(--color-moonGlow);
+}
+
+.loading__title {
+  margin: 0;
+  font-size: calc(var(--text-title) * 1.6);
+  color: var(--color-gold);
+}
+
+.loading__tagline {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.loading__bar {
+  width: 220px;
+  height: 8px;
+  margin-top: var(--space-xl);
+  box-shadow: inset 0 0 0 1px var(--color-rim);
+}
+
+/* Scaled, not resized: the fill keeps gliding on the compositor while a bake holds the page's main thread. */
+.loading__fill {
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--time-slow) ease-out;
+}
+
+.loading__note {
+  max-width: 260px;
+  margin: var(--space-lg) 0 0;
+  font-size: var(--text-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading__fill {
+    transition: none;
+  }
+}
+
+.boot-error__card {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-sm);
+  max-width: 300px;
+  padding: var(--space-xl) var(--space-lg);
+}
+
+.boot-error__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--color-gold);
+}
+
+.boot-error__text {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.4;
+}

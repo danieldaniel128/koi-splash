@@ -6,12 +6,36 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0b1830" />
-    <title>Koi Splash</title>
+    <title>Koi Splash: a moonlit match-3</title>
+    <meta
+      name="description"
+      content="A calm match-3 on a koi pond by moonlight: swipe the koi into lines of three, bloom the lotuses and chase three stars."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="game"></div>
+    <div id="game" tabindex="-1" inert></div>
+    <div id="loading" class="loading">
+      <div class="loading__moon" aria-hidden="true"></div>
+      <h1 class="number loading__title">Koi Splash</h1>
+      <p class="label loading__tagline">A koi pond by moonlight</p>
+      <div
+        class="track loading__bar"
+        role="progressbar"
+        aria-label="Loading the pond"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <span class="loading__fill"></span>
+      </div>
+      <noscript>
+        <p class="label loading__note">
+          Koi Splash needs JavaScript to run. Please turn it on and reload the page.
+        </p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
