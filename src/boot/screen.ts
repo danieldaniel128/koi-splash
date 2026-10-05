@@ -47,7 +47,7 @@ export function measureScreen(app: Application, host: HTMLElement): GameScreen {
   const layout = layoutGame(app.screen, readSafeInsets(), { ...LAYOUT, cols: shape.cols, rows: shape.rows });
   const shore = traceShore(shape, layout.board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   return {
-    spec: { ...shape, kinds: BOARD.kinds },
+    spec: { ...shape, colorCount: BOARD.colorCount },
     layout,
     shore,
     ui: new UiLayer(host, layout.stage),

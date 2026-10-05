@@ -1,4 +1,4 @@
-import type { CascadeStep, Cell, Fired } from '../model/types';
+import type { CascadeRound, Cell, Fired } from '../model/types';
 import { cellKey, stepsApart } from '../model/types';
 
 /** How long a special's parts take (s), after the prototype (see TIMING.specials). */
@@ -7,10 +7,10 @@ export interface SpecialTiming {
   readonly merge: number;
   /** A striped koi's sweep reaches one more cell every this long. */
   readonly sweep: number;
-  /** A whirlpool spins up, then sucks its neighbours down over `whirlPull`; its corners a little later. */
-  readonly whirlSpin: number;
-  readonly whirlPull: number;
-  readonly whirlCorner: number;
+  /** A whirlpool spins up, then sucks its neighbours down over `whirlpoolPull`; its corners a little later. */
+  readonly whirlpoolSpin: number;
+  readonly whirlpoolPull: number;
+  readonly whirlpoolCornerDelay: number;
   /** A rainbow koi rises, then its beams leave one every `rainbowStep` and take `rainbowTravel` to land. */
   readonly rainbowRise: number;
   readonly rainbowStep: number;
@@ -34,7 +34,7 @@ export interface ClearPlan {
 /** When each special fires this round (s from the round's start). */
 export interface BlastPlan {
   readonly fired: Fired;
-  readonly at: number;
+  readonly delay: number;
 }
 
 export interface RoundPlan {
@@ -50,13 +50,13 @@ export interface RoundPlan {
  * into it), each special fires when it was matched or swapped (at once) or when another's blast reached it, and each
  * blast takes its cells in its own rhythm. Pure: the animator plays it, the tests check it. O(cleared + fired).
  */
-export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
+export function planRound(round: CascadeRound, timing: SpecialTiming): RoundPlan {
   const clears = new Map<number, ClearPlan>();
   const blasts: BlastPlan[] = [];
   const mergeInto = new Map<string, Cell>();
-  for (const made of step.created) for (const cell of made.from) mergeInto.set(cellKey(cell), made.at);
+  for (const made of round.created) for (const cell of made.from) mergeInto.set(cellKey(cell), made.at);
 
-  for (const cleared of step.cleared) {
+  for (const cleared of round.cleared) {
     if (cleared.blast !== undefined) continue;
     const into = mergeInto.get(cellKey(cleared.at));
     clears.set(
@@ -66,12 +66,12 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
         : { delay: 0, lasts: timing.dive, how: 'dive' },
     );
   }
-  step.fired.forEach((fired, index) => {
+  round.fired.forEach((fired, index) => {
     // matched or swapped: it fires at once; caught by an earlier blast: a beat after that blast reaches it
     const caught = clears.get(fired.piece.id)?.delay ?? 0;
     const start = caught > 0 ? caught + timing.chain : 0;
-    const reach = step.cleared.filter((cleared) => cleared.blast === index);
-    blasts.push({ fired, at: start });
+    const reach = round.cleared.filter((cleared) => cleared.blast === index);
+    blasts.push({ fired, delay: start });
     clears.set(fired.piece.id, { delay: start, lasts: firing(fired, reach.length, timing), how: 'fire' });
     for (const cleared of reach) {
       clears.set(cleared.piece.id, reachedBy(fired, start, cleared.at, cleared.order ?? 0, timing));
@@ -86,22 +86,22 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
  * When a round's blast (its index in the round's fired) lands: when it takes its first koi, or when it fires if it
  * takes none. Its points show then. Pure. O(cleared).
  */
-export function blastLands(step: CascadeStep, plan: RoundPlan, blast: number): number {
+export function blastLands(round: CascadeRound, plan: RoundPlan, blast: number): number {
   let lands = Infinity;
-  for (const cleared of step.cleared) {
+  for (const cleared of round.cleared) {
     if (cleared.blast !== blast) continue;
     lands = Math.min(lands, plan.clears.get(cleared.piece.id)?.delay ?? Infinity);
   }
-  return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.at ?? 0);
+  return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.delay ?? 0);
 }
 
-/** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a prism beam. */
+/** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a rainbow arc. */
 function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing: SpecialTiming): ClearPlan {
   const type = fired.piece.special?.type;
-  if (type === 'whirl') {
+  if (type === 'whirlpool') {
     const corner = at.col !== fired.at.col && at.row !== fired.at.row;
-    const delay = start + timing.whirlSpin + (corner ? timing.whirlCorner : 0);
-    return { delay, lasts: timing.whirlPull, how: 'drain', toward: fired.at };
+    const delay = start + timing.whirlpoolSpin + (corner ? timing.whirlpoolCornerDelay : 0);
+    return { delay, lasts: timing.whirlpoolPull, how: 'drain', toward: fired.at };
   }
   if (type === 'rainbow') {
     const delay = start + timing.rainbowRise + order * timing.rainbowStep + timing.rainbowTravel;
@@ -114,7 +114,7 @@ function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing:
 /** How long a firing special stays: until its whirlpool has drained, or its last beam has landed. */
 function firing(fired: Fired, reached: number, timing: SpecialTiming): number {
   const type = fired.piece.special?.type;
-  if (type === 'whirl') return timing.whirlSpin + timing.whirlCorner + timing.whirlPull;
+  if (type === 'whirlpool') return timing.whirlpoolSpin + timing.whirlpoolCornerDelay + timing.whirlpoolPull;
   if (type === 'rainbow') {
     return timing.rainbowRise + Math.max(0, reached - 1) * timing.rainbowStep + timing.rainbowTravel;
   }

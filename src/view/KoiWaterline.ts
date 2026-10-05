@@ -36,9 +36,9 @@ export class KoiWaterline {
 
   /** Starts casting a koi's marks into the water. */
   add(koi: Koi): void {
-    const shadow = centred(this.textures.shadow(koi.kind));
+    const shadow = centred(this.textures.shadow(koi.color));
     shadow.tint = THEME.scene.light.shadow;
-    const contactPoses = this.textures.contact(koi.kind);
+    const contactPoses = this.textures.contact(koi.color);
     const contact = new Sprite(contactPoses[0]);
     contact.anchor.set(0.5);
     this.marks.set(koi, { shadow, contact, contactPoses, last: new Point(NaN, NaN) });

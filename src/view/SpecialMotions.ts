@@ -43,12 +43,12 @@ export class SpecialMotions {
    * sinks as the eddy pops, a rainbow koi rises and spins, then dissolves in its own light.
    */
   async exit(koi: Koi, special: Special, delay: number, lasts: number): Promise<void> {
-    if (special.type === 'line') {
+    if (special.type === 'striped') {
       await play(sink(koi, lasts).delay(delay));
       return;
     }
     const rest = koi.restScale;
-    if (special.type === 'whirl') {
+    if (special.type === 'whirlpool') {
       await play(
         gsap.to(koi.scale, {
           x: rest * 0.15,

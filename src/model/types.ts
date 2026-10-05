@@ -9,7 +9,7 @@ export interface BoardSpec {
   readonly cols: number;
   readonly rows: number;
   /** How many koi colours are in play. */
-  readonly kinds: number;
+  readonly colorCount: number;
   /** The cells the board's shape doesn't have (see parseShape); none for a plain rectangle. */
   readonly holes?: readonly Cell[];
 }
@@ -18,7 +18,7 @@ export interface BoardSpec {
 export type Axis = 'row' | 'col';
 
 /** Which koi colour a piece is (an index into the koi set). */
-export type Kind = number;
+export type PieceColor = number;
 
 /**
  * A special koi's power: a striped koi sweeps its row or column, a whirlpool drains the cells round it, a rainbow koi
@@ -28,7 +28,9 @@ export type Kind = number;
  * (SPECIAL_MENU) are listed by hand.
  */
 export type Special =
-  { readonly type: 'line'; readonly along: Axis } | { readonly type: 'whirl' } | { readonly type: 'rainbow' };
+  | { readonly type: 'striped'; readonly along: Axis }
+  | { readonly type: 'whirlpool' }
+  | { readonly type: 'rainbow' };
 
 /** Which special a koi is: striped (line), whirlpool or rainbow. */
 export type SpecialType = Special['type'];
@@ -36,7 +38,7 @@ export type SpecialType = Special['type'];
 /** One koi on the board. The id stays with the piece while it moves, so the view can follow its sprite. */
 export interface Piece {
   readonly id: number;
-  readonly kind: Kind;
+  readonly color: PieceColor;
   readonly special?: Special;
 }
 
@@ -67,9 +69,9 @@ export type PadEvent =
   | { readonly type: 'bloom'; readonly pad: Pad }
   | { readonly type: 'drift'; readonly pad: Pad };
 
-/** A straight run of 3+ same-kind pieces. */
+/** A straight run of 3+ same-color pieces. */
 export interface Match {
-  readonly kind: Kind;
+  readonly color: PieceColor;
   readonly cells: readonly Cell[];
   readonly direction: Axis;
 }
@@ -95,7 +97,7 @@ export interface Fired {
   readonly piece: Piece;
   readonly at: Cell;
   readonly reach: readonly Cell[];
-  readonly target?: Kind | 'all';
+  readonly target?: PieceColor | 'all';
 }
 
 /** A piece that fell straight down to fill a gap. */
@@ -114,7 +116,7 @@ export interface Spawn {
 }
 
 /** One round of a cascade: what matched, what was removed, what fell and what came in. */
-export interface CascadeStep {
+export interface CascadeRound {
   readonly matches: readonly Match[];
   /** Specials made this round, and specials that fired (matched, swapped or caught in a blast). */
   readonly created: readonly Created[];
@@ -128,7 +130,7 @@ export interface CascadeStep {
 
 export type SwapResult =
   | { readonly valid: false; readonly reason: 'not-adjacent' | 'blocked' | 'no-match' }
-  | { readonly valid: true; readonly steps: readonly CascadeStep[]; readonly reshuffled: boolean };
+  | { readonly valid: true; readonly rounds: readonly CascadeRound[]; readonly reshuffled: boolean };
 
 export const sameCell = (a: Cell, b: Cell): boolean => a.col === b.col && a.row === b.row;
 
@@ -142,12 +144,12 @@ export const distanceSq = (a: Cell, b: Cell): number => (a.col - b.col) ** 2 + (
 export const stepsApart = (a: Cell, b: Cell): number => Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
 
 /** The colour a piece matches as: null for a rainbow koi, which has no colour of its own. */
-export const colourOf = (piece: Piece): Kind | null =>
-  piece.special?.type === 'rainbow' ? null : piece.kind;
+export const colorOf = (piece: Piece): PieceColor | null =>
+  piece.special?.type === 'rainbow' ? null : piece.color;
 
 /** The line a striped koi sweeps. Only a striped koi has one, so any other special throws. */
 export function alongOf(special: Special): Axis {
-  if (special.type !== 'line') throw new Error(`a ${special.type} special sweeps no line`);
+  if (special.type !== 'striped') throw new Error(`a ${special.type} special sweeps no line`);
   return special.along;
 }
 

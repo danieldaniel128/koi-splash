@@ -1,5 +1,5 @@
-import type { Cell, Kind, Piece, Axis } from './types';
-import { colourOf } from './types';
+import type { Cell, PieceColor, Piece, Axis } from './types';
+import { colorOf } from './types';
 
 /**
  * The grid of pieces. Only storage and bounds; the game rules live in rules.ts. A cell can be blocked (a lily pad
@@ -33,6 +33,11 @@ export class Board {
     return this.inBounds(cell) && this.holes.has(this.index(cell));
   }
 
+  /** True where a lily pad sits. */
+  hasPad(cell: Cell): boolean {
+    return this.inBounds(cell) && this.blocked.has(this.index(cell));
+  }
+
   /** True where no piece can be: a lily pad, or a hole. */
   isBlocked(cell: Cell): boolean {
     return this.inBounds(cell) && (this.blocked.has(this.index(cell)) || this.holes.has(this.index(cell)));
@@ -62,14 +67,14 @@ export class Board {
   }
 
   /** The colour a piece matches as: null for an empty cell, and for a rainbow koi (it matches nothing). */
-  kindAt(cell: Cell): Kind | null {
+  colorAt(cell: Cell): PieceColor | null {
     const piece = this.get(cell);
-    return piece ? colourOf(piece) : null;
+    return piece ? colorOf(piece) : null;
   }
 
   /** The cells whose koi match as this colour. O(N). */
-  cellsOf(kind: Kind): Cell[] {
-    return [...this.cells()].filter((cell) => this.kindAt(cell) === kind);
+  cellsOf(color: PieceColor): Cell[] {
+    return [...this.cells()].filter((cell) => this.colorAt(cell) === color);
   }
 
   /** Every cell of one row or column (holes included), in order. */
@@ -91,8 +96,8 @@ export class Board {
   }
 
   /** Makes a new piece with a fresh id (not placed on the board). */
-  createPiece(kind: Kind): Piece {
-    return { id: this.nextId++, kind };
+  createPiece(color: PieceColor): Piece {
+    return { id: this.nextId++, color: color };
   }
 
   /** Every cell, row by row from the top-left. */

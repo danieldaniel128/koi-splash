@@ -44,7 +44,7 @@ export class ScorePopups extends Container implements MatchEffects {
 
   /** The points `amount` made at `at` show as `look` says. */
   points(at: PointData, amount: number, look: PointsLook): void {
-    const color = roundColor(look.round);
+    const color = roundColor(look.roundIndex);
     if (amount >= POINTS.flyMin) {
       gsap.delayedCall(look.delay, () => {
         this.flights.fly({ x: this.x + at.x, y: this.y + at.y }, amount, color);

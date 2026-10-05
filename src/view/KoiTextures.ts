@@ -5,7 +5,7 @@ import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact } from '../art/koiInk';
 import type { Dressing, KoiContactShape, KoiInk } from '../art/koiInk';
-import type { Kind } from '../model/types';
+import type { PieceColor } from '../model/types';
 
 /** How the koi textures are baked. */
 export interface KoiBake {
@@ -32,7 +32,7 @@ export interface KoiBake {
 }
 
 /**
- * Textures per koi kind, painted once at startup and shared by every sprite of that kind: one tail beat of inked
+ * Textures per koi color, painted once at startup and shared by every sprite of that color: one tail beat of inked
  * poses (the koi swim in place by stepping through them), a soft shadow for the pond bottom and the shape where the
  * koi meets the water (for the foam at the waterline). Painting is expensive canvas work, so it must never happen
  * during play.
@@ -48,8 +48,8 @@ export class KoiTextures {
   private readonly contacts: Texture[][];
 
   /**
-   * O(kinds x frames) canvas paints: every other pose of the tail beat (a whole beat on its own, the poses between
-   * come later: see inBetweenJobs), their blurred contact masks and one shadow per kind, then GPU uploads. Done once
+   * O(colors x frames) canvas paints: every other pose of the tail beat (a whole beat on its own, the poses between
+   * come later: see inBetweenJobs), their blurred contact masks and one shadow per color, then GPU uploads. Done once
    * while the game loads, with the GPU's drawing of the canvases on top, when they're first uploaded.
    */
   constructor(
@@ -65,12 +65,12 @@ export class KoiTextures {
   }
 
   /**
-   * The tail beat's poses between the ones baked at load, one job per kind, for the background (see runWhenIdle):
-   * each kind's beat grows in place to all its poses, and every koi swimming with it picks them up on its next frame.
+   * The tail beat's poses between the ones baked at load, one job per color, for the background (see runWhenIdle):
+   * each color's beat grows in place to all its poses, and every koi swimming with it picks them up on its next frame.
    */
   inBetweenJobs(): (() => void)[] {
-    return this.varietyIds.map((id, kind) => () => {
-      const poses = this.poses[kind];
+    return this.varietyIds.map((id, color) => () => {
+      const poses = this.poses[color];
       if (!poses || poses.length >= this.bake.frames) return;
       const all = Array.from({ length: this.bake.frames }, (_, i) =>
         i % 2 === 0 ? poses[i / 2] : Texture.from(bakePose(id, this.bake, i)),
@@ -79,23 +79,23 @@ export class KoiTextures {
     });
   }
 
-  /** One tail beat of poses for a kind, in order (every other one until the in-between poses are baked). */
-  swim(kind: Kind): readonly Texture[] {
-    const poses = this.poses[kind];
-    if (!poses) throw new RangeError(`no koi textures for kind ${kind}`);
+  /** One tail beat of poses for a color, in order (every other one until the in-between poses are baked). */
+  swim(color: PieceColor): readonly Texture[] {
+    const poses = this.poses[color];
+    if (!poses) throw new RangeError(`no koi textures for color ${color}`);
     return poses;
   }
 
-  shadow(kind: Kind): Texture {
-    const texture = this.shadows[kind];
-    if (!texture) throw new RangeError(`no koi shadow for kind ${kind}`);
+  shadow(color: PieceColor): Texture {
+    const texture = this.shadows[color];
+    if (!texture) throw new RangeError(`no koi shadow for color ${color}`);
     return texture;
   }
 
-  /** Where a koi of this kind meets the water through its tail beat (see bakeKoiContact), at contactResolution. */
-  contact(kind: Kind): readonly Texture[] {
-    const shapes = this.contacts[kind];
-    if (!shapes) throw new RangeError(`no koi contact for kind ${kind}`);
+  /** Where a koi of this color meets the water through its tail beat (see bakeKoiContact), at contactResolution. */
+  contact(color: PieceColor): readonly Texture[] {
+    const shapes = this.contacts[color];
+    if (!shapes) throw new RangeError(`no koi contact for color ${color}`);
     return shapes;
   }
 }

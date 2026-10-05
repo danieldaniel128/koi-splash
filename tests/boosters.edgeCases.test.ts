@@ -6,7 +6,7 @@ import { findMatches } from '../src/model/rules';
 import type { Cell } from '../src/model/types';
 import { boardFrom, drawBoard, makeSpecial } from './support/boards';
 
-// shifted diagonals: no matches, every kind spread out
+// shifted diagonals: no matches, every color spread out
 const ROWS = ['012340', '123401', '234012', '340123', '401234', '012340'];
 const TYPES: readonly BoosterType[] = ['swap', 'special', 'feed'];
 
@@ -43,10 +43,10 @@ describe('applyBooster with nothing to do', () => {
 
   it('does nothing when the special booster is used on a special, and keeps that special', () => {
     const board = boardFrom(ROWS);
-    const whirl = makeSpecial(board, cell(1, 1), { type: 'whirl' });
+    const whirlpool = makeSpecial(board, cell(1, 1), { type: 'whirlpool' });
     const use = { type: 'special', at: cell(1, 1), special: { type: 'rainbow' } } as const;
     expect(applyBooster(board, use)).toBeNull();
-    expect(board.get(cell(1, 1))).toBe(whirl);
+    expect(board.get(cell(1, 1))).toBe(whirlpool);
   });
 
   it('does nothing when the colour fed has fewer than three koi', () => {
@@ -61,15 +61,15 @@ describe('the feed', () => {
   it('makes no more lines than the colour has koi for, and leaves the koi over where they were', () => {
     // five 0s: enough for one line of 3, not the two asked for
     const board = boardFrom(['012341', '123012', '234120', '301234', '412303']);
-    const zeros = [...board.cells()].filter((c) => board.kindAt(c) === 0);
+    const zeros = [...board.cells()].filter((c) => board.colorAt(c) === 0);
     const where = new Map(zeros.map((c) => [board.get(c)?.id, c]));
     const change = applyBooster(board, { type: 'feed', at: cell(0, 0), lines: 2 });
-    expect(change?.fed).toBe(0);
-    const lines = findMatches(board).filter((m) => m.kind === 0);
+    expect(change?.fedColor).toBe(0);
+    const lines = findMatches(board).filter((m) => m.color === 0);
     expect(lines).toHaveLength(1);
     const inLine = (c: Cell): boolean =>
       lines[0]?.cells.some((l) => l.col === c.col && l.row === c.row) ?? false;
-    const leftOver = [...board.cells()].filter((c) => board.kindAt(c) === 0 && !inLine(c));
+    const leftOver = [...board.cells()].filter((c) => board.colorAt(c) === 0 && !inLine(c));
     expect(leftOver).toHaveLength(zeros.length - 3);
     for (const c of leftOver) expect(where.get(board.get(c)?.id)).toEqual(c);
   });
@@ -91,7 +91,7 @@ describe('the feed', () => {
   it('lays its lines a cell apart, so each is a school of its own', () => {
     const board = boardFrom(ROWS);
     applyBooster(board, { type: 'feed', at: cell(2, 2), lines: 2 });
-    const lines = findMatches(board).filter((m) => m.kind === 4);
+    const lines = findMatches(board).filter((m) => m.color === 4);
     expect(lines).toHaveLength(2);
     const [first, second] = lines;
     for (const a of first?.cells ?? [])

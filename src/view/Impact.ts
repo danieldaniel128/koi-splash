@@ -18,7 +18,7 @@ export interface ImpactParts {
   /** The sparkles a win bursts into, and where the board's middle is and how big a cell is (stage px). */
   readonly sparkles: Sparkles;
   readonly boardCentre: PointData;
-  readonly cell: number;
+  readonly cellSize: number;
 }
 
 /**
@@ -34,17 +34,17 @@ export class Impact {
   ) {
     parts.flash.alpha = 0;
     const { shake } = IMPACT;
-    events.on('match', ({ round, size }) => {
-      this.match(round, size);
+    events.on('match', ({ roundIndex, size }) => {
+      this.match(roundIndex, size);
     });
     events.on('specialBorn', () => {
       this.hit(shake.born, IMPACT.flash.born);
     });
-    events.on('lineFired', () => {
-      this.hit(shake.line, 0);
+    events.on('stripedFired', () => {
+      this.hit(shake.striped, 0);
     });
-    events.on('whirlPopped', () => {
-      this.hit(shake.whirlPop, IMPACT.flash.special);
+    events.on('whirlpoolPopped', () => {
+      this.hit(shake.whirlpool, IMPACT.flash.special);
       parts.hitStop.hold(SPECIAL_FX.hitStop.time);
     });
     events.on('rainbowFired', () => {
@@ -65,24 +65,24 @@ export class Impact {
   }
 
   /** A cascade round clears `size` koi: the shake grows with both, and a big round holds the clock. */
-  private match(round: number, size: number): void {
+  private match(roundIndex: number, size: number): void {
     const { shake, hitStop } = IMPACT;
-    const cascade = round + 1;
-    this.parts.camera.shake(size * shake.perKoi + round * shake.perRound);
+    const cascade = roundIndex + 1;
+    this.parts.camera.shake(size * shake.perKoi + roundIndex * shake.perRound);
     const huge = size >= hitStop.hugeRound || cascade >= hitStop.hugeCascade;
     if (huge || size >= hitStop.bigRound || cascade >= hitStop.bigCascade) {
       this.parts.hitStop.hold(huge ? hitStop.huge : hitStop.big);
     }
-    if (round >= IMPACT.vibrateFrom) this.parts.haptics.pulse(IMPACT.vibrate.combo);
+    if (roundIndex >= IMPACT.vibrateFrom) this.parts.haptics.pulse(IMPACT.vibrate.combo);
   }
 
   /** The pond is won: sparkles burst from its middle as the camera pushes in on it, with a flash and a buzz. */
   private celebrate(): void {
-    const { camera, sparkles, boardCentre, cell } = this.parts;
+    const { camera, sparkles, boardCentre, cellSize } = this.parts;
     camera.punch(boardCentre);
     camera.shake(IMPACT.shake.win);
     this.parts.flash.alpha = IMPACT.flash.win;
-    sparkles.burst(boardCentre, CELEBRATION.count, CELEBRATION.reach * cell);
+    sparkles.burst(boardCentre, CELEBRATION.count, CELEBRATION.reach * cellSize);
     this.parts.haptics.pulse(IMPACT.vibrate.win);
   }
 

@@ -314,7 +314,7 @@ function shade(ctx: CanvasRenderingContext2D, part: HTMLCanvasElement): void {
  * The glow under a rainbow koi: the seven colours of the spectrum round a white heart, `size` px wide. Spun slowly
  * and drawn additively.
  */
-export function paintPrismGlow(size: number): HTMLCanvasElement {
+export function paintRainbowGlow(size: number): HTMLCanvasElement {
   const canvas = blank(size);
   const ctx = context(canvas);
   const r = size / 2;

@@ -8,7 +8,7 @@ export interface Voice {
   /** A tone: `freq` Hz for `dur` s at `vol`, gliding to `glide` Hz, `delay` s from now, swelling in over `attack` s. */
   tone(freq: number, dur: number, vol: number, opts?: ToneOptions): void;
   /** Soft noise through a lowpass at `freq` Hz (sweeping to `sweepTo`), for `dur` s at `vol`. */
-  noise(dur: number, vol: number, freq: number, opts?: NoiseOptions): void;
+  noise(freq: number, dur: number, vol: number, opts?: NoiseOptions): void;
   /** A plucked note: a sine and a short triangle an octave up. */
   pluck(freq: number, vol: number, delay?: number): void;
   /** A water plip: a short high sine dropping fast. */
@@ -76,7 +76,7 @@ export class Synth implements Voice {
     osc.stop(t + dur + 0.03);
   }
 
-  noise(dur: number, vol: number, freq: number, opts: NoiseOptions = {}): void {
+  noise(freq: number, dur: number, vol: number, opts: NoiseOptions = {}): void {
     const output = this.mixer.output(this.bus);
     const buffer = this.mixer.noise;
     if (!output || !buffer) return;

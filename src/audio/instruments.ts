@@ -35,14 +35,14 @@ const INSTRUMENTS: Readonly<Record<Part, (v: Voice, freqs: readonly number[], at
     const vol = MUSIC.volumes.flute;
     v.tone(freq, seconds, vol, { delay, attack: 0.18, vibrato: { rate: 4.8, depth: freq * 0.007 } });
     v.tone(freq * 2, seconds * 0.8, vol * 0.08, { delay, attack: 0.25 });
-    v.noise(seconds * 0.9, vol * 0.3, freq, { delay, attack: 0.12, band: 8 });
+    v.noise(freq, seconds * 0.9, vol * 0.3, { delay, attack: 0.12, band: 8 });
   },
   drum: (v, _freqs, { delay }) => {
     // a soft taiko under the water: a low thump falling in pitch, a hint of skin, and a higher knock in the body
     // of the drum so phone speakers, which can't play the thump, still carry the beat
     v.tone(85, 0.45, MUSIC.volumes.drum, { delay, glide: 48, attack: 0.004 });
     v.tone(190, 0.12, MUSIC.volumes.drum * 0.45, { delay, glide: 130, attack: 0.002, type: 'triangle' });
-    v.noise(0.06, MUSIC.volumes.drum * 0.35, 1100, { delay });
+    v.noise(1100, 0.06, MUSIC.volumes.drum * 0.35, { delay });
   },
 };
 
@@ -68,7 +68,7 @@ export const AMBIENT = {
   /** Water lapping at the stones: a long soft swell of low noise, darkening as it falls back. */
   water: (v: Voice, delay: number, random: () => number): void => {
     const { volume, length } = AMBIENCE.water;
-    v.noise(length, volume, 380 + random() * 120, {
+    v.noise(380 + random() * 120, length, volume, {
       delay,
       sweepTo: 240,
       attack: length * 0.45,

@@ -27,7 +27,7 @@ export interface GameStage {
  * pushes in (the HTML HUD stays still over it).
  */
 export function buildStage(parts: GameParts, around: Surroundings): GameStage {
-  const { boardView, pond, pads, specials, boosters, popups } = parts;
+  const { boardView, pond, pads, specialEffects, boosters, popups } = parts;
   const world = new Container();
   world.addChild(
     pond.bank,
@@ -37,7 +37,7 @@ export function buildStage(parts: GameParts, around: Surroundings): GameStage {
     boardView,
     pads, // over the koi: a koi swimming past a pad goes under the leaf
     pond.surface,
-    specials.fx, // the specials' light, over the water
+    specialEffects.fx, // the specials' light, over the water
     boosters.motions, // the feed's pellets and the special booster's sparkles
     popups,
     around.scenery,

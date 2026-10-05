@@ -4,11 +4,11 @@ import { comboBanner, plainBanner } from '../src/ui/banners';
 describe('comboBanner', () => {
   it('shows nothing for a plain first round, and only the special a first round made', () => {
     expect(comboBanner(0)).toBeNull();
-    expect(comboBanner(0, 'whirl')).toEqual(plainBanner('Whirlpool!'));
+    expect(comboBanner(0, 'whirlpool')).toEqual(plainBanner('Whirlpool!'));
   });
 
   it('counts the combo from the second round, with the special made under it', () => {
-    const banner = comboBanner(1, 'line');
+    const banner = comboBanner(1, 'striped');
     expect(banner?.text).toBe('Combo x2');
     expect(banner?.sub).toBe('Striped koi!');
     expect(banner?.scale).toBe(1);

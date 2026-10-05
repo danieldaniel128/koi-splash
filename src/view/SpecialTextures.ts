@@ -8,7 +8,7 @@ import {
   bodySpan,
   curl,
   inEveryPose,
-  paintPrismGlow,
+  paintRainbowGlow,
   paintSparkle,
   paintWhirlpool,
   rainbow,
@@ -17,7 +17,7 @@ import {
 } from '../art/specialKoi';
 import type { SpecialColors } from '../config/koi';
 import { SPECIAL_LOOK } from '../config/specials';
-import type { Kind, Special } from '../model/types';
+import type { PieceColor, Special } from '../model/types';
 import { bakeContact, bakePose, bakePoses, bakeShadow, stillPose, tailWag } from './KoiTextures';
 import type { KoiBake } from './KoiTextures';
 import type { KoiMarks } from './KoiWaterline';
@@ -27,9 +27,9 @@ type BodySpan = ReturnType<typeof bodySpan>;
 
 /** Every special koi the petal menu shows: a striped koi either way, so its petal can show the line it will get. */
 const PREVIEWED: readonly Special[] = [
-  { type: 'whirl' },
-  { type: 'line', along: 'col' },
-  { type: 'line', along: 'row' },
+  { type: 'whirlpool' },
+  { type: 'striped', along: 'col' },
+  { type: 'striped', along: 'row' },
   { type: 'rainbow' },
 ];
 
@@ -40,15 +40,15 @@ const PREVIEWED: readonly Special[] = [
  * Each is kept once baked.
  */
 export class SpecialTextures {
-  /** A white glow and a white sparkle (tinted per sprite), and the rainbow's prism glow. */
+  /** A white glow and a white sparkle (tinted per sprite), and the rainbow's glow. */
   readonly glow: Texture;
   readonly sparkle: Texture;
-  readonly prism: Texture;
+  readonly rainbowGlow: Texture;
   private readonly cache = new Map<string, Texture[]>();
-  private readonly curledMarks = new Map<Kind, KoiMarks>();
+  private readonly curledMarks = new Map<PieceColor, KoiMarks>();
   private readonly previews = new Map<string, string>();
   /** Where each colour's koi body spans across its canvas: what a striped koi's bands fit. */
-  private readonly spans = new Map<Kind, BodySpan>();
+  private readonly spans = new Map<PieceColor, BodySpan>();
   /** The petal menu's pictures, painted, before they're read back as image URLs (see readPictures). */
   private readonly pictures = new Map<string, HTMLCanvasElement>();
   private sheet: PictureSheet | null = null;
@@ -61,7 +61,7 @@ export class SpecialTextures {
     const px = bake.size * bake.resolution;
     this.glow = Texture.from(paintGlow('#ffffff', Math.ceil(px)));
     this.sparkle = Texture.from(paintSparkle(Math.ceil(px * 0.5)));
-    this.prism = Texture.from(paintPrismGlow(Math.ceil(px * 1.6)));
+    this.rainbowGlow = Texture.from(paintRainbowGlow(Math.ceil(px * 1.6)));
   }
 
   /**
@@ -72,17 +72,17 @@ export class SpecialTextures {
    * painted with the whirlpools, put on one sheet, then read back in one go.
    */
   warmUpJobs(): (() => void)[] {
-    const forEachColour = (bake: (kind: Kind) => void): (() => void)[] =>
-      [...this.varieties.keys()].map((kind) => () => {
-        bake(kind);
+    const forEachColor = (bake: (color: PieceColor) => void): (() => void)[] =>
+      [...this.varieties.keys()].map((color) => () => {
+        bake(color);
       });
     return [
-      ...forEachColour((kind) => this.spanOf(kind)),
+      ...forEachColor((color) => this.spanOf(color)),
       // the whirlpool's first: curling its koi (and its shadow and waterline) reads them back, best before the
       // other two are painted
-      ...forEachColour((kind) => this.marks(specialOf('whirl'), kind)),
-      ...forEachColour((kind) => {
-        for (const special of PREVIEWED) this.picture(special, kind);
+      ...forEachColor((color) => this.marks(specialOf('whirlpool'), color)),
+      ...forEachColor((color) => {
+        for (const special of PREVIEWED) this.picture(special, color);
       }),
       () => {
         this.drawPictures();
@@ -90,33 +90,33 @@ export class SpecialTextures {
       () => {
         this.readPictures();
       },
-      ...forEachColour((kind) => this.poses(specialOf('line'), kind)),
-      ...forEachColour((kind) => this.sheen(kind)),
-      ...forEachColour((kind) => this.poses(specialOf('rainbow'), kind)),
+      ...forEachColor((color) => this.poses(specialOf('striped'), color)),
+      ...forEachColor((color) => this.sheen(color)),
+      ...forEachColor((color) => this.poses(specialOf('rainbow'), color)),
     ];
   }
 
   /** A special koi's poses: a striped or rainbow koi's tail beat, or a whirlpool's koi curled into its eye. */
-  poses(special: Special, kind: Kind): readonly Texture[] {
-    return this.cached(`${special.type}:${kind}`, () => {
-      const id = this.variety(kind);
-      if (special.type !== 'whirl') return bakePoses(id, this.bake, this.dressing(special.type, kind));
+  poses(special: Special, color: PieceColor): readonly Texture[] {
+    return this.cached(`${special.type}:${color}`, () => {
+      const id = this.variety(color);
+      if (special.type !== 'whirlpool') return bakePoses(id, this.bake, this.dressing(special.type, color));
       const straight = bakeInkedKoi(getVariety(id), stillPose(this.bake), this.bake.ink);
-      return [Texture.from(curl(straight, straight.width * SPECIAL_LOOK.whirl.curl))];
+      return [Texture.from(curl(straight, straight.width * SPECIAL_LOOK.whirlpool.curl))];
     });
   }
 
   /**
-   * What a special koi casts into the water, when its shape isn't its kind's: a whirlpool's curled koi casts a curled
+   * What a special koi casts into the water, when its shape isn't its color's: a whirlpool's curled koi casts a curled
    * shadow and meets the water along its curl. Null for the specials that keep the koi's own shape.
    */
-  marks(special: Special, kind: Kind): KoiMarks | null {
-    if (special.type !== 'whirl') return null;
-    const known = this.curledMarks.get(kind);
+  marks(special: Special, color: PieceColor): KoiMarks | null {
+    if (special.type !== 'whirlpool') return null;
+    const known = this.curledMarks.get(color);
     if (known) return known;
-    const id = this.variety(kind);
+    const id = this.variety(color);
     const curled = (canvas: HTMLCanvasElement, koiPx: number): HTMLCanvasElement =>
-      curl(canvas, Math.ceil(koiPx) * SPECIAL_LOOK.whirl.curl);
+      curl(canvas, Math.ceil(koiPx) * SPECIAL_LOOK.whirlpool.curl);
     const { size, resolution, contactResolution } = this.bake;
     const still = bakeKoi(getVariety(id), stillPose(this.bake));
     const contact = bakeContact(id, this.bake, 0); // padded round the koi: curled round the same center
@@ -124,7 +124,7 @@ export class SpecialTextures {
       shadow: bakeShadow(curled(still, size * resolution), this.bake),
       contacts: [Texture.from(curled(contact, size * contactResolution))],
     };
-    this.curledMarks.set(kind, marks);
+    this.curledMarks.set(color, marks);
     return marks;
   }
 
@@ -132,9 +132,9 @@ export class SpecialTextures {
    * A striped koi's sheen, frame by frame from tail to head, cut to the part of the body that every pose covers so
    * it never spills past a bending tail.
    */
-  sheen(kind: Kind): readonly Texture[] {
-    return this.cached(`sheen:${kind}`, () => {
-      const variety = getVariety(this.variety(kind));
+  sheen(color: PieceColor): readonly Texture[] {
+    return this.cached(`sheen:${color}`, () => {
+      const variety = getVariety(this.variety(color));
       const body = { ...stillPose(this.bake), parts: 'body' } as const;
       const bodies = Array.from({ length: this.bake.frames }, (_, i) =>
         bakeKoi(variety, { ...body, tailWag: tailWag(i / this.bake.frames, this.bake) }),
@@ -145,52 +145,52 @@ export class SpecialTextures {
     });
   }
 
-  /** A whirlpool's eddy in the kind's colour. */
-  eddy(kind: Kind): Texture {
-    const [texture] = this.cached(`eddy:${kind}`, () => {
-      const size = this.bake.size * this.bake.resolution * SPECIAL_LOOK.whirl.eddy * 2;
-      return [Texture.from(paintWhirlpool(size, this.color(kind).glow))];
+  /** A whirlpool's eddy in its color's glow. */
+  eddy(color: PieceColor): Texture {
+    const [texture] = this.cached(`eddy:${color}`, () => {
+      const size = this.bake.size * this.bake.resolution * SPECIAL_LOOK.whirlpool.eddy * 2;
+      return [Texture.from(paintWhirlpool(size, this.tintsOf(color).glow))];
     });
-    if (!texture) throw new Error(`no eddy for kind ${kind}`);
+    if (!texture) throw new Error(`no eddy for color ${color}`);
     return texture;
   }
 
   /**
-   * A picture of a koi of this kind as a special, as an image URL for the UI (the special booster's petals): the
+   * A picture of a koi of this color as a special, as an image URL for the UI (the special booster's petals): the
    * striped koi facing along its line, the rainbow koi as it swims, a whirlpool's eddy with its koi curled in the eye.
    * Cached.
    */
-  preview(special: Special, kind: Kind): string {
-    const key = previewKey(special, kind);
+  preview(special: Special, color: PieceColor): string {
+    const key = previewKey(special, color);
     const known = this.previews.get(key);
     if (known) return known;
-    const url = this.picture(special, kind).toDataURL(); // wanted before the warm-up got to it: this one on its own
+    const url = this.picture(special, color).toDataURL(); // wanted before the warm-up got to it: this one on its own
     this.pictures.delete(key);
     this.previews.set(key, url);
     return url;
   }
 
-  /** A kind's colours as a special. */
-  color(kind: Kind): SpecialColors {
-    const colors = this.colors[kind];
-    if (!colors) throw new RangeError(`no special colours for kind ${kind}`);
+  /** A color's colours as a special. */
+  tintsOf(color: PieceColor): SpecialColors {
+    const colors = this.colors[color];
+    if (!colors) throw new RangeError(`no special tints for color ${color}`);
     return colors;
   }
 
   /** Where a colour's koi body spans across its canvas, measured once from its painted body. */
-  private spanOf(kind: Kind): BodySpan {
-    const known = this.spans.get(kind);
+  private spanOf(color: PieceColor): BodySpan {
+    const known = this.spans.get(color);
     if (known) return known;
-    const body = bakeKoi(getVariety(this.variety(kind)), { ...stillPose(this.bake), parts: 'body' });
+    const body = bakeKoi(getVariety(this.variety(color)), { ...stillPose(this.bake), parts: 'body' });
     const span = bodySpan(body);
-    this.spans.set(kind, span);
+    this.spans.set(color, span);
     return span;
   }
 
   /** How a striped or rainbow koi is dressed before it's inked (see specialKoi). */
-  private dressing(type: 'line' | 'rainbow', kind: Kind): Dressing {
+  private dressing(type: 'striped' | 'rainbow', color: PieceColor): Dressing {
     if (type === 'rainbow') return rainbow;
-    const look = { ...SPECIAL_LOOK.stripes, band: this.color(kind).band, body: this.spanOf(kind) };
+    const look = { ...SPECIAL_LOOK.stripes, band: this.tintsOf(color).band, body: this.spanOf(color) };
     return (part, pose) => {
       stripe(part, look, pose);
     };
@@ -199,10 +199,10 @@ export class SpecialTextures {
   /** Puts the petal menu's pictures not made yet side by side on one sheet, for readPictures to read back. */
   private drawPictures(): void {
     const missing = [...this.varieties.keys()]
-      .flatMap((kind) => PREVIEWED.map((special) => ({ special, kind })))
-      .filter(({ special, kind }) => !this.previews.has(previewKey(special, kind)));
+      .flatMap((color) => PREVIEWED.map((special) => ({ special, color })))
+      .filter(({ special, color }) => !this.previews.has(previewKey(special, color)));
     this.sheet = drawSideBySide(
-      missing.map(({ special, kind }) => [previewKey(special, kind), this.picture(special, kind)]),
+      missing.map(({ special, color }) => [previewKey(special, color), this.picture(special, color)]),
     );
     this.pictures.clear(); // on the sheet now
   }
@@ -222,39 +222,43 @@ export class SpecialTextures {
    * What a preview shows: a whirlpool's koi on its eddy, or the special's first pose, painted on its own while its
    * tail beat isn't baked yet (much less for the GPU to draw before the picture can be read back). Kept until read.
    */
-  private picture(special: Special, kind: Kind): HTMLCanvasElement {
-    const key = previewKey(special, kind);
+  private picture(special: Special, color: PieceColor): HTMLCanvasElement {
+    const key = previewKey(special, color);
     const known = this.pictures.get(key);
     if (known) return known;
-    const picture = special.type === 'whirl' ? this.whirlPicture(kind) : this.swimmingPicture(special, kind);
+    const picture =
+      special.type === 'whirlpool' ? this.whirlpoolPicture(color) : this.swimmingPicture(special, color);
     this.pictures.set(key, picture);
     return picture;
   }
 
   /** A whirlpool's koi on its eddy. */
-  private whirlPicture(kind: Kind): HTMLCanvasElement {
-    return onEddy(canvasOf(this.eddy(kind)), canvasOf(this.whirlKoi(kind)));
+  private whirlpoolPicture(color: PieceColor): HTMLCanvasElement {
+    return onEddy(canvasOf(this.eddy(color)), canvasOf(this.whirlpoolKoi(color)));
   }
 
   /** A striped or rainbow koi in its first pose; a striped koi facing along its line (a row's swims across). */
-  private swimmingPicture(special: Special & { type: 'line' | 'rainbow' }, kind: Kind): HTMLCanvasElement {
-    const baked = this.cache.get(`${special.type}:${kind}`)?.[0];
+  private swimmingPicture(
+    special: Special & { type: 'striped' | 'rainbow' },
+    color: PieceColor,
+  ): HTMLCanvasElement {
+    const baked = this.cache.get(`${special.type}:${color}`)?.[0];
     const koi = baked
       ? canvasOf(baked)
-      : bakePose(this.variety(kind), this.bake, 0, this.dressing(special.type, kind));
-    return special.type === 'line' && special.along === 'row' ? quarterTurned(koi) : koi;
+      : bakePose(this.variety(color), this.bake, 0, this.dressing(special.type, color));
+    return special.type === 'striped' && special.along === 'row' ? quarterTurned(koi) : koi;
   }
 
   /** A whirlpool's koi, curled into its eye. */
-  private whirlKoi(kind: Kind): Texture {
-    const [koi] = this.poses(specialOf('whirl'), kind);
-    if (!koi) throw new Error(`no whirlpool koi for kind ${kind}`);
+  private whirlpoolKoi(color: PieceColor): Texture {
+    const [koi] = this.poses(specialOf('whirlpool'), color);
+    if (!koi) throw new Error(`no whirlpool koi for color ${color}`);
     return koi;
   }
 
-  private variety(kind: Kind): string {
-    const id = this.varieties[kind];
-    if (!id) throw new RangeError(`no koi variety for kind ${kind}`);
+  private variety(color: PieceColor): string {
+    const id = this.varieties[color];
+    if (!id) throw new RangeError(`no koi variety for color ${color}`);
     return id;
   }
 
@@ -267,14 +271,14 @@ export class SpecialTextures {
   }
 }
 
-/** A special's picture's key: its type (and a striped koi's line) and its kind. */
-function previewKey(special: Special, kind: Kind): string {
-  return `${special.type === 'line' ? `line-${special.along}` : special.type}:${kind}`;
+/** A special's picture's key: its type (and a striped koi's line) and its color. */
+function previewKey(special: Special, color: PieceColor): string {
+  return `${special.type === 'striped' ? `striped-${special.along}` : special.type}:${color}`;
 }
 
 /** A special of this type, for its textures (a striped koi's bands look the same either way). */
 function specialOf(type: Special['type']): Special {
-  return type === 'line' ? { type, along: 'col' } : { type };
+  return type === 'striped' ? { type, along: 'col' } : { type };
 }
 
 /** Pictures drawn side by side on one canvas, and where each is on it, by its key. */

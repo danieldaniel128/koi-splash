@@ -41,7 +41,7 @@ export interface SpecialPicker {
 }
 
 /** The way a striped koi's line sweeps: along its row or its column. */
-type LineAlong = Extract<Special, { type: 'line' }>['along'];
+type LineAlong = Extract<Special, { type: 'striped' }>['along'];
 
 /** What the player hears as they use the boosters. */
 export interface BoosterSounds {
@@ -52,10 +52,10 @@ export interface BoosterSounds {
   petals(): void;
 }
 
-/** The steps of using a booster. */
-export type BoosterStep = 'idle' | 'armed' | 'picked' | 'choosing' | 'playing';
+/** The states of using a booster. */
+export type BoosterState = 'idle' | 'armed' | 'picked' | 'choosing' | 'playing';
 
-/** What the steps' guards read: the armed booster, and the koi a swap picked first. */
+/** What the transitions' guards read: the armed booster, and the koi a swap picked first. */
 export interface Arming {
   type: BoosterType | null;
   picked: Cell | null;
@@ -69,10 +69,10 @@ const armedWith =
 
 /**
  * The flow of using a booster: armed / picking / choosing / playing, with guarded transitions. Each booster takes
- * only the steps of its own flow: a swap picks its first koi and plays with the second, a special opens the petals
+ * only the transitions of its own flow: a swap picks its first koi and plays with the second, a special opens the petals
  * and plays the one chosen, a feed plays straight from its tap.
  */
-export const BOOSTER_STEPS: readonly Transition<BoosterStep, Arming>[] = [
+export const BOOSTER_TRANSITIONS: readonly Transition<BoosterState, Arming>[] = [
   { from: 'idle', to: 'armed' },
   { from: 'armed', to: 'armed' }, // another booster's button: it takes over
   { from: 'armed', to: 'idle' },
@@ -98,7 +98,7 @@ export class BoosterControl {
   private readonly left = new Map<BoosterType, number>();
   private readonly tips = new Map<BoosterType, string>();
   private readonly arming: Arming = { type: null, picked: null };
-  private readonly step: StateMachine<BoosterStep, Arming>;
+  private readonly state: StateMachine<BoosterState, Arming>;
   /** What each booster does with the koi it takes (one per type: a new booster asks for its flow here). */
   private readonly takes: Readonly<Record<BoosterType, (cell: Cell) => void>> = {
     swap: (cell) => {
@@ -127,7 +127,7 @@ export class BoosterControl {
     },
   ) {
     // however the choosing ends (a petal, a tap away, a cancel, another booster), the petals close with it
-    this.step = new StateMachine<BoosterStep, Arming>('idle', BOOSTER_STEPS, this.arming, {
+    this.state = new StateMachine<BoosterState, Arming>('idle', BOOSTER_TRANSITIONS, this.arming, {
       choosing: {
         onExit: () => {
           this.deps.picker.close();
@@ -139,7 +139,7 @@ export class BoosterControl {
 
   /** True while a booster is armed: the board's taps and drags go here. */
   get armed(): boolean {
-    return !this.step.is('idle') && !this.step.is('playing');
+    return !this.state.is('idle') && !this.state.is('playing');
   }
 
   /** A new level: every booster back to its count, nothing armed. */
@@ -158,14 +158,14 @@ export class BoosterControl {
       this.cancel();
       return;
     }
-    if ((this.left.get(type) ?? 0) <= 0 || !this.deps.game.canBoost || this.step.is('playing')) {
+    if ((this.left.get(type) ?? 0) <= 0 || !this.deps.game.canBoost || this.state.is('playing')) {
       this.deps.buttons.nope(type);
       this.deps.sounds.wrong();
       return;
     }
     this.arming.type = type;
     this.arming.picked = null;
-    this.step.transition('armed');
+    this.state.transition('armed');
     this.deps.buttons.setArmed(type);
     this.deps.pill.show(this.tips.get(type) ?? '');
     this.deps.marks.lift(null);
@@ -186,7 +186,7 @@ export class BoosterControl {
    */
   back(): boolean {
     if (!this.armed) return false;
-    if (this.step.is('choosing')) this.deps.picker.close();
+    if (this.state.is('choosing')) this.deps.picker.close();
     else this.cancel();
     return true;
   }
@@ -194,10 +194,10 @@ export class BoosterControl {
   /** A tap on the board while a booster is armed. */
   tap(cell: Cell): void {
     const type = this.arming.type;
-    if (!type || !(this.step.is('armed') || this.step.is('picked'))) return;
+    if (!type || !(this.state.is('armed') || this.state.is('picked'))) return;
     if (this.isPicked(cell)) {
       this.arming.picked = null; // the picked koi again: it settles back
-      this.step.transition('armed');
+      this.state.transition('armed');
       this.deps.marks.lift(null);
       return;
     }
@@ -224,7 +224,7 @@ export class BoosterControl {
     const first = this.arming.picked;
     if (!first) {
       this.arming.picked = cell;
-      this.step.transition('picked');
+      this.state.transition('picked');
       this.deps.marks.lift(cell);
       this.deps.sounds.lift();
       return;
@@ -241,20 +241,20 @@ export class BoosterControl {
 
   /** Special: petals open round the koi; the one chosen is what it becomes. */
   private async choose(cell: Cell): Promise<void> {
-    this.step.transition('choosing');
+    this.state.transition('choosing');
     this.deps.marks.lift(cell);
     this.deps.sounds.petals();
     // as in the prototype a striped koi's line is a toss, made before the petals open so the striped one shows it
     const along: LineAlong = this.deps.random() < 0.5 ? 'row' : 'col';
     const choice = await this.deps.picker.pick(cell, along);
-    if (!this.step.is('choosing')) return; // cancelled while the petals were open
+    if (!this.state.is('choosing')) return; // cancelled while the petals were open
     if (!choice) {
-      this.step.transition('armed'); // tapped away: still armed, pick another koi
+      this.state.transition('armed'); // tapped away: still armed, pick another koi
       this.deps.marks.lift(null);
       this.deps.sounds.cancel();
       return;
     }
-    const special: Special = choice === 'line' ? { type: 'line', along } : { type: choice };
+    const special: Special = choice === 'striped' ? { type: 'striped', along } : { type: choice };
     await this.use({ type: 'special', at: cell, special });
   }
 
@@ -263,13 +263,13 @@ export class BoosterControl {
    * the bar is free again afterwards; the booster is spent only if the board took it.
    */
   private async use(use: BoosterUse): Promise<void> {
-    this.step.transition('playing');
+    this.state.transition('playing');
     this.hideArming();
     try {
       if (await this.deps.game.useBooster(use)) this.spend(use.type);
     } finally {
       this.clearArming();
-      this.step.transition('idle');
+      this.state.transition('idle');
     }
   }
 
@@ -281,7 +281,7 @@ export class BoosterControl {
 
   private disarm(): void {
     this.clearArming();
-    this.step.transition('idle');
+    this.state.transition('idle');
     this.hideArming();
   }
 

@@ -160,7 +160,7 @@ export class PondWater implements WaterSurface {
 
   /** Wakes, tail flicks, swaps, dives and landing droplets all push the water here. */
   push(at: PointData, strength: number, radius: number): void {
-    this.sim.drop(at.x, at.y, radius, -strength);
+    this.sim.push(at, strength, radius);
   }
 
   /**

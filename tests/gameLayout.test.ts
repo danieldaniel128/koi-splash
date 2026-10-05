@@ -74,7 +74,9 @@ describe('layoutGame', () => {
     const design = layoutGame({ width: 360, height: 640 }, NO_INSETS, CONFIG);
     const tablet = layoutGame({ width: 768, height: 1024 }, NO_INSETS, CONFIG);
     expect(tablet.stage.width).toBeGreaterThan(design.stage.width);
-    expect(tablet.board.cell * tablet.stage.scale).toBeGreaterThan(design.board.cell * design.stage.scale);
+    expect(tablet.board.cellSize * tablet.stage.scale).toBeGreaterThan(
+      design.board.cellSize * design.stage.scale,
+    );
     expect(tablet.pond.x * 2 + tablet.pond.width).toBeCloseTo(tablet.stage.width);
   });
 
@@ -96,12 +98,14 @@ describe('layoutGame', () => {
 
   it('keeps the gap between pieces', () => {
     const tablet = layoutGame({ width: 1024, height: 1366 }, NO_INSETS, CONFIG).board;
-    expect(tablet.piece).toBe(tablet.cell - 4);
+    expect(tablet.koiSize).toBe(tablet.cellSize - 4);
   });
 
   it("shrinks the cell for the garden's sky only down to minCell", () => {
     const greedy = { ...CONFIG, garden: { beside: 120, sky: 400 } };
-    expect(layoutGame({ width: 360, height: 640 }, NO_INSETS, greedy).board.cell).toBeCloseTo(CONFIG.minCell);
+    expect(layoutGame({ width: 360, height: 640 }, NO_INSETS, greedy).board.cellSize).toBeCloseTo(
+      CONFIG.minCell,
+    );
   });
 });
 
@@ -134,7 +138,7 @@ describe("layoutGame with the game's own layout", () => {
       const garden = gardenOf(layout);
       expect(garden.wide).toBe(false);
       expect(garden.sky).toBeGreaterThanOrEqual(GARDEN_ROOM.sky);
-      expect(layout.board.cell).toBeGreaterThanOrEqual(LAYOUT.minCell);
+      expect(layout.board.cellSize).toBeGreaterThanOrEqual(LAYOUT.minCell);
       expect(layout.hud.width).toBeCloseTo(LAYOUT.designWidth - LAYOUT.sidePadding * 2); // room for the HUD
     }
   });
@@ -145,7 +149,7 @@ describe("layoutGame with the game's own layout", () => {
       { width: 1366, height: 768 },
     ]) {
       const layout = layoutGame(screen, NO_INSETS, gameConfig);
-      expect(layout.board.cell).toBeCloseTo(layoutGame(screen, NO_INSETS, noSky).board.cell);
+      expect(layout.board.cellSize).toBeCloseTo(layoutGame(screen, NO_INSETS, noSky).board.cellSize);
     }
     expect(gardenOf(layoutGame({ width: 1366, height: 768 }, NO_INSETS, gameConfig)).wide).toBe(true);
   });

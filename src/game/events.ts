@@ -19,7 +19,7 @@ export interface GameEvents {
    * A cascade round clears: which round of the turn (0 = the swap's own), how many koi, and the strongest special it
    * made, if any.
    */
-  match: { round: number; size: number; made?: SpecialType };
+  match: { roundIndex: number; size: number; made?: SpecialType };
   /** A koi slips under; a koi settles into a new cell. */
   dive: undefined;
   land: undefined;
@@ -34,13 +34,13 @@ export interface GameEvents {
   allGoalsMet: undefined;
   /** A special is born, or fires. */
   specialBorn: { type: SpecialType };
-  lineFired: undefined;
-  whirlFired: undefined;
-  whirlPopped: undefined;
+  stripedFired: undefined;
+  whirlpoolFired: undefined;
+  whirlpoolPopped: undefined;
   rainbowRose: undefined;
   rainbowFired: undefined;
   /** A rainbow koi's beam lands on its nth koi. */
-  prismHit: { n: number };
+  rainbowArcLanded: { n: number };
   /** The boosters: armed (its place on the bar), put away, a tap it can't take, a koi picked up. */
   boosterArmed: { type: BoosterType; slot: number };
   boosterCancelled: undefined;

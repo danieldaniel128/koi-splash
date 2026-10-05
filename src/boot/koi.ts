@@ -64,11 +64,15 @@ export function goalIcons(resolution: number): GoalIcons {
 /** The koi on the board, placed on the layout's board. */
 export function createBoardView(
   textures: KoiTextures,
-  specials: SpecialTextures,
+  specialTextures: SpecialTextures,
   spec: BoardSpec,
   board: GameLayout['board'],
 ): BoardView {
-  const view = new BoardView(textures, specials, { ...spec, cellSize: board.cell, koiSize: board.piece });
+  const view = new BoardView(textures, specialTextures, {
+    ...spec,
+    cellSize: board.cellSize,
+    koiSize: board.koiSize,
+  });
   view.position.set(board.x, board.y);
   return view;
 }

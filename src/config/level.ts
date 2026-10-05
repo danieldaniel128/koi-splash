@@ -24,11 +24,11 @@ export const LEVEL = {
   shape: ['..###..', '.#####.', '#######', '#######', '.#####.', '#######', '#######', '.#####.', '..###..'],
   /**
    * The goals, all to be reached to win. Mix and match: { type: 'lotus', count }, { type: 'score', target }, or
-   * { type: 'koi', kind, count } to clear that many koi of one colour (kind 0 is the first of KOI_SET).
+   * { type: 'koi', color, count } to clear that many koi of one color (color 0 is the first of KOI_SET).
    */
   goals: [
     { type: 'lotus', count: LOTUSES },
-    { type: 'koi', kind: 0, count: 10 }, // 10 red koi
+    { type: 'koi', color: 0, count: 10 }, // 10 red koi
   ] as readonly GoalDef[],
   /**
    * The rating: a star at each of these scores (see starsFor). Set from the final scores of whole levels played

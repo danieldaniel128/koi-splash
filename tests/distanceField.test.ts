@@ -105,7 +105,7 @@ describe('bakeDistanceField, the fast way', () => {
     const drawing = ['..###..', '.#####.', '###.###', '#######', '..###..'];
     const shore = traceShore(
       parseShape(drawing),
-      { x: 0, y: 0, width: 280, height: 200, cell: 40 },
+      { x: 0, y: 0, width: 280, height: 200, cellSize: 40 },
       {
         margin: { left: 14, right: 14, top: 16, bottom: 16 },
         cornerRadius: 24,

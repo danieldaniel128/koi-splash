@@ -1,5 +1,5 @@
 import { Container, Geometry, Mesh, RenderTexture, Shader, UniformGroup } from 'pixi.js';
-import type { Renderer, TextureSource } from 'pixi.js';
+import type { PointData, Renderer, TextureSource } from 'pixi.js';
 import { WATER } from '../../config/water';
 import common from './shaders/common.glsl?raw';
 import simFragment from './shaders/sim.frag?raw';
@@ -79,18 +79,19 @@ export class WaterSim {
   }
 
   /**
-   * Pushes the surface at a stage point: negative `push` presses it down (a fish diving, a splash), positive lifts
-   * it, at most WATER.stateRange either way. Applied on the next step. Past WATER.maxDrops in one step, it takes the
-   * place of the weakest push if it's stronger, so a splash is never crowded out by the koi's wakes. O(1),
-   * O(maxDrops) once the step is full.
+   * Pushes the surface at a stage point, as WaterSurface.push does: a positive `strength` presses it down (a fish
+   * diving, a splash), a negative one lifts it, at most WATER.stateRange either way. Applied on the next step. Past
+   * WATER.maxDrops in one step, it takes the place of the weakest push if it's stronger, so a splash is never crowded
+   * out by the koi's wakes. O(1), O(maxDrops) once the step is full.
    */
-  drop(stageX: number, stageY: number, radius: number, push: number): void {
-    const slot = this.dropCount < WATER.maxDrops ? this.dropCount++ : this.weakestDrop(push);
+  push(at: PointData, strength: number, radius: number): void {
+    const lift = -strength; // the state holds height: pressing down is negative
+    const slot = this.dropCount < WATER.maxDrops ? this.dropCount++ : this.weakestDrop(lift);
     if (slot < 0) return;
-    const cellX = ((stageX - this.area.x) / this.area.width) * this.cols;
-    const cellY = ((stageY - this.area.y) / this.area.height) * this.rows;
+    const cellX = ((at.x - this.area.x) / this.area.width) * this.cols;
+    const cellY = ((at.y - this.area.y) / this.area.height) * this.rows;
     const range = WATER.stateRange; // what the state can hold: a stronger push would flatten the splash's crown
-    const capped = Math.min(Math.max(push, -range), range);
+    const capped = Math.min(Math.max(lift, -range), range);
     this.drops.set([cellX, cellY, radius / WATER.cellSize, capped], slot * 4);
   }
 

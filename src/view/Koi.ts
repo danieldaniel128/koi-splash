@@ -3,7 +3,7 @@ import type { PointData, Texture } from 'pixi.js';
 import { KOI_SWIM } from '../config/koi';
 import { TIMING } from '../config/timing';
 import { mixColor } from '../core/color';
-import type { Kind } from '../model/types';
+import type { PieceColor } from '../model/types';
 
 const WHITE = 0xffffff;
 /** Koi deep in the water take on this pale water-blue, keeping their own colour (a dark tint turns them muddy). */
@@ -33,7 +33,7 @@ export class Koi extends Sprite {
   private time = 0;
 
   constructor(
-    readonly kind: Kind,
+    readonly color: PieceColor,
     private poses: readonly Texture[],
     size: number,
     random: () => number,
