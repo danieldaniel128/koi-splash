@@ -10,7 +10,22 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="game"></div>
+    <div id="game" inert></div>
+    <div id="loading" class="loading">
+      <div class="loading__moon" aria-hidden="true"></div>
+      <h1 class="number loading__title">Koi Splash</h1>
+      <p class="label loading__tagline">A koi pond by moonlight</p>
+      <div
+        class="track loading__bar"
+        role="progressbar"
+        aria-label="Loading the pond"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <span class="loading__fill"></span>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

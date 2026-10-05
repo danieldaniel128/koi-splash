@@ -61,6 +61,26 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
+/** The player has asked the system for less motion. */
+const LESS_MOTION = '(prefers-reduced-motion: reduce)';
+
+/**
+ * Fades an element in or out over `seconds`, at once for players who ask for less motion, and resolves when it's
+ * done. Faded out, it stays invisible.
+ */
+export async function fade(element: HTMLElement, to: 'in' | 'out', seconds: number): Promise<void> {
+  const opacity = to === 'in' ? [0, 1] : [1, 0];
+  const animation = element.animate(
+    opacity.map((value) => ({ opacity: value })),
+    {
+      duration: window.matchMedia(LESS_MOTION).matches ? 0 : seconds * 1000,
+      easing: 'ease',
+      fill: to === 'out' ? 'forwards' : 'none',
+    },
+  );
+  await animation.finished;
+}
+
 /** Plays a quick swell on an element (a counter that changed). Web Animations: no class juggling, restarts cleanly. */
 export function bump(element: HTMLElement, scale: number, seconds: number): void {
   element.animate([{ transform: `scale(${scale})` }, { transform: 'scale(1)' }], {
