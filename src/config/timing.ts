@@ -25,6 +25,9 @@ export const TIMING = {
    * shrinking to this size as they go, tinted toward the pale water.
    */
   dive: 0.32,
+  /** As it goes, a matched koi kicks: it swells this much over this long (s), then sinks for the rest of the dive. */
+  diveKick: 1.14,
+  diveKickTime: 0.07,
   diveGlide: 0.35,
   diveScale: 0.45,
   diveTint: '#a9cfe0',

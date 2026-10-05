@@ -4,11 +4,13 @@ import { TIMING } from '../config/timing';
 import type { Special } from '../model/types';
 import type { Koi } from './Koi';
 import { play } from './motion/play';
-import { pop, sink, spiral } from './motion/koiMotions';
+import { flash, pop, sink, spiral } from './motion/koiMotions';
 
 /** How far round a merging koi spirals into its special, and a drained koi into its whirlpool (radians). */
 const MERGE_TURN = 2.4;
 const DRAIN_TURN = 4.4;
+/** A rainbow's beam lands on a koi: it swells this much and flashes white for this long (s). */
+const ZAP = { swell: 1.2, flash: 0.12 };
 
 /**
  * How koi leave the board around the specials (after the prototype's): a shape's koi spiral into the special they
@@ -29,12 +31,11 @@ export class SpecialMotions {
 
   /** A rainbow's beam lands on a koi: it swells and flashes white, then sinks away. */
   async zap(koi: Koi, delay: number): Promise<void> {
-    await play(
-      gsap
-        .timeline({ delay })
-        .add(pop(koi, 1.2, 0.12))
-        .add(sink(koi, TIMING.specials.dive)),
-    );
+    const hit = gsap
+      .timeline()
+      .add(pop(koi, ZAP.swell, ZAP.flash), 0)
+      .add(flash(koi, ZAP.flash), 0);
+    await play(gsap.timeline({ delay }).add(hit).add(sink(koi, TIMING.specials.dive)));
   }
 
   /**

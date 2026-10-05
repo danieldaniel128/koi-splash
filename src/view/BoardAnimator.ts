@@ -10,7 +10,7 @@ import type { GameEventBus } from '../game/events';
 import type { TurnAnimator } from '../game/GameScene';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
-import { rise, sink } from './motion/koiMotions';
+import { pop, rise, sink } from './motion/koiMotions';
 import { play, wait } from './motion/play';
 import { blastLands, planRound } from './specialTiming';
 import type { ClearPlan, RoundPlan } from './specialTiming';
@@ -166,6 +166,7 @@ export class BoardAnimator implements TurnAnimator {
   async playStep(step: CascadeStep, points: number, round: number): Promise<void> {
     const plan = planRound(step, TIMING.specials);
     this.score(step, plan, { points, round });
+    this.splashMatches(step, round);
     for (const blast of plan.blasts) this.specials.fx.fire(blast);
     // the koi above start swimming down while the last ones are still going
     const swimDelay =
@@ -244,6 +245,15 @@ export class BoardAnimator implements TurnAnimator {
     }
   }
 
+  /** Each match splashes at its middle as it clears, harder for bigger matches and deeper in a cascade. */
+  private splashMatches(step: CascadeStep, round: number): void {
+    for (const { cells } of step.matches) {
+      const middle = centreOf(cells.map((cell) => this.view.cellToPoint(cell)));
+      const extra = Math.max(0, cells.length - 3) * WATER.matchPushPerKoi + round * WATER.matchPushPerRound;
+      this.water.push(this.onStage(middle), WATER.matchPush * (1 + extra), WATER.matchRadius);
+    }
+  }
+
   /** The water is shoved apart between two cells (a swap): a push at the midpoint, `strength` times the full one. */
   private stir(from: Cell, to: Cell, strength: number): void {
     const middle = centreOf([this.view.cellToPoint(from), this.view.cellToPoint(to)]);
@@ -295,8 +305,8 @@ export class BoardAnimator implements TurnAnimator {
   }
 
   /**
-   * A matched koi dives: it tips forward and swims down into the deep along its heading, shrinking and taking on the
-   * water's colour until it's gone, and the water closes over it with a ring. No flash, no squash: it swims away.
+   * A matched koi dives: it kicks (a quick swell), then swims down into the deep along its heading, shrinking and
+   * taking on the water's colour until it's gone, and the water closes over it with a ring.
    */
   private async dive(id: number, at: Cell, delay = 0): Promise<void> {
     const koi = this.view.spriteOf(id);
@@ -311,7 +321,14 @@ export class BoardAnimator implements TurnAnimator {
       duration: TIMING.dive,
       ease: 'sine.in',
     };
-    await play(gsap.timeline({ delay }).to(koi, glide, 0).add(sink(koi, TIMING.dive), 0));
+    const kick = TIMING.diveKickTime;
+    await play(
+      gsap
+        .timeline({ delay })
+        .to(koi, glide, 0)
+        .add(pop(koi, TIMING.diveKick, kick), 0)
+        .add(sink(koi, TIMING.dive - kick), kick),
+    );
     this.view.removePiece(id);
   }
 

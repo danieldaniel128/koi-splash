@@ -1,4 +1,5 @@
 import { gsap } from 'gsap';
+import { Sprite } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import type { Koi } from '../Koi';
 
@@ -107,6 +108,39 @@ export function headShake(koi: Koi, angle: number, times: number, duration: numb
       koi.tilt = 0;
     },
   });
+}
+
+/**
+ * Flashes white: a glowing copy of the koi's pose, added over it, fades out over `duration`. (A white tint can't do
+ * it: a tint only darkens.)
+ */
+export function flash(koi: Koi, duration: number): gsap.core.Timeline {
+  const glow = new Sprite({ texture: koi.texture, anchor: 0.5, blendMode: 'add' });
+  const follow = (): void => {
+    glow.position.copyFrom(koi.position);
+    glow.rotation = koi.rotation;
+    glow.scale.copyFrom(koi.scale);
+  };
+  return gsap.timeline().fromTo(
+    glow,
+    { alpha: 1 },
+    {
+      alpha: 0,
+      duration,
+      ease: 'power1.in',
+      onStart: () => {
+        koi.parent?.addChildAt(glow, koi.parent.getChildIndex(koi) + 1);
+        follow();
+      },
+      onUpdate: follow,
+      onComplete: () => {
+        glow.destroy();
+      },
+      onInterrupt: () => {
+        glow.destroy();
+      },
+    },
+  );
 }
 
 /** Fades to `alpha` over `duration`. */
