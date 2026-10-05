@@ -2,7 +2,7 @@ import { RESULT_CARD } from '../config/ui';
 import { StateMachine } from '../core/StateMachine';
 import type { StateHooks, Transition } from '../core/StateMachine';
 import { runDetached } from '../core/detached';
-import type { Random } from '../core/Random';
+import type { RandomSource } from '../core/Random';
 import { Timers } from '../core/Timers';
 import type { Board } from '../model/Board';
 import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
@@ -21,6 +21,7 @@ import type { BoosterGame } from './BoosterControl';
 import type { GameEventBus } from './events';
 import type { GameStatus } from './GameStatus';
 import type { SwapGame } from './SwapControl';
+import { colourOf } from '../model/types';
 
 type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
 
@@ -107,7 +108,7 @@ export interface LevelRules {
 export interface GameSceneDeps {
   readonly spec: BoardSpec;
   readonly level: LevelRules;
-  readonly rng: Random;
+  readonly rng: RandomSource;
   readonly view: BoardDisplay;
   readonly animator: TurnAnimator;
   readonly status: StatusDisplay;
@@ -363,9 +364,7 @@ export class GameScene implements BoosterGame, SwapGame {
     const { goal } = this.level;
     const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
     // a rainbow koi has no colour of its own: it counts toward no colour goal
-    const cleared = step.cleared
-      .filter(({ piece }) => piece.special?.type !== 'rainbow')
-      .map(({ piece }) => piece.kind);
+    const cleared = step.cleared.map(({ piece }) => colourOf(piece)).filter((kind) => kind !== null);
     const metBefore = goalsMet(goal.progress());
     this.level.score += recordRound(
       goal,

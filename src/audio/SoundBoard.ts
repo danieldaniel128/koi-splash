@@ -1,8 +1,16 @@
 import type { GameEventBus, GameEvents } from '../game/events';
+import type { SpecialType } from '../model/types';
 import * as sounds from './recipes';
 import type { Voice } from './Synth';
 
 /** What each game event sounds like (a recipe per event, with its payload): the game's whole soundtrack, in one map. */
+/** What each special sounds like as it's born (one per type: a new special asks for its sound here). */
+const BORN_SOUND: Readonly<Record<SpecialType, (v: Voice) => void>> = {
+  line: sounds.special,
+  whirl: sounds.whirlBorn,
+  rainbow: sounds.rainbowBorn,
+};
+
 type SoundMap = { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents[K]) => void };
 const SOUND_OF: SoundMap = {
   swap: (v) => {
@@ -42,9 +50,7 @@ const SOUND_OF: SoundMap = {
     sounds.special(v);
   },
   specialBorn: (v, { type }) => {
-    if (type === 'rainbow') sounds.rainbowBorn(v);
-    else if (type === 'whirl') sounds.whirlBorn(v);
-    else sounds.special(v);
+    BORN_SOUND[type](v);
   },
   lineFired: (v) => {
     sounds.current(v);
@@ -104,9 +110,6 @@ const SOUND_OF: SoundMap = {
   },
   starLanded: (v, { k }) => {
     sounds.star(v, k);
-  },
-  buttonPressed: (v) => {
-    sounds.press(v);
   },
   buttonClicked: (v) => {
     sounds.click(v);

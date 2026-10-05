@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { int, pick, seeded } from '../src/core/Random';
 import { Board } from '../src/model/Board';
 import { createBoard, findMove, trySwap } from '../src/model/rules';
 import { scoreRound } from '../src/model/score';
@@ -31,7 +31,7 @@ describe('splitPoints', () => {
       { col: 2, row: 1 },
       { col: 2, row: 0 },
       { ...SPEC, cols: 4, rows: 2 },
-      new Random(1),
+      seeded(1),
     );
     if (!result.valid) throw new Error('refused');
     const [first] = result.steps;
@@ -43,12 +43,12 @@ describe('splitPoints', () => {
   it('adds up to the points the scene scored, for every round of every cascade, specials and all', () => {
     let rounds = 0;
     for (let seed = 1; seed <= 150; seed++) {
-      const rng = new Random(seed);
+      const rng = seeded(seed);
       const board = createBoard(SPEC, rng);
       for (let k = 0; k < 4; k++) {
-        const at = { col: rng.int(0, SPEC.cols - 1), row: rng.int(0, SPEC.rows - 1) };
+        const at = { col: int(rng, 0, SPEC.cols - 1), row: int(rng, 0, SPEC.rows - 1) };
         const koi = board.get(at);
-        if (koi) board.set(at, { ...koi, special: rng.pick(SPECIALS) });
+        if (koi) board.set(at, { ...koi, special: pick(rng, SPECIALS) });
       }
       const swap = playableSwap(board);
       if (!swap) continue;

@@ -72,14 +72,6 @@ export class KoiTextures {
     if (!shapes) throw new RangeError(`no koi contact for kind ${kind}`);
     return shapes;
   }
-
-  destroy(): void {
-    const all = [...this.poses.flat(), ...this.shadows, ...this.contacts.flat()];
-    for (const texture of all) texture.destroy(true);
-    this.poses.length = 0;
-    this.shadows.length = 0;
-    this.contacts.length = 0;
-  }
 }
 
 /**

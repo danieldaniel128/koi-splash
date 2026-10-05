@@ -20,7 +20,10 @@ export interface MusicNote {
 /** A rhythm: notes at these eighths, this many eighths long. */
 type Rhythm = readonly (readonly [step: number, length: number])[];
 
-const STEPS = 8; // eighths in a bar
+/** Eighths in a bar; a strong beat every `STRONG_BEAT` of them (the bar's two halves). */
+export const STEPS_PER_BAR = 8;
+const STEPS = STEPS_PER_BAR;
+const STRONG_BEAT = 4;
 const PHRASE = 4; // bars in a phrase: it closes on a long chord tone
 /** Bars in one pass through the progression: its last phrase closes on the root. */
 const CYCLE = MUSIC.bars * MUSIC.progression.length;
@@ -134,7 +137,7 @@ export class Composer {
     const rhythm = closing ? CLOSING : this.pick(this.rhythms(part, mood));
     return rhythm.map(([step, length], k) => {
       const last = closing && k === rhythm.length - 1;
-      const strong = step % 4 === 0;
+      const strong = step % STRONG_BEAT === 0;
       this.degree = this.walk(strong || last ? tones : null, last && inCycle === CYCLE - 1);
       return { part, step, length, pitches: [semitonesOf(this.degree)] };
     });

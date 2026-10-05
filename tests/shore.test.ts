@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { traceShore } from '../src/layout/outline';
 import { ringAlongShore } from '../src/layout/shore';
 import type { ShoreLook, ShorePiece } from '../src/layout/shore';
@@ -23,8 +23,8 @@ function shoreDistance([px, py]: readonly [number, number]): number {
 }
 
 const stonesFor = (seed: number): ShorePiece[] => {
-  const rng = new Random(seed);
-  return ringAlongShore(SHORE, LOOK, () => rng.next());
+  const rng = seeded(seed);
+  return ringAlongShore(SHORE, LOOK, rng);
 };
 
 describe('ringAlongShore', () => {
@@ -64,8 +64,8 @@ describe('ringAlongShore', () => {
     const sitsOn = (a: ShorePiece, b: ShorePiece): boolean =>
       Math.abs(a.at[0] - b.at[0]) < b.radius[0] && Math.abs(a.at[1] - b.at[1]) < b.radius[1];
     for (let seed = 1; seed <= 20; seed++) {
-      const rng = new Random(seed);
-      const stones = ringAlongShore(shore, LOOK, () => rng.next());
+      const rng = seeded(seed);
+      const stones = ringAlongShore(shore, LOOK, rng);
       const onNotch = stones.filter(
         ({ at: [x, y] }) => x < BOARD.x + BOARD.cell && Math.abs(y - notchRow) < BOARD.cell / 2,
       );

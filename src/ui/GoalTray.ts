@@ -1,5 +1,5 @@
 import { HUD_MOTION } from '../config/ui';
-import type { GoalProgress } from '../model/goals';
+import type { GoalProgress, GoalType } from '../model/goals';
 import { CHECK, STAR, setIcon } from './icons';
 import { bump, el } from './UiLayer';
 
@@ -41,10 +41,14 @@ export class GoalTray {
     return chip?.icon ?? this.element;
   }
 
+  /** Each goal type's picture (null: a star, for a score goal). One per type: a new goal asks for its icon here. */
   private iconFor(goal: GoalProgress): string | null {
-    if (goal.kind === 'lotus') return this.icons.lotus;
-    if (goal.kind === 'koi') return this.icons.koi[goal.koi ?? 0] ?? null;
-    return null; // a score goal shows a star
+    const icons: Readonly<Record<GoalType, () => string | null>> = {
+      lotus: () => this.icons.lotus,
+      koi: () => this.icons.koi[goal.koi ?? 0] ?? null,
+      score: () => null,
+    };
+    return icons[goal.kind]();
   }
 }
 

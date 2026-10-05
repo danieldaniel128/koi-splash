@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AMBIENT } from '../src/audio/instruments';
 import { NightAmbience } from '../src/audio/NightAmbience';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import { AMBIENCE, AUDIO } from '../src/config/audio';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 
 type Layer = keyof typeof AMBIENT;
 const LAYERS = Object.keys(AMBIENT) as Layer[];
@@ -52,9 +52,9 @@ describe('NightAmbience', () => {
   it('sounds every layer again and again, each after a gap from its own range', () => {
     const seconds = 120;
     const voice = clockedVoice();
-    const random = new Random(11);
+    const random = seeded(11);
     const calls = countLayers();
-    play(new NightAmbience(voice, () => random.next()), voice, 0, seconds);
+    play(new NightAmbience(voice, random), voice, 0, seconds);
     for (const layer of LAYERS) {
       const [shortest, longest] = AMBIENCE[layer].gap;
       expect(calls[layer](), layer).toBeGreaterThanOrEqual(Math.floor(seconds / longest));

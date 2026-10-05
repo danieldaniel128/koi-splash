@@ -1,11 +1,10 @@
-import { AUDIO, MUSIC } from '../config/audio';
-import { Composer } from './composer';
+import { MUSIC } from '../config/audio';
+import { Composer, STEPS_PER_BAR } from './composer';
 import type { BarMood } from './composer';
 import { playNote } from './instruments';
+import { scheduleAhead } from './lookahead';
 import type { Voice } from './Synth';
 import type { Mood, Track } from './Track';
-
-const STEPS_PER_BAR = 8;
 
 /**
  * The music, composed as it plays: each bar is asked of the composer just before it's due and scheduled on the audio
@@ -46,10 +45,14 @@ export class GardenMusic implements Track {
       return;
     }
     if (this.nextBar === null || this.nextBar < now) this.nextBar = now + 0.1;
-    while (this.nextBar < now + AUDIO.lookahead) {
-      this.play(this.nextBar - now);
-      this.nextBar += this.stepSeconds * STEPS_PER_BAR;
-    }
+    this.nextBar = scheduleAhead(
+      this.nextBar,
+      now,
+      (delay) => {
+        this.play(delay);
+      },
+      () => this.stepSeconds * STEPS_PER_BAR,
+    );
   }
 
   private play(delay: number): void {

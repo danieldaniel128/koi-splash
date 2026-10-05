@@ -1,3 +1,5 @@
+import type { Bus } from '../config/audio';
+import type { BoosterType } from '../model/boosters';
 /**
  * The UI's icons, drawn inline as SVG so they take the theme's colours (currentColor) and stay sharp at any scale.
  * Fixed strings from this file only, never user text, so they are safe to put in innerHTML.
@@ -20,7 +22,7 @@ export function setIcon(element: HTMLElement, icon: string): void {
  * The boosters' icons, from the prototype, a little bolder: two koi leaping past each other (swap), a sparkle
  * powering a koi up (special), and pellets lobbed onto the water (feed).
  */
-export const BOOSTER_ICONS = {
+export const BOOSTER_ICONS: Readonly<Record<BoosterType, string>> = {
   swap: `<svg viewBox="0 0 40 40" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M5 33 Q20 37.5 35 33" stroke="#9fdcff" stroke-width="2.2" opacity=".75"/>
     <path d="M32 29 Q26 7 9 12.5" stroke="#ffb3d1" stroke-width="3.6"/><path d="M13.5 8.5 L8.5 12.5 L13 17" stroke="#ffb3d1" stroke-width="3.6"/>
@@ -41,8 +43,6 @@ export const BOOSTER_ICONS = {
   </svg>`,
 } as const;
 
-export type BoosterIcon = keyof typeof BOOSTER_ICONS;
-
 /** A speaker, with sound waves (on) or a cross (off). */
 export const SPEAKER_ON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>
   <path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -51,7 +51,7 @@ export const SPEAKER_OFF = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d=
   <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
 
 /** The sound channels: a pair of notes (music), ripples under the moon (ambience), a sparkle (effects). */
-export const SOUND_ICONS = {
+export const SOUND_ICONS: Readonly<Record<Bus, string>> = {
   music: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V6l10-2v11" fill="none" stroke="currentColor"
     stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="2.6" fill="currentColor"/>
     <circle cx="16.5" cy="15.5" r="2.6" fill="currentColor"/></svg>`,
@@ -61,5 +61,3 @@ export const SOUND_ICONS = {
   sfx: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 6.1L20 11l-6.1 1.9L12 19l-1.9-6.1L4 11l6.1-1.9z"
     fill="currentColor"/><circle cx="19" cy="4.5" r="1.4" fill="currentColor"/></svg>`,
 } as const;
-
-export type SoundIcon = keyof typeof SOUND_ICONS;

@@ -18,7 +18,8 @@ export interface GoalProgress {
 
 /**
  * What the player must reach to win a level (Strategy). The scene feeds every cascade round in and asks whether it
- * is complete; it never knows which goal it runs, or how many (see AllGoals). A new goal type is one line here.
+ * is complete; it never knows which goal it runs, or how many (see AllGoals). A new goal type is a variant of GoalDef:
+ * the compiler then asks for it in createGoal, the goal chip's icon (GoalTray) and the end card's line (ResultCard).
  */
 export interface Goal {
   record(round: RoundOutcome): void;
@@ -51,6 +52,9 @@ export function recordRound(goal: Goal, round: RoundOutcome, bonus: number): num
   if (met === 0) return round.points;
   return round.points + recordRound(goal, { points: met * bonus, padEvents: [], cleared: [] }, bonus);
 }
+
+/** Which kind of goal: bloom lotuses, score points or clear koi of a colour. */
+export type GoalType = GoalDef['type'];
 
 /**
  * Throws when a level's goals can't all be reached on its board: more lotuses to bloom than buds, or koi of a colour

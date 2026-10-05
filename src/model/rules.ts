@@ -1,4 +1,5 @@
-import type { Random } from '../core/Random';
+import type { RandomSource } from '../core/Random';
+import { int, pick } from '../core/Random';
 import { Board } from './Board';
 import type { PadField } from './pads';
 import type {
@@ -17,7 +18,8 @@ import { isAdjacent, sameCell } from './types';
 import { resolveRound, swapTriggers } from './specials';
 import type { Trigger } from './specials';
 
-const MIN_RUN = 3;
+/** The shortest run of one colour that matches. */
+export const MIN_RUN = 3;
 /** Safety net: a cascade this long means a bug, not a lucky player. */
 const MAX_CASCADE = 50;
 
@@ -27,7 +29,7 @@ const MAX_CASCADE = 50;
  * A full board with no ready-made matches and at least one valid move. Blocked cells (the lily pads) are placed
  * first, so the koi only ever fill the free cells around them. O(N) per try, see fillSafely.
  */
-export function createBoard(spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): Board {
+export function createBoard(spec: BoardSpec, rng: RandomSource, blocked: readonly Cell[] = []): Board {
   const board = new Board(spec.cols, spec.rows, spec.holes);
   for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
@@ -38,7 +40,12 @@ export function createBoard(spec: BoardSpec, rng: Random, blocked: readonly Cell
  * Gives an existing board a fresh layout (for playing the level again), with the new blocked cells placed first.
  * Piece ids keep counting up from where they were, so the view never mistakes a new koi for an old sprite.
  */
-export function resetBoard(board: Board, spec: BoardSpec, rng: Random, blocked: readonly Cell[] = []): void {
+export function resetBoard(
+  board: Board,
+  spec: BoardSpec,
+  rng: RandomSource,
+  blocked: readonly Cell[] = [],
+): void {
   for (const cell of board.cells()) board.setBlocked(cell, false);
   for (const cell of blocked) board.setBlocked(cell, true);
   fillSafely(board, spec.kinds, rng);
@@ -100,7 +107,7 @@ export function trySwap(
   a: Cell,
   b: Cell,
   spec: BoardSpec,
-  rng: Random,
+  rng: RandomSource,
   pads?: PadField,
 ): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
@@ -129,7 +136,7 @@ export interface SettleStart {
 export function settle(
   board: Board,
   spec: BoardSpec,
-  rng: Random,
+  rng: RandomSource,
   start: SettleStart = {},
 ): { steps: CascadeStep[]; reshuffled: boolean } {
   const steps: CascadeStep[] = [];
@@ -165,7 +172,7 @@ export function settle(
  * Fills every cell with new pieces, avoiding ready-made matches, until the board has at least one move.
  * O(N) per try plus a findMove check. Almost always one try, but there is no fixed upper bound on retries.
  */
-function fillSafely(board: Board, kinds: number, rng: Random): void {
+function fillSafely(board: Board, kinds: number, rng: RandomSource): void {
   do {
     for (const cell of board.cells()) {
       if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
@@ -174,7 +181,7 @@ function fillSafely(board: Board, kinds: number, rng: Random): void {
 }
 
 /** A kind for `cell` that does not complete a run with the two pieces to its left or the two above. */
-function safeKind(board: Board, cell: Cell, kinds: number, rng: Random): Kind {
+function safeKind(board: Board, cell: Cell, kinds: number, rng: RandomSource): Kind {
   const banned = new Set<Kind>();
   const left = board.kindAt({ col: cell.col - 1, row: cell.row });
   if (left !== null && left === board.kindAt({ col: cell.col - 2, row: cell.row })) banned.add(left);
@@ -183,7 +190,7 @@ function safeKind(board: Board, cell: Cell, kinds: number, rng: Random): Kind {
 
   const allowed: Kind[] = [];
   for (let k = 0; k < kinds; k++) if (!banned.has(k)) allowed.push(k);
-  return rng.pick(allowed);
+  return pick(rng, allowed);
 }
 
 /** Runs of 3+ along every row ('row') or every column ('col'). */
@@ -296,13 +303,13 @@ function stretches(board: Board, col: number): number[][] {
 }
 
 /** Fills the empty cells at the top of each stretch of water with new koi rising from the deep, the lowest first. */
-function refill(board: Board, kinds: number, rng: Random): Spawn[] {
+function refill(board: Board, kinds: number, rng: RandomSource): Spawn[] {
   const spawns: Spawn[] = [];
   for (let col = 0; col < board.cols; col++) {
     for (const slots of stretches(board, col)) {
       const empty = slots.filter((row) => !board.get({ col, row })); // bottom to top
       empty.forEach((row, order) => {
-        const piece = board.createPiece(rng.int(0, kinds - 1));
+        const piece = board.createPiece(int(rng, 0, kinds - 1));
         const to = { col, row };
         board.set(to, piece);
         spawns.push({ piece, to, order });

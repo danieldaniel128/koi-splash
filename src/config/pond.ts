@@ -89,6 +89,8 @@ export const BOARD_PADS = {
   radius: 0.38,
   /** Baked opening stages of a bud, from closed to full bloom. */
   stages: 4,
+  /** The seed that shapes the lotus's petals: the buds on the board and the goal's icon are the same flower. */
+  lotusSeed: 7,
   /** Gentle rocking on the water (radians, radians per second). */
   rock: 0.06,
   rockSpeed: 0.9,

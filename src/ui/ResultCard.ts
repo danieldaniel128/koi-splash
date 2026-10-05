@@ -2,7 +2,7 @@ import { RESULT_CARD } from '../config/ui';
 import { Timers } from '../core/Timers';
 import type { ResultDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
-import type { GoalProgress } from '../model/goals';
+import type { GoalProgress, GoalType } from '../model/goals';
 import { STAR, setIcon } from './icons';
 import type { GameEventBus } from '../game/events';
 import { el } from './UiLayer';
@@ -99,8 +99,13 @@ export class ResultCard implements ResultDisplay {
   }
 }
 
-/** One goal on the card: how far it got. */
+/** One goal on the card: how far it got (one line per goal type: a new goal asks for its line here). */
+const GOAL_LINE: Readonly<Record<GoalType, (goal: GoalProgress) => string>> = {
+  lotus: (goal) => `lotus ${goal.done} / ${goal.target}`,
+  koi: (goal) => `koi ${goal.done} / ${goal.target}`,
+  score: (goal) => `goal ${goal.target}`,
+};
+
 function goalLine(goal: GoalProgress): string {
-  if (goal.kind === 'score') return `goal ${goal.target}`;
-  return `${goal.kind === 'lotus' ? 'lotus' : 'koi'} ${goal.done} / ${goal.target}`;
+  return GOAL_LINE[goal.kind](goal);
 }

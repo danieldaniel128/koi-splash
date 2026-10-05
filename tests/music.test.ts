@@ -4,11 +4,11 @@ import type { BarMood, MusicNote } from '../src/audio/composer';
 import { GardenMusic } from '../src/audio/GardenMusic';
 import type { Bus } from '../src/config/audio';
 import { Soundtrack } from '../src/audio/Soundtrack';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import type { Mood, Track } from '../src/audio/Track';
 import { MUSIC } from '../src/config/audio';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { createGameEvents } from '../src/game/events';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
@@ -35,8 +35,8 @@ function clockedVoice(): Voice & { time: number | null; tones: number; delays: n
 
 /** Bars from a seeded composer, one mood each. */
 function compose(moods: readonly BarMood[], seed = 7): MusicNote[][] {
-  const random = new Random(seed);
-  const composer = new Composer(() => random.next());
+  const random = seeded(seed);
+  const composer = new Composer(random);
   return moods.map((mood) => composer.next(mood));
 }
 

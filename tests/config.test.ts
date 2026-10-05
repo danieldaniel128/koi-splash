@@ -3,7 +3,7 @@ import { BOARD } from '../src/config/board';
 import { KOI_COLORS, KOI_SET } from '../src/config/koi';
 import { LEVEL, SCORE } from '../src/config/level';
 import { BOOSTERS } from '../src/config/ui';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { checkGoals } from '../src/model/goals';
 import { PadField } from '../src/model/pads';
 import { createBoard, findMatches, hasAnyMove } from '../src/model/rules';
@@ -44,7 +44,7 @@ describe('the shipped level', () => {
 
   it('deals a playable board for any seed: the pads fit their spacing, no ready-made match, a move to make', () => {
     for (let seed = 1; seed <= 200; seed++) {
-      const rng = new Random(seed);
+      const rng = seeded(seed);
       const pads = PadField.scatter(LEVEL.pads, SPEC, rng);
       expect(pads.pads).toHaveLength(LEVEL.pads.buds + LEVEL.pads.emptyPads);
       const board = createBoard(SPEC, rng, pads.cells);

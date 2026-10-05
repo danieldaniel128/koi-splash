@@ -1,6 +1,9 @@
 import type { GoalDef } from '../model/goals';
 import type { PadSpec } from '../model/pads';
 
+/** Lotuses to bloom: the lotus goal's count, and one bud on the board for each. */
+const LOTUSES = 3;
+
 /**
  * The one level for now. Change any number here: more lotuses, 15 hits to bloom, a score goal instead.
  * Only valid swaps spend a move.
@@ -24,7 +27,7 @@ export const LEVEL = {
    * { type: 'koi', kind, count } to clear that many koi of one colour (kind 0 is the first of KOI_SET).
    */
   goals: [
-    { type: 'lotus', count: 3 },
+    { type: 'lotus', count: LOTUSES },
     { type: 'koi', kind: 0, count: 10 }, // 10 red koi
   ] as readonly GoalDef[],
   /**
@@ -34,7 +37,7 @@ export const LEVEL = {
   stars: { scores: [1500, 2800, 4000] },
   pads: {
     /** One bud per lotus in the goal (fewer buds than lotuses to bloom fails at startup). */
-    buds: 3,
+    buds: LOTUSES,
     emptyPads: 2,
     /** Matches touching a bud before it blooms, and touching an empty pad before it drifts away. */
     hitsToBloom: 2,

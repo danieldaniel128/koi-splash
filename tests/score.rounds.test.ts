@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SCORE } from '../src/config/level';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { trySwap } from '../src/model/rules';
 import { scoreRound } from '../src/model/score';
 import type { CascadeStep, Cell, Cleared, Created, Special } from '../src/model/types';
@@ -55,7 +55,7 @@ describe('scoreRound', () => {
       { col: 2, row: 1 },
       { col: 2, row: 0 },
       { cols: 5, rows: 3, kinds: 5 },
-      new Random(1),
+      seeded(1),
     );
     if (!result.valid) throw new Error('refused');
     const first = result.steps[0];

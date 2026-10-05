@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { playSoundsOf } from '../src/audio/SoundBoard';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import { AUDIO } from '../src/config/audio';
 import { createGameEvents } from '../src/game/events';
@@ -41,7 +41,6 @@ const EVERY_EVENT: { readonly [K in keyof GameEvents]: GameEvents[K] } = {
   won: undefined,
   lost: undefined,
   starLanded: { k: 0 },
-  buttonPressed: undefined,
   buttonClicked: undefined,
 };
 

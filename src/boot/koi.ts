@@ -13,6 +13,10 @@ import { KoiTextures } from '../view/KoiTextures';
 import type { KoiBake } from '../view/KoiTextures';
 import { SpecialTextures } from '../view/SpecialTextures';
 import type { BoardSpec } from '../model/types';
+import { BOARD_PADS } from '../config/pond';
+
+/** A lotus fully open (0 is a closed bud). */
+const FULL_BLOOM = 1;
 
 /** How the koi are baked: their size, the resolution, their build, tail beat, shadow, ink and waterline. */
 export function koiBake(koiSize: number, resolution: number): KoiBake {
@@ -44,7 +48,7 @@ export function goalIcons(resolution: number): GoalIcons {
   const pose = { size: GOAL_TRAY.koiSize, resolution, build: KOI_LOOK.build, shadow: false };
   return {
     bonus: SCORE.goalBonus,
-    lotus: bakeLotusPad(GOAL_TRAY.iconRadius, 1, 7, resolution).toDataURL(),
+    lotus: bakeLotusPad(GOAL_TRAY.iconRadius, FULL_BLOOM, BOARD_PADS.lotusSeed, resolution).toDataURL(),
     koi: KOI_SET.map((id) => bakeInkedKoi(getVariety(id), pose, koiInk()).toDataURL()),
   };
 }
