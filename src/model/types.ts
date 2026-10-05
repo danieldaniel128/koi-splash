@@ -19,7 +19,10 @@ export type Kind = number;
 
 /**
  * A special koi's power: a striped koi sweeps its row or column, a whirlpool drains the cells round it, a rainbow koi
- * takes every koi of one colour.
+ * takes every koi of one colour. A new special is a variant here: the compiler then asks for its reach
+ * (SPECIAL_REACH), its look on the board (SpecialLooks) and its birth sound (SoundBoard). Its blast effect
+ * (SpecialFx.fire), the way koi leave round it (SpecialMotions), its baked koi (SpecialTextures) and its petal
+ * (SPECIAL_MENU) are listed by hand.
  */
 export type Special =
   | { readonly type: 'line'; readonly along: 'row' | 'col' }

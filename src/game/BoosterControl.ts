@@ -95,6 +95,18 @@ export class BoosterControl {
   private readonly tips = new Map<BoosterType, string>();
   private readonly arming: Arming = { type: null, picked: null };
   private readonly step: StateMachine<BoosterStep, Arming>;
+  /** What each booster does with the koi it takes (one per type: a new booster asks for its flow here). */
+  private readonly takes: Readonly<Record<BoosterType, (cell: Cell) => void>> = {
+    swap: (cell) => {
+      this.swapPick(cell);
+    },
+    special: (cell) => {
+      this.play(this.choose(cell));
+    },
+    feed: (cell) => {
+      this.play(this.use({ type: 'feed', at: cell, lines: this.deps.feedLines }));
+    },
+  };
 
   constructor(
     private readonly deps: {
@@ -191,9 +203,7 @@ export class BoosterControl {
       this.deps.sounds.wrong();
       return;
     }
-    if (type === 'swap') this.swapPick(cell);
-    else if (type === 'feed') this.play(this.use({ type: 'feed', at: cell, lines: this.deps.feedLines }));
-    else this.play(this.choose(cell));
+    this.takes[type](cell);
   }
 
   /**

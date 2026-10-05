@@ -18,7 +18,6 @@ export const AUDIO = {
   scale: [0, 2, 4, 7, 9],
   landGap: 0.06,
   diveGap: 0.055,
-  countGap: 0.05,
   bell: [1, 2.76, 5.4, 8.93],
   /** How far ahead the music and ambience are scheduled on the audio clock (s): steady even when a frame is late. */
   lookahead: 0.25,

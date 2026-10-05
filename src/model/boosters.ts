@@ -31,13 +31,17 @@ export interface BoosterChange {
   readonly fed?: Kind;
 }
 
+/** Which koi each booster can take (one per type: a new booster asks for its rule here). */
+const TAKES: Readonly<Record<BoosterType, (board: Board, piece: Piece, at: Cell) => boolean>> = {
+  swap: () => true,
+  special: (_board, piece) => !piece.special,
+  feed: (board, piece, at) => board.kindAt(at) !== null && countKind(board, piece.kind) >= 3,
+};
+
 /** Whether a booster can be used on this cell: a koi, and for the special booster a plain one. O(1), feed O(N). */
 export function canTarget(board: Board, type: BoosterType, at: Cell): boolean {
   const piece = board.get(at);
-  if (!piece) return false;
-  if (type === 'special') return !piece.special;
-  if (type === 'feed') return board.kindAt(at) !== null && countKind(board, piece.kind) >= 3;
-  return true;
+  return piece !== null && TAKES[type](board, piece, at);
 }
 
 /** Applies a booster to the board (call canTarget first). Returns null when it has nothing to do. */

@@ -83,12 +83,6 @@ export function shuffle(v: Voice): void {
   for (let k = 0; k < 6; k++) v.pluck(v.note(12 - k), 0.07, k * 0.05);
 }
 
-/** Points land in the score. */
-export function coin(v: Voice): void {
-  v.pluck(v.note(10), 0.06);
-  v.tone(v.note(15), 0.18, 0.025, { delay: 0.03 });
-}
-
 /** A goal is met: its bonus lands. */
 export function bonus(v: Voice, step: number): void {
   v.pluck(v.note(8 + (step % 8)), 0.09);
@@ -116,11 +110,10 @@ export function whirlBorn(v: Voice): void {
   for (let k = 0; k < 3; k++) v.plip(0.12 + k * 0.05);
 }
 
-/** A striped koi fires: a rushing sweep and a rising sine (`step` semitones up for a run of them). */
-export function current(v: Voice, step = 0): void {
-  const f = Math.pow(2, step / 12);
-  v.noise(0.5, 0.16, 450 * f, { sweepTo: 2800 * f });
-  v.tone(180 * f, 0.4, 0.1, { glide: 720 * f });
+/** A striped koi fires: a rushing sweep and a rising sine. */
+export function current(v: Voice): void {
+  v.noise(0.5, 0.16, 450, { sweepTo: 2800 });
+  v.tone(180, 0.4, 0.1, { glide: 720 });
 }
 
 /** A rainbow koi's beams fly: a harp glissando up the scale over a shimmering glass chord. */
@@ -239,11 +232,6 @@ export function star(v: Voice, k: number): void {
   v.pluck(f, 0.12);
   v.tone(f * 2, 0.5, 0.04, { delay: 0.04 });
   v.noise(0.25, 0.04, 2400, { sweepTo: 600 });
-}
-
-/** A button is pressed. */
-export function press(v: Voice): void {
-  v.tone(640, 0.07, 0.05, { glide: 500 });
 }
 
 /** A button takes (play again, the sound toggle). */

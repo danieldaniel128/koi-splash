@@ -1,6 +1,6 @@
 import { EventBus } from '../core/EventBus';
 import type { BoosterType } from '../model/boosters';
-import type { Special } from '../model/types';
+import type { SpecialType } from '../model/types';
 
 /**
  * What happens in the game that something else may care about (the sounds, for now), by name and payload. The game
@@ -19,7 +19,7 @@ export interface GameEvents {
    * A cascade round clears: which round of the turn (0 = the swap's own), how many koi, and the strongest special it
    * made, if any.
    */
-  match: { round: number; size: number; made?: Special['type'] };
+  match: { round: number; size: number; made?: SpecialType };
   /** A koi slips under; a koi settles into a new cell. */
   dive: undefined;
   land: undefined;
@@ -33,7 +33,7 @@ export interface GameEvents {
   goalMet: { n: number };
   allGoalsMet: undefined;
   /** A special is born, or fires. */
-  specialBorn: { type: Special['type'] };
+  specialBorn: { type: SpecialType };
   lineFired: undefined;
   whirlFired: undefined;
   whirlPopped: undefined;
@@ -61,8 +61,7 @@ export interface GameEvents {
   won: undefined;
   lost: undefined;
   starLanded: { k: number };
-  /** A button is pressed; one takes. */
-  buttonPressed: undefined;
+  /** A button takes (play again, the sound toggle). */
   buttonClicked: undefined;
 }
 

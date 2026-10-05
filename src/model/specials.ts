@@ -7,7 +7,7 @@ import type { Cell, Cleared, Created, Fired, Kind, Match, Piece, Special } from 
 /**
  * The special koi, as in the prototype. A shape makes one (specialFor), it appears on one of the shape's cells
  * (spawnCellFor), and when it is matched, swapped or caught in another special's blast it fires: each kind of special
- * reaches its own cells (SPECIAL_REACH, one entry per kind: a new special is one entry). Pure board logic, no timing.
+ * reaches its own cells (SPECIAL_REACH, one entry per kind). Pure board logic, no timing.
  */
 
 /** A special about to fire, and for a rainbow koi the colour it was swapped with ('all' for another rainbow). */
@@ -156,7 +156,7 @@ function firingPiece(board: Board, outcome: RoundOutcome, at: Cell): Piece | nul
 /** The cells a special reaches from its cell, nearest first (`target`: the colour a rainbow koi takes). */
 type Reach = (board: Board, at: Cell, special: Special, target?: Kind | 'all') => Cell[];
 
-/** What each kind of special reaches (Strategy, one entry per kind): a new special is one entry here. */
+/** What each kind of special reaches (Strategy, one entry per kind; the full list for a new special is at Special). */
 const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   // a striped koi sweeps its whole row or column, outward from itself
   line: (board, at, special) => {

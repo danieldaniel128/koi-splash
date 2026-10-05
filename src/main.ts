@@ -16,7 +16,10 @@ interface BootPage {
   readonly loading: HTMLElement;
 }
 
-/** Stops something boot started that would keep running: the app's clock, the sound. */
+/**
+ * Stops something boot started that would keep running: the app's clock, the sound. Only an error stops them: the
+ * game lives as long as the page, so nothing it makes is torn down otherwise.
+ */
 type Stop = () => void;
 
 /**

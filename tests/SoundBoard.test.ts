@@ -41,7 +41,6 @@ const EVERY_EVENT: { readonly [K in keyof GameEvents]: GameEvents[K] } = {
   won: undefined,
   lost: undefined,
   starLanded: { k: 0 },
-  buttonPressed: undefined,
   buttonClicked: undefined,
 };
 
