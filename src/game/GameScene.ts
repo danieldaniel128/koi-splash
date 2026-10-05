@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoals, goalsMet } from '../model/goals';
+import { createGoals, goalsMet, recordRound } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
@@ -269,17 +269,23 @@ export class GameScene {
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
   }
 
-  /** Adds a round's points and feeds it to the goals. Returns the goals it met, numbered by when (0 = the first met). */
+  /**
+   * Feeds a round to the goals and adds its points to the score, with the bonus of each goal it met. Returns the goals
+   * it met, numbered by when (0 = the first met).
+   */
   private countRound(step: CascadeStep, points: number): number[] {
-    this.level.score += points;
+    const { goal } = this.level;
     // a rainbow koi has no colour of its own: it counts toward no colour goal
     const cleared = step.cleared
       .filter(({ piece }) => piece.special?.type !== 'rainbow')
       .map(({ piece }) => piece.kind);
-    const metBefore = goalsMet(this.level.goal.progress());
-    this.level.goal.record({ points, padEvents: step.padEvents, cleared });
-    const metAfter = goalsMet(this.level.goal.progress());
-    this.level.score += (metAfter - metBefore) * this.deps.level.goalBonus; // a goal met this round pays its bonus
+    const metBefore = goalsMet(goal.progress());
+    this.level.score += recordRound(
+      goal,
+      { points, padEvents: step.padEvents, cleared },
+      this.deps.level.goalBonus,
+    );
+    const metAfter = goalsMet(goal.progress());
     return Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
   }
 

@@ -40,6 +40,19 @@ export function goalsMet(goals: readonly GoalProgress[]): number {
   return goals.filter((goal) => goal.done >= goal.target).length;
 }
 
+/**
+ * Feeds a round to the goals and pays `bonus` for each goal it meets. The bonus is fed to the goals too, so a score
+ * goal counts every point the player sees (and may be met by another goal's bonus). Returns the round's points with
+ * the bonuses. O(goals) per goal met.
+ */
+export function recordRound(goal: Goal, round: RoundOutcome, bonus: number): number {
+  const metBefore = goalsMet(goal.progress());
+  goal.record(round);
+  const met = goalsMet(goal.progress()) - metBefore;
+  if (met === 0) return round.points;
+  return round.points + recordRound(goal, { points: met * bonus, padEvents: [], cleared: [] }, bonus);
+}
+
 /** All of a level's goals as one: won when every one of them is. */
 export function createGoals(defs: readonly GoalDef[]): Goal {
   return new AllGoals(defs.map((def) => createGoal(def)));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGoal, createGoals, goalsMet } from '../src/model/goals';
+import { createGoal, createGoals, goalsMet, recordRound } from '../src/model/goals';
 import type { RoundOutcome } from '../src/model/goals';
 import type { PadEvent } from '../src/model/pads';
 
@@ -60,6 +60,17 @@ describe('goals', () => {
     expect(goalsMet(goal.progress())).toBe(0);
     goal.record(round({ padEvents: [bloom], cleared: [0] }));
     expect(goalsMet(goal.progress())).toBe(1);
+  });
+
+  it('pays a bonus for each goal a round meets, and a score goal counts the bonuses too', () => {
+    const goal = createGoals([
+      { type: 'lotus', count: 1 },
+      { type: 'score', target: 600 },
+    ]);
+    expect(recordRound(goal, round({ points: 50 }), 500)).toBe(50);
+    // the bloom meets the lotus goal; its bonus takes the score to 650, which meets the score goal and pays again
+    expect(recordRound(goal, round({ points: 100, padEvents: [bloom] }), 500)).toBe(1100);
+    expect(goal.isComplete()).toBe(true);
   });
 
   it('reset starts every goal over', () => {
