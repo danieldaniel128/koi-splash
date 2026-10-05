@@ -28,40 +28,31 @@ export interface GameWiring {
   readonly screenFlow: ScreenFlow;
 }
 
+/** What loading leaves for later: the art the game may want once it's played, to bake in the background. */
+export interface LoadedGame {
+  readonly warmUp: readonly (() => void)[];
+}
+
 /**
- * Loads the game behind the loading screen, step by step, and reports the share done: the font, every special koi
- * and the petal menu's pictures of them, the koi, the shore's distance field, the water, the garden, the stones
- * round the pond, then the game built from them, and one frame played unseen so the GPU compiles every shader and
- * takes every texture before the player's first frame. Each step is weighted by about how long it takes (measured
- * in Chrome at phone size; only the ratios matter). Everything is made once, here: nothing is baked during play,
- * and playing again reuses it all.
+ * Loads the game behind the loading screen, step by step, and reports the share done: the font, the goals' icons,
+ * the koi, the shore's distance field, the water, the garden, the stones round the pond, then the game built from
+ * them, and one frame played unseen so the GPU compiles every shader and takes every texture before the player's
+ * first frame. Each step is weighted by about how long it takes (measured in Chrome at phone size; only the ratios
+ * matter). The special koi aren't needed to start, so they're left for later (warmUp): loading never waits for
+ * them. Everything is made once: nothing is rebuilt for another game.
  */
 export async function loadGame(
   app: Application,
   screen: GameScreen,
   wiring: GameWiring,
   onProgress: (done: number) => void,
-): Promise<void> {
+): Promise<LoadedGame> {
   const bake = koiBake(screen.layout.board.piece, screen.resolution.art);
   const specials = createSpecialKoi(bake);
   await new BootPipeline()
     .step('fonts', 1, loadFonts)
     .step('goalIcons', 6, () => goalIcons(screen.resolution.art))
-    // the special koi before the board's: reading a canvas back (a striped koi's fit, a whirlpool's curl, the
-    // pictures) waits for the GPU to finish everything drawn so far, so the less there is, the sooner it's done
-    .step('stripedKoi', 44, () => {
-      specials.bakeSpecial('line');
-    })
-    .step('whirlpools', 19, () => {
-      specials.bakeSpecial('whirl');
-    })
-    .step('rainbowKoi', 7, () => {
-      specials.bakeSpecial('rainbow');
-    })
-    .step('petalPictures', 3, () => {
-      specials.bakePreviews();
-    })
-    .step('koi', 15, () => bakeKoi(bake))
+    .step('koi', 19, () => bakeKoi(bake))
     .step('shoreField', 3, () => bakeShoreField(screen.layout.pond, screen.shore))
     .step('pond', 1, ({ shoreField }) => createPond(app.renderer, screen, shoreField))
     .step('garden', 1, () => createGarden(screen))
@@ -70,10 +61,11 @@ export async function loadGame(
       assembleGame(app, screen, { ...made, specials }, wiring);
     })
     // the GPU draws the koi's canvases as they're first uploaded, here
-    .step('firstFrame', 85, () => {
+    .step('firstFrame', 15, () => {
       app.ticker.update();
     })
     .run(onProgress);
+  return { warmUp: specials.warmUpJobs() };
 }
 
 /** The art and the pond the game is put together from. */

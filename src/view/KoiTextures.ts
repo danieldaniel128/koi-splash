@@ -91,9 +91,21 @@ export function bakePoses(
   bake: KoiBake,
   dress?: (part: HTMLCanvasElement) => void,
 ): Texture[] {
-  const variety = getVariety(varietyId);
-  return Array.from({ length: bake.frames }, (_, i) =>
-    Texture.from(bakeInkedKoi(variety, { ...stillPose(bake), tailWag: tailWag(i, bake) }, bake.ink, dress)),
+  return Array.from({ length: bake.frames }, (_, i) => Texture.from(bakePose(varietyId, bake, i, dress)));
+}
+
+/** Pose `pose` of the tail beat, on its own canvas (see bakePoses). */
+export function bakePose(
+  varietyId: string,
+  bake: KoiBake,
+  pose: number,
+  dress?: (part: HTMLCanvasElement) => void,
+): HTMLCanvasElement {
+  return bakeInkedKoi(
+    getVariety(varietyId),
+    { ...stillPose(bake), tailWag: tailWag(pose, bake) },
+    bake.ink,
+    dress,
   );
 }
 

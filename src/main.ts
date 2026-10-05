@@ -2,6 +2,7 @@ import { createApp } from './boot/app';
 import { loadGame } from './boot/loading';
 import { measureScreen } from './boot/screen';
 import { startSound } from './boot/sound';
+import { runWhenIdle } from './core/idleWork';
 import { createGameEvents } from './game/events';
 import { ScreenFlow } from './game/ScreenFlow';
 import { showBootError } from './ui/BootError';
@@ -22,6 +23,7 @@ type Stop = () => void;
  * Composition root: the one place that creates the objects and hands each one what it needs. The game is laid out
  * for the screen, loaded behind the loading screen (src/boot/loading.ts has every step), then its clock starts and
  * the screen flow takes over: the loading screen fades away to the game, and the end card and playing again follow.
+ * What loading left for later is baked in the background, between frames.
  */
 async function boot({ game: host, loading }: BootPage, running: Stop[]): Promise<void> {
   const loader = new LoadingScreen(loading, host);
@@ -41,11 +43,12 @@ async function boot({ game: host, loading }: BootPage, running: Stop[]): Promise
   card.onRestart(() => {
     screenFlow.replay();
   });
-  await loadGame(app, screen, { events, sound, screenFlow }, (done) => {
+  const { warmUp } = await loadGame(app, screen, { events, sound, screenFlow }, (done) => {
     loader.setProgress(done);
   });
   app.start();
   await screenFlow.start();
+  await runWhenIdle(warmUp);
 }
 
 // The error boundary: if anything fails on the way, whatever had started is stopped, so nothing keeps running
