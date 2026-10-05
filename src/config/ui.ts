@@ -9,7 +9,10 @@ export interface PetalChoice {
   readonly name: string;
 }
 
-/** The sound menu's sizes (stage px): the button, a booster orb to line up with, the panel, a row, its padding and gap. */
+/**
+ * The sound menu's sizes (stage px): the button, a booster orb to line up with, the panel, a row, its padding, and
+ * the gap between the panel and the bar.
+ */
 export interface SoundMenuLook {
   readonly button: number;
   readonly barOrb: number;
@@ -110,7 +113,8 @@ export const PORTRAIT_LOCK = {
 
 /**
  * The sound menu (stage px): the speaker button at the bar's right end, lined up with the boosters' orbs, opens a
- * small panel above it with a switch per channel, top to bottom.
+ * small panel above the bar with a switch per channel, top to bottom. `gap` keeps the panel clear of the bar's top,
+ * where an armed booster rises with its badge (about 15 px over it).
  */
 export const SOUND_MENU = {
   look: {
@@ -119,7 +123,7 @@ export const SOUND_MENU = {
     width: 176,
     row: 44,
     padding: THEME.space.xs,
-    gap: 10,
+    gap: 20,
   } satisfies SoundMenuLook,
   channels: [
     { id: 'music', name: 'Music' },

@@ -200,7 +200,10 @@
   transform: scale(var(--scale-press));
 }
 
-/* The sound menu: a glass panel over the button, a row per channel; it grows out of the button's corner. */
+/*
+ * The sound menu: a glass panel over the button, a row per channel; it grows out of the button's corner. It is drawn
+ * over the booster bar and opens clear of it, so a lifted booster never covers it or takes its taps.
+ */
 .sound-menu {
   z-index: 3;
   display: flex;
