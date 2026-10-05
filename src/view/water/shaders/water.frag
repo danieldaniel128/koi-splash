@@ -123,6 +123,7 @@ vec3 water(vec2 p, float edge, vec3 w) {
 float shallowsEdge(vec2 p, float shore) {
     float d = 1e5;
     for (int i = 0; i < MAX_PROPS; i++) {
+        if (float(i) >= uPropCount) break;
         if (uProps[i].z <= 0.0) continue;
         d = min(d, propDistance(i, p) + (1.0 - uPropAfloat[i]) * uDepth.y);
     }

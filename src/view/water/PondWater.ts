@@ -155,6 +155,7 @@ export class PondWater implements WaterSurface {
       axes.set([1, 0], slot * 2);
       afloat[slot] = circle?.afloat ?? 0;
     }
+    uniforms.uPropCount = Math.min(this.fixedProps + circles.length, MAX_PROPS);
   }
 
   /** Wakes, tail flicks, swaps, dives and landing droplets all push the water here. */
@@ -313,7 +314,7 @@ function pondShape(layout: PondLayout): PondShapeResources {
     format: 'rgba8unorm',
     scaleMode: 'linear', // the distance is smooth: blending neighbours gives the distance in between
   });
-  const { shapes, axes, afloat } = waterShapes(layout.props);
+  const { shapes, axes, afloat, count } = waterShapes(layout.props);
   const { x, y, width, height } = field.area;
   return {
     uShoreField: source,
@@ -323,6 +324,7 @@ function pondShape(layout: PondLayout): PondShapeResources {
       uProps: { value: shapes, type: 'vec4<f32>', size: MAX_PROPS },
       uPropAxes: { value: axes, type: 'vec2<f32>', size: MAX_PROPS },
       uPropAfloat: { value: afloat, type: 'f32', size: MAX_PROPS },
+      uPropCount: { value: count, type: 'f32' },
     }),
   };
 }

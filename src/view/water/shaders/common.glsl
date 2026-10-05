@@ -11,11 +11,12 @@ uniform vec2 uShoreBend;
 
 // stones and lily pads in the water, as rotated ellipses: centre (x, y) and half size, and the cosine and sine of
 // the rotation; and how much of each is still on the water (1, falling to 0 as a pad leaves it), which the water's
-// depth fades with. Unused slots have a zero size.
+// depth fades with. Slots past uPropCount are unused, and so is a slot with a zero size.
 const int MAX_PROPS = 16;
 uniform vec4 uProps[MAX_PROPS];
 uniform vec2 uPropAxes[MAX_PROPS];
 uniform float uPropAfloat[MAX_PROPS];
+uniform float uPropCount;
 
 // The water's state: a value in -WATER_RANGE..WATER_RANGE (WATER.stateRange, set by withCommon) packed into two
 // 8-bit channels, a high byte and the remainder at full 8-bit resolution, so the simulation runs on any phone GPU
@@ -85,6 +86,7 @@ float propDistance(int i, vec2 p) {
 float propEdge(vec2 p) {
     float d = 1e5;
     for (int i = 0; i < MAX_PROPS; i++) {
+        if (float(i) >= uPropCount) break; // every pixel of every pass walks this loop: only the slots in use
         if (uProps[i].z <= 0.0) continue;
         d = min(d, propDistance(i, p));
     }
