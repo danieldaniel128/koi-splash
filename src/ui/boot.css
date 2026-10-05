@@ -14,8 +14,6 @@
   gap: var(--space-sm);
   padding: var(--space-xl);
   background: linear-gradient(180deg, var(--color-night), var(--color-horizon));
-  font-family: var(--font-label);
-  color: var(--color-ink);
   text-align: center;
 }
 

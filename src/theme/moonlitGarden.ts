@@ -67,9 +67,12 @@ export const MOONLIT_GARDEN = {
   radius: { sm: 8, lg: 22, round: 999 },
   /** Sizes shared by the CSS and the layout (px): the booster bar's round buttons. */
   size: { boosterOrb: 58 },
-  /** Rim width and the soft shadow under panels. */
-  line: 1.5,
+  /** Rim widths (px): fine for the small goal chips, normal for every other piece, bold for a warning. */
+  line: { fine: 1, normal: 1.5, bold: 2 },
+  /** The soft shadow under panels and buttons. */
   shadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+  /** How far a pressed control squashes, and how small something starts as it pops in. */
+  scale: { press: 0.92, reveal: 0.92 },
   /**
    * Motion (s): transitions, and the loops (a pulse on the last moves, the armed booster breathing, the rotate
    * notice's phone tipping upright).

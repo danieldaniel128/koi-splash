@@ -15,7 +15,7 @@ export class ScoreCounter {
   private flying = 0;
 
   constructor() {
-    this.element = el('div', 'score', el('span', 'label', 'score'), this.value);
+    this.element = el('div', 'score', el('span', 'label score__label', 'score'), this.value);
   }
 
   update(score: number): void {

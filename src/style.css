@@ -19,6 +19,18 @@ body {
   touch-action: none; /* no browser pan/zoom: every touch belongs to the game */
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent; /* the game's controls show their own press */
+}
+
+/* The UI's base type, for the layer over the canvas and the overlays alike. */
+body {
+  font-family: var(--font-label);
+  color: var(--color-ink);
+}
+
+/* Hidden means hidden, whatever display a component gives itself. */
+[hidden] {
+  display: none !important;
 }
 
 #game {

@@ -1,4 +1,4 @@
-import { HUD_MOTION } from '../config/ui';
+import { GOAL_TRAY, HUD_MOTION } from '../config/ui';
 import type { GoalProgress, GoalType } from '../model/goals';
 import { CHECK, STAR, setIcon } from './icons';
 import { bump, el, image } from './UiLayer';
@@ -22,7 +22,7 @@ export class GoalTray {
   private chips: GoalChip[] = [];
 
   constructor(private readonly icons: GoalIcons) {
-    this.element.append(this.row, el('span', 'label', 'goals'));
+    this.element.append(this.row, el('span', 'label goal__label', 'goals'));
   }
 
   /** A new level: a fresh chip per goal, showing what's to go with no pop. */
@@ -66,7 +66,7 @@ class GoalChip {
     private readonly bonus: number,
   ) {
     this.kind = goal.kind;
-    if (picture) this.icon.append(image(`chip__image chip__image--${goal.kind}`, picture));
+    if (picture) this.icon.append(chipImage(goal.kind, picture));
     else setIcon(this.icon, STAR);
     this.element = el('div', 'chip', this.icon, this.count);
     this.left = leftOf(goal);
@@ -95,9 +95,9 @@ class GoalChip {
     this.element.append(label);
     const rise = label.animate(
       [
-        { transform: 'translate(-50%, 0) scale(0.6)', opacity: 0 },
-        { transform: 'translate(-50%, -18px) scale(1.15)', opacity: 1, offset: 0.25 },
-        { transform: 'translate(-50%, -34px) scale(1)', opacity: 0 },
+        { transform: 'scale(0.6)', opacity: 0 },
+        { transform: 'translateY(-18px) scale(1.15)', opacity: 1, offset: 0.25 },
+        { transform: 'translateY(-34px)', opacity: 0 },
       ],
       { duration: HUD_MOTION.bonusRise * 1000, easing: 'ease-out' },
     );
@@ -110,4 +110,12 @@ class GoalChip {
 /** How many a goal still needs. */
 function leftOf(goal: GoalProgress): number {
   return Math.max(0, goal.target - goal.done);
+}
+
+/** A goal's picture, shown at the size its painting was made for (it spills out of the chip's icon box). */
+function chipImage(kind: GoalProgress['kind'], src: string): HTMLImageElement {
+  const picture = image(`chip__image chip__image--${kind}`, src);
+  const size = kind === 'koi' ? GOAL_TRAY.koiSize : GOAL_TRAY.lotusSize;
+  picture.style.setProperty('--image-size', `${size}px`);
+  return picture;
 }

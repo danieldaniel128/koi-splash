@@ -10,16 +10,17 @@ import { button, el, shake } from './UiLayer';
  */
 export class InstructionPill implements BoosterPill {
   private readonly root: HTMLElement;
-  private readonly text = el('span', 'pill__text');
+  private readonly text = el('span', 'glass pill__text');
   private closed: (() => void) | null = null;
 
   constructor(layer: UiLayer, rect: Rect) {
-    const close = button('pill__close', 'Cancel booster');
+    const close = button('control glass pill__close', 'Cancel booster');
     setIcon(close, CROSS);
     close.addEventListener('click', () => {
       this.closed?.();
     });
-    this.root = el('div', 'pill', this.text, close);
+    this.root = el('div', 'reveal pill', this.text, close);
+    this.setShown(false);
     layer.place(this.root, rect);
   }
 
@@ -30,14 +31,20 @@ export class InstructionPill implements BoosterPill {
 
   show(tip: string): void {
     this.text.textContent = tip;
-    this.root.classList.add('pill--shown');
+    this.setShown(true);
   }
 
   hide(): void {
-    this.root.classList.remove('pill--shown');
+    this.setShown(false);
   }
 
   nope(): void {
     shake(this.root);
+  }
+
+  /** Hidden, the pill is inert: its X can't be tapped or reached with Tab while it fades away. */
+  private setShown(shown: boolean): void {
+    this.root.classList.toggle('reveal--shown', shown);
+    this.root.inert = !shown;
   }
 }

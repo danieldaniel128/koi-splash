@@ -12,7 +12,7 @@ export class MovesCounter {
   private shown = 0;
 
   constructor() {
-    this.element = el('div', 'orb moves', this.value, el('span', 'label', 'moves'));
+    this.element = el('div', 'orb moves', this.value, el('span', 'label moves__label', 'moves'));
   }
 
   /** Shows the moves a new level starts with, without the pop. */

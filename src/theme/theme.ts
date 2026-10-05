@@ -37,9 +37,10 @@ function tokenStyleSheet(): string {
   group('space', THEME.space, 'px');
   group('radius', THEME.radius, 'px');
   group('size', THEME.size, 'px');
+  group('line', THEME.line, 'px');
   group('time', THEME.time, 's');
   group('ease', THEME.ease);
-  set('line', `${THEME.line}px`);
+  group('scale', THEME.scale);
   set('shadow', THEME.shadow);
   return `:root { ${tokens.join(' ')} }`;
 }

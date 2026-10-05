@@ -46,9 +46,13 @@ export const BAR_MOTION = {
 /** The "no" shake of a press the game can't take (a booster, the pill): px either way, then still, over `time` s. */
 export const NOPE_SHAKE = { offsets: [-5, 4, -2], time: 0.34 } as const;
 
-/** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */
+/**
+ * The goal chips' icons, baked from the same painters as the board (px): the lotus's radius and the size it is shown
+ * at (its painting has room round it for the shadow), and a koi's size, baked and shown.
+ */
 export const GOAL_TRAY = {
   iconRadius: 13,
+  lotusSize: 38,
   koiSize: 34,
 } as const;
 

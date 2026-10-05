@@ -59,9 +59,15 @@ export class BoosterBar implements BoosterButtons {
   private makeButton(slot: BoosterSlot): Button {
     const orb = el('span', 'orb booster__orb');
     setIcon(orb, BOOSTER_ICONS[slot.type]);
-    const badge = el('b', 'badge', `${slot.count}`);
+    const badge = el('b', 'badge booster__badge', `${slot.count}`);
     const name = el('span', 'label booster__name', slot.name);
-    const element = button('booster', `${slot.name} booster: ${slot.tip}`, orb, badge, name);
+    const element = button(
+      'control pressable booster',
+      `${slot.name} booster: ${slot.tip}`,
+      orb,
+      badge,
+      name,
+    );
     element.addEventListener('click', () => {
       bump(orb, BAR_MOTION.pressBump, BAR_MOTION.pressSettle);
       this.pressed?.(slot.type);
