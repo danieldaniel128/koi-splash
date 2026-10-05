@@ -14,8 +14,6 @@
   gap: var(--space-sm);
   padding: var(--space-xl);
   background: linear-gradient(180deg, var(--color-night), var(--color-horizon));
-  font-family: var(--font-label);
-  color: var(--color-ink);
   text-align: center;
 }
 
@@ -65,7 +63,10 @@
   box-shadow: inset 0 0 0 1px var(--color-rim);
 }
 
-/* Scaled, not resized: the fill keeps gliding on the compositor while a bake holds the page's main thread. */
+/*
+ * Scaled, not resized: the fill keeps gliding on the compositor while a bake holds the page's main thread. With less
+ * motion it jumps (the kit zeroes the timings).
+ */
 .loading__fill {
   width: 100%;
   transform: scaleX(0);
@@ -77,12 +78,6 @@
   max-width: 260px;
   margin: var(--space-lg) 0 0;
   font-size: var(--text-md);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loading__fill {
-    transition: none;
-  }
 }
 
 .boot-error__card {

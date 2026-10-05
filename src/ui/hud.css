@@ -1,33 +1,34 @@
-/* The HUD above the pond: the moves orb, then a glass panel with the score, the goal chip and the star bar. */
+/* The HUD above the pond: the moves orb, then a glass panel with the score, the goal chips and the star bar. */
 
 .hud {
+  --tuck: 26px; /* how far the panel runs in under the orb */
   display: flex;
   align-items: center;
 }
 
 .moves {
+  --orb-base: var(--color-glassBase);
   position: relative;
   z-index: 1; /* over the panel's left end */
   flex: none;
-  width: 78px;
-  height: 78px;
+  height: 100%; /* the HUD's height from the layout; the panel is a little shorter, so the orb stands out */
+  aspect-ratio: 1;
   transition: box-shadow var(--time-normal);
 }
 
 .moves__value {
-  font-size: 34px;
+  font-size: var(--text-display);
 }
 
-.moves .label {
+.moves__label {
   margin-top: 1px;
 }
 
+/* A few moves left: the orb's rim and number turn coral and it glows; on the last few it pulses. */
 .moves--low {
-  box-shadow:
-    inset 0 0 0 2px var(--color-coral),
-    inset 0 2px 1px rgba(255, 255, 255, 0.28),
-    inset 0 -8px 14px rgba(0, 10, 20, 0.45),
-    0 0 14px rgba(255, 143, 158, 0.45);
+  --rim-color: var(--color-coral);
+  --rim-width: var(--line-bold);
+  --glow: 0 0 14px color-mix(in srgb, var(--color-coral) 45%, transparent);
 }
 
 .moves--low .moves__value {
@@ -35,7 +36,7 @@
 }
 
 .moves--last {
-  animation: moves-pulse 0.9s ease-in-out infinite;
+  animation: moves-pulse var(--time-pulse) ease-in-out infinite;
 }
 
 @keyframes moves-pulse {
@@ -44,20 +45,22 @@
   }
 }
 
+/* The panel is as tall as what it holds: the score and the goals, and the star bar under them. */
 .hud__panel {
   flex: 1;
-  height: 70px;
-  margin-left: -26px; /* tucked under the orb */
-  padding: var(--space-sm) var(--space-md) var(--space-sm) 34px;
+  min-width: 0; /* never wider than the room beside the orb */
+  margin-left: calc(-1 * var(--tuck));
+  padding: var(--space-xs) var(--space-md) var(--space-xs) calc(var(--tuck) + var(--space-sm));
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: 1fr auto;
 }
 
+/* The score and the goals, each a number with its caption under it, the captions on one line. */
 .hud__row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
+  gap: var(--space-sm);
 }
 
 .score {
@@ -76,109 +79,112 @@
   gap: 1px;
 }
 
+/* Three goals or more: compact chips, smaller and closer together, so they all fit beside the score. */
+.goal--many {
+  --chip-icon: calc(var(--size-goalIcon) * 0.8);
+  --chip-count: var(--text-md);
+}
+
+.goal--many .goal__chips,
+.goal--many .chip {
+  gap: calc(var(--space-xs) / 2);
+}
+
+.goal--many .chip {
+  padding-right: var(--space-xs);
+}
+
 .goal__chips {
   display: flex;
   gap: var(--space-xs);
 }
 
+/* A goal chip's parts (the HUD's, and the end card's): sized by --chip-icon and --chip-count, when its row sets them. */
 .chip__icon {
+  --box: var(--chip-icon, var(--size-goalIcon));
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: var(--box);
+  height: var(--box);
   color: var(--color-gold);
 }
 
+/* A goal's picture, --image-scale times the icon's box (from the config), centered on it and spilling out of it. */
 .chip__image {
-  width: 38px;
-  height: 38px;
-  margin: -5px; /* the baked lotus has room around it for its shadow */
+  --image: calc(var(--box) * var(--image-scale));
+  width: var(--image);
+  height: var(--image);
+  margin: calc((var(--box) - var(--image)) / 2);
 }
 
 .chip__image--koi {
-  width: 34px;
-  height: 34px;
-  margin: -3px;
   transform: rotate(-40deg); /* swimming across the chip, not standing up */
 }
 
 .chip__count {
+  --icon-size: 20px;
   display: grid;
   place-items: center;
   min-width: 18px;
   height: 22px;
-  font-size: var(--text-lg);
+  font-size: var(--chip-count, var(--text-lg));
 }
 
-.chip__count svg {
-  width: 20px;
-  height: 20px;
-}
-
-.chip {
-  position: relative; /* for the bonus rising out of it */
-}
-
+/* A met goal's bonus: it pops out of the middle of its chip, then flies into the score. */
 .chip__bonus {
   position: absolute;
   left: 50%;
-  top: -6px;
+  top: 50%;
+  translate: -50% -50%;
   color: var(--color-gold);
   font-size: var(--text-lg);
   white-space: nowrap;
-  pointer-events: none;
 }
 
+/* A goal met: its chip's rim turns gold and glows, and its count is a gold check. */
 .chip--done {
-  box-shadow:
-    inset 0 0 0 1.5px var(--color-gold),
-    0 0 12px rgba(255, 215, 106, 0.45);
+  --rim-color: var(--color-gold);
+  --rim-width: var(--line-normal);
+  --glow: 0 0 12px color-mix(in srgb, var(--color-gold) 45%, transparent);
 }
 
 .chip--done .chip__count {
   color: var(--color-gold);
 }
 
+/* A goal missed, on the end card: its rim and count in coral, like the last moves. */
+.chip--missed {
+  --rim-color: var(--color-coral);
+  --rim-width: var(--line-normal);
+}
+
+.chip--missed .chip__count {
+  color: var(--color-coral);
+}
+
+/* The star bar, inset by half a star at each end, so the stars at its ends stay inside the panel. */
 .stars {
+  --star: 22px;
   position: relative;
-  height: 18px;
-  margin-top: var(--space-xs);
+  height: var(--star);
+  margin: 0 calc(var(--star) / 2);
 }
 
 .stars__track {
   position: absolute;
   left: 0;
   right: 0;
-  top: 6px;
-  height: 7px;
-}
-
-.stars__fill {
-  background: linear-gradient(90deg, var(--color-goldDeep), var(--color-goldLight));
+  top: 50%;
+  translate: 0 -50%;
 }
 
 .stars__star {
+  --star-glow: 4px;
   position: absolute;
-  top: -3px;
-  width: 22px;
-  height: 22px;
-  margin-left: -11px;
-  color: #33415e;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
-  transition:
-    color var(--time-normal),
-    filter var(--time-normal);
-}
-
-.stars__star svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.stars__star--lit {
-  color: var(--color-gold);
-  filter: drop-shadow(0 0 4px rgba(255, 215, 106, 0.75));
+  top: 0;
+  width: var(--star);
+  height: var(--star);
+  translate: -50% 0;
 }
 
 /* The banner lane over the top of the pond: one ribbon at a time ('Combo x3', 'Whirlpool!'). */
@@ -199,13 +205,13 @@
   border-radius: var(--radius-round);
   background: var(--color-glass);
   box-shadow:
-    inset 0 0 0 var(--line) var(--color-rim),
+    inset 0 0 0 var(--line-normal) var(--color-rim),
     var(--shadow);
 }
 
 .banner__text {
   font-family: var(--font-number);
-  font-weight: 900;
+  font-weight: var(--weight-black);
   font-size: var(--text-title);
   line-height: 1.15;
   color: var(--banner-color, var(--color-gold));
@@ -215,7 +221,7 @@
 .banner__sub {
   display: none;
   font-family: var(--font-label);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   font-size: var(--text-md);
   color: var(--color-ink);
 }
@@ -230,7 +236,7 @@
   left: 0;
   top: 0;
   font-family: var(--font-number);
-  font-weight: 900;
+  font-weight: var(--weight-black);
   font-size: var(--text-lg);
   color: var(--fly-color, var(--color-gold));
   -webkit-text-stroke: 4px var(--color-outline);

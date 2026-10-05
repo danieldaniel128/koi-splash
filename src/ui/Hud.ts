@@ -27,7 +27,7 @@ export class Hud implements StatusDisplay {
     rect: Rect,
     look: { goalIcons: GoalIcons; stars: StarRule },
   ) {
-    this.goal = new GoalTray(look.goalIcons);
+    this.goal = new GoalTray(look.goalIcons, (chip) => this.towardScore(chip));
     this.stars = new StarBar(look.stars);
     const top = el('div', 'hud__row', this.score.element, this.goal.element);
     const panel = el('div', 'panel hud__panel', top, this.stars.element);
@@ -69,5 +69,12 @@ export class Hud implements StatusDisplay {
     this.score.update(status.score);
     this.goal.update(status.goals);
     this.stars.update(status.score, status.stars);
+  }
+
+  /** How far the score is from an element, in stage px: a met goal's bonus flies that way. */
+  private towardScore(from: HTMLElement): PointData {
+    const at = this.layer.centreOf(from);
+    const score = this.scoreAnchor();
+    return { x: score.x - at.x, y: score.y - at.y };
   }
 }

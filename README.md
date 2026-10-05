@@ -119,14 +119,18 @@ time, to play a bug again.
 The layout is worked out from the screen, not fixed (`src/layout/gameLayout.ts`, values in `src/config/layout.ts`).
 The stage is at least 360 x 640 and grows to cover the whole screen with no letterboxing. The HUD goes at the top,
 the booster bar at the bottom (inside the phone's notch and home bar), and the board takes the biggest cell that fits
-between them. The layout is made once, for the screen the game starts on, and a later resize scales it. Phones play
+between them; on a short phone or an upright tablet it gives up a little, so the garden keeps its strip of sky. The
+layout is made once, for the screen the game starts on, and a later resize scales it. Phones play
 upright; turned sideways they get a notice.
 
 The UI is HTML and CSS over the canvas, laid out in the same stage units and scaled with it, so the text stays sharp.
 I modelled the HUD on the casual match-3s I studied: moves big in a glass orb (it warns when they run low), the
-score, a chip per goal that ticks down to a check, and a star bar that fills with the score. It's small components on
-a little CSS kit (glass panel, orb, chip, badge, track, button) that only reads theme tokens (`src/theme`), the same
-tokens the Pixi side reads.
+score, a chip per goal that ticks down to a check, and a star bar that fills with the score. It's small BEM components
+on a little CSS kit (`src/ui/kit.css`: control, glass panel, orb, chip, gold badge and button, star, track, switch,
+reveal) that only reads theme tokens (`src/theme`), the same tokens the Pixi side reads. Every button is a real button
+with a focus ring and a finger-wide tap area, and players who ask for less motion get the same feedback without the
+movement. The end card is a modal dialog that shows each goal the way the HUD does, and when the moves run out it
+says what to try next.
 
 ### The board
 

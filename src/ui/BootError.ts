@@ -1,4 +1,4 @@
-import { el } from './UiLayer';
+import { button, el } from './UiLayer';
 
 /** What the error screen says when nothing more is known. */
 const SOMETHING_WENT_WRONG = 'Something went wrong while the pond was filling. Reloading usually helps.';
@@ -23,8 +23,7 @@ export function showBootError(
 ): void {
   page.loading.remove();
   page.game.replaceChildren();
-  const reload = el('button', 'btn', 'Reload');
-  reload.type = 'button';
+  const reload = button('btn', undefined, 'Reload');
   reload.addEventListener('click', () => {
     window.location.reload();
   });

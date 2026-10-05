@@ -45,12 +45,16 @@ async function boot(page: BootPage, running: Stop[]): Promise<void> {
   running.push(() => {
     sound.stop();
   });
-  const card = new ResultCard(host, events);
+  const card = new ResultCard(host);
+  card.onStarLanded((k) => {
+    events.emit('starLanded', { k });
+  });
   const screenFlow = new ScreenFlow({ loader, game: host, card });
   card.onRestart(() => {
+    events.emit('buttonClicked');
     screenFlow.replay();
   });
-  const { warmUp } = await loadGame(app, screen, { events, sound, screenFlow }, (done) => {
+  const { warmUp } = await loadGame(app, screen, { events, sound, screenFlow, card }, (done) => {
     loader.setProgress(done);
   });
   app.start();

@@ -1,7 +1,7 @@
 import type { Rect } from '../layout/gameLayout';
 import { setIcon, SPEAKER_OFF, SPEAKER_ON } from './icons';
 import type { UiLayer } from './UiLayer';
-import { el } from './UiLayer';
+import { button, el } from './UiLayer';
 
 /** One channel the player can switch: its id, its name and its icon (a fixed SVG string from icons.ts). */
 export interface SoundChannel<Id extends string> {
@@ -23,11 +23,12 @@ export interface SoundSettingsOptions<Id extends string> {
  * The speaker button at the end of the booster bar and the small glass menu it opens above it: a switch per sound
  * channel (music, ambience, effects). The speaker shows a cross when every channel is off. The menu closes on a
  * second press, a tap anywhere else or Escape (the game's key handler calls close). While it's open, a clear scrim
- * covers the rest of the UI and the board: a tap away lands on it and only closes the menu.
+ * covers the rest of the UI and the board: a tap away lands on it and only closes the menu. The menu follows its
+ * button for the keyboard: Tab goes from the speaker into the open menu, and opened from a key, it takes the focus.
  */
 export class SoundSettings<Id extends string> {
-  private readonly button = el('button', 'orb sound-button');
-  private readonly menu = el('div', 'panel sound-menu');
+  private readonly button = button('control pressable orb sound-button');
+  private readonly menu = el('div', 'panel reveal sound-menu');
   private readonly scrim = el('div', 'sound-scrim');
   private readonly switches = new Map<Id, HTMLButtonElement>();
 
@@ -40,11 +41,11 @@ export class SoundSettings<Id extends string> {
     this.menu.setAttribute('role', 'group');
     this.menu.setAttribute('aria-label', 'Sound');
     for (const channel of options.channels) this.menu.append(this.row(channel));
-    this.button.type = 'button';
     this.button.setAttribute('aria-controls', this.menu.id);
-    this.button.addEventListener('click', () => {
+    this.button.addEventListener('click', (event) => {
       options.onPress();
       this.setOpen(!this.isOpen());
+      if (this.isOpen() && event.detail === 0) [...this.switches.values()][0]?.focus(); // opened from a key
     });
     // closed on the click, not the press: the whole tap lands on the scrim, so none of it reaches what's under it
     this.scrim.addEventListener('click', () => {
@@ -53,8 +54,8 @@ export class SoundSettings<Id extends string> {
     this.setOpen(false);
     this.showSpeaker();
     layer.root.append(this.scrim);
-    layer.place(this.menu, rects.menu);
     layer.place(this.button, rects.button);
+    layer.place(this.menu, rects.menu);
   }
 
   /** Closes the menu and gives the focus back to its button. False when it wasn't open. */
@@ -66,11 +67,11 @@ export class SoundSettings<Id extends string> {
   }
 
   private isOpen(): boolean {
-    return this.menu.classList.contains('sound-menu--open');
+    return this.menu.classList.contains('reveal--shown');
   }
 
   private setOpen(open: boolean): void {
-    this.menu.classList.toggle('sound-menu--open', open);
+    this.menu.classList.toggle('reveal--shown', open);
     this.menu.inert = !open;
     this.scrim.hidden = !open;
     this.button.setAttribute('aria-expanded', `${open}`);
@@ -81,8 +82,8 @@ export class SoundSettings<Id extends string> {
     const icon = el('span', 'sound-menu__icon');
     setIcon(icon, channel.icon);
     const knob = el('span', 'switch', el('span', 'switch__knob'));
-    const row = el('button', 'sound-menu__row', icon, el('span', 'sound-menu__name', channel.name), knob);
-    row.type = 'button';
+    const name = el('span', 'sound-menu__name', channel.name);
+    const row = button('control sound-menu__row', undefined, icon, name, knob);
     row.setAttribute('role', 'switch');
     row.setAttribute('aria-checked', `${this.options.isOn(channel.id)}`);
     row.addEventListener('click', () => {

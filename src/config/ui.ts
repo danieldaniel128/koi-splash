@@ -1,5 +1,6 @@
 import type { BoosterSlot } from '../model/boosters';
 import type { SpecialType } from '../model/types';
+import { THEME } from '../theme/theme';
 import type { Bus } from './audio';
 
 /** One petal of the special booster's menu: which special it makes, and its name. */
@@ -8,7 +9,10 @@ export interface PetalChoice {
   readonly name: string;
 }
 
-/** The sound menu's sizes (stage px): the button, a booster orb to line up with, the panel, a row, its padding and gap. */
+/**
+ * The sound menu's sizes (stage px): the button, a booster orb to line up with, the panel, a row, its padding, and
+ * the gap between the panel and the bar.
+ */
 export interface SoundMenuLook {
   readonly button: number;
   readonly barOrb: number;
@@ -30,14 +34,31 @@ export const HUD_MOTION = {
   goalBump: 1.3,
   goalSettle: 0.4,
   starEarned: 1.7,
-  /** A met goal's bonus rises out of its chip for this long (s). */
-  bonusRise: 1.3,
+  /** A met goal's bonus pops out of its chip, holds, then flies into the score: all in this long (s). */
+  bonusFlight: 1.3,
 } as const;
 
-/** The goal chips' icons, baked from the same painters as the board: the lotus's radius and a koi's size (px). */
+/** How the booster bar answers: a press swells a button's orb, and a booster just spent shrinks it (scale, s). */
+export const BAR_MOTION = {
+  pressBump: 0.9,
+  pressSettle: 0.3,
+  spentBump: 0.85,
+  spentSettle: 0.35,
+} as const;
+
+/** The "no" shake of a press the game can't take (a booster, the pill): px either way, then still, over `time` s. */
+export const NOPE_SHAKE = { offsets: [-5, 4, -2], time: 0.34 } as const;
+
+/**
+ * The goal chips' icons, baked from the same painters as the board (px): the lotus's radius and the size it is shown
+ * at (its painting has room round it for the shadow), and a koi's size, baked and shown. Up to `roomy` goals get
+ * full-size chips; more get compact ones, so they all fit beside the score.
+ */
 export const GOAL_TRAY = {
   iconRadius: 13,
+  lotusSize: 38,
   koiSize: 34,
+  roomy: 2,
 } as const;
 
 /**
@@ -53,7 +74,8 @@ export const BOOSTERS = [
 /**
  * The special booster's petals (after the prototype): one per special, left to right, on an arc `reach` cells out and
  * `spread` rad apart, fanned down for a koi in the top `topRows` rows; each `petal` cells across, blooming over
- * `open` s, `stagger` s apart, and kept `edge` px inside the screen.
+ * `open` s, `stagger` s apart, and kept `edge` px inside the screen. The dim behind them fades in and out over `fade`
+ * s, and closing, the petals shrink to `closeScale`.
  */
 export const SPECIAL_MENU = {
   choices: [
@@ -68,9 +90,11 @@ export const SPECIAL_MENU = {
   stagger: 0.06,
   topRows: 3,
   edge: 44,
+  fade: 0.2,
+  closeScale: 0.6,
 } as const satisfies { choices: readonly PetalChoice[] } & Record<string, unknown>;
 
-/** The end-of-level card fades in and pops (s). */
+/** The end-of-level card fades in and pops (s), and what it says out of moves. */
 export const RESULT_CARD = {
   /** A won pond is celebrated for this long before the card opens (s). */
   winBeat: 0.9,
@@ -80,6 +104,17 @@ export const RESULT_CARD = {
   firstStar: 0.4,
   starStep: 0.35,
   starPop: 0.4,
+  /**
+   * Out of moves, the card says what to try next, for the first goal missed ({goal} is its name, "red koi"), and
+   * reminds the player of the free boosters left unused ({n}).
+   */
+  tips: {
+    lotus: 'A lotus opens when you match koi right beside its bud, twice.',
+    koi: 'Match four or five in a row: specials clear the {goal} fastest.',
+    score: 'Long matches and specials score the most points.',
+  },
+  unusedBooster: 'You still had a free booster!',
+  unusedBoosters: 'You still had {n} free boosters!',
 } as const;
 
 /** A lost graphics context that hasn't come back after this long (s) is given up on: the error screen shows. */
@@ -94,10 +129,18 @@ export const PORTRAIT_LOCK = {
 
 /**
  * The sound menu (stage px): the speaker button at the bar's right end, lined up with the boosters' orbs, opens a
- * small panel above it with a switch per channel, top to bottom.
+ * small panel above the bar with a switch per channel, top to bottom. `gap` keeps the panel clear of the bar's top,
+ * where an armed booster rises with its badge (about 15 px over it).
  */
 export const SOUND_MENU = {
-  look: { button: 36, barOrb: 58, width: 176, row: 44, padding: 4, gap: 10 } satisfies SoundMenuLook,
+  look: {
+    button: 36,
+    barOrb: THEME.size.boosterOrb,
+    width: 176,
+    row: 44,
+    padding: THEME.space.xs,
+    gap: 20,
+  } satisfies SoundMenuLook,
   channels: [
     { id: 'music', name: 'Music' },
     { id: 'ambience', name: 'Ambience' },

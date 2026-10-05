@@ -10,7 +10,7 @@ import { bump, el } from './UiLayer';
  */
 export class StarBar {
   readonly element: HTMLElement;
-  private readonly fill = el('span', 'stars__fill');
+  private readonly fill = el('span', 'track__fill');
   private readonly stars: HTMLElement[];
   /** Where each star sits along the bar (0..1). */
   private readonly places: number[];
@@ -21,7 +21,7 @@ export class StarBar {
     this.top = rule.scores[2];
     this.places = rule.scores.map((needed) => needed / this.top);
     this.stars = rule.scores.map((needed) => {
-      const star = el('span', 'stars__star');
+      const star = el('span', 'star stars__star');
       setIcon(star, STAR);
       star.style.left = `${(needed / this.top) * 100}%`;
       return star;
@@ -45,7 +45,7 @@ export class StarBar {
   private show(score: number, stars: number): void {
     this.fill.style.width = `${Math.min(1, score / this.top) * 100}%`;
     this.lit = stars;
-    this.stars.forEach((star, i) => star.classList.toggle('stars__star--lit', i < stars));
+    this.stars.forEach((star, i) => star.classList.toggle('star--lit', i < stars));
   }
 
   /**

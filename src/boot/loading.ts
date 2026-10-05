@@ -4,6 +4,7 @@ import { LEVEL } from '../config/level';
 import { BootPipeline } from '../core/BootPipeline';
 import type { GameEventBus } from '../game/events';
 import type { ScreenFlow } from '../game/ScreenFlow';
+import { THEME } from '../theme/theme';
 import type { GoalIcons } from '../ui/GoalTray';
 import { Camera } from '../view/Camera';
 import { Haptics } from '../view/Haptics';
@@ -12,6 +13,7 @@ import { createFlash, Impact } from '../view/Impact';
 import { Sparkles } from '../view/Sparkles';
 import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
+import type { ResultCard } from '../ui/ResultCard';
 import type { KoiTextures } from '../view/KoiTextures';
 import type { SpecialTextures } from '../view/SpecialTextures';
 import { bakeShoreField } from '../view/water/PondWater';
@@ -27,11 +29,15 @@ import { addSoundMenu } from './sound';
 import type { Sound } from './sound';
 import { buildStage, putUnderWater } from './stage';
 
-/** What the game is wired to before loading starts: the events bus, the sound, and the flow between screens. */
+/**
+ * What the game is wired to before loading starts: the events bus, the sound, the flow between screens, and the end
+ * card (it shows the goals' pictures and the boosters left, once there is a game).
+ */
 export interface GameWiring {
   readonly events: GameEventBus;
   readonly sound: Sound;
   readonly screenFlow: ScreenFlow;
+  readonly card: ResultCard;
 }
 
 /** What loading leaves for later: the art the game may want once it's played, to bake in the background. */
@@ -93,7 +99,6 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const { pond, scenery } = made;
   const { events, sound } = wiring;
   const hud = new Hud(ui, layout.hud, { goalIcons: made.goalIcons, stars: LEVEL.stars });
-  const menu = addSoundMenu(screen, sound, events);
   const materials = {
     koi: made.koi,
     specials: made.specials,
@@ -102,7 +107,9 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     screenFlow: wiring.screenFlow,
     events,
   };
-  const { parts: game, control } = createGame(screen, materials, app.canvas);
+  const { parts: game, control, bar } = createGame(screen, materials, app.canvas);
+  wiring.card.setGame({ goalIcons: made.goalIcons, boostersLeft: () => bar.unused() });
+  const menu = addSoundMenu(screen, sound, events); // after the booster bar it ends, for the keyboard too
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);
   const celebration = createCelebration(layout.stage, made.specials.sparkle);
@@ -155,13 +162,14 @@ function createImpact(
 }
 
 /**
- * Waits for the bundled font's weights the game draws with: the Pixi labels are drawn once with whatever font is
- * ready, so it should be Nunito. A face that fails to load only costs the look: the labels fall back to the system
- * font and the game starts anyway.
+ * Waits for the bundled typeface in the weights the game draws with: the Pixi labels are drawn once with whatever
+ * font is ready, so it should be the theme's. A face that fails to load only costs the look: the labels fall back to
+ * the system font and the game starts anyway.
  */
 async function loadFonts(): Promise<void> {
+  const weights = Object.values(THEME.weight);
   try {
-    await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
+    await Promise.all(weights.map((weight) => document.fonts.load(`${weight} 16px ${THEME.typeface}`)));
   } catch (error) {
     console.warn('the game font did not load; the labels use a fallback', error);
   }

@@ -12,7 +12,7 @@ export class RotateNotice {
     'div',
     'rotate',
     el('div', 'rotate__phone'),
-    el('p', 'label', 'Turn your phone upright'),
+    el('p', 'label rotate__text', 'Turn your phone upright'),
   );
 
   constructor(host: HTMLElement) {

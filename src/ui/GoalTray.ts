@@ -1,14 +1,25 @@
-import { HUD_MOTION } from '../config/ui';
+import { KOI_NAMES } from '../config/koi';
+import { GOAL_TRAY, HUD_MOTION } from '../config/ui';
 import type { GoalProgress, GoalType } from '../model/goals';
+import { THEME } from '../theme/theme';
 import { CHECK, STAR, setIcon } from './icons';
-import { bump, el } from './UiLayer';
+import { bump, el, image, wantsLessMotion } from './UiLayer';
 
 /** The goals' icons, painted by the game's own painters: the lotus, and a koi of each colour. */
 export interface GoalIcons {
   readonly lotus: string;
   readonly koi: readonly string[];
-  /** The points a met goal pays: the chip shows them rising out of it. */
+  /** The points a met goal pays: they pop out of its chip and fly into the score. */
   readonly bonus: number;
+}
+
+/** How far the score is from an element (stage px), for a met goal's bonus to fly there. */
+export type TowardScore = (from: HTMLElement) => { readonly x: number; readonly y: number };
+
+/** The bonus a chip shows as its goal is met: its points, flying into the score. */
+interface ChipBonus {
+  readonly points: number;
+  readonly towardScore: TowardScore;
 }
 
 /**
@@ -21,13 +32,18 @@ export class GoalTray {
   private readonly row = el('div', 'goal__chips');
   private chips: GoalChip[] = [];
 
-  constructor(private readonly icons: GoalIcons) {
-    this.element.append(this.row, el('span', 'label', 'goals'));
+  constructor(
+    private readonly icons: GoalIcons,
+    private readonly towardScore: TowardScore,
+  ) {
+    this.element.append(this.row, el('span', 'label goal__label', 'goals'));
   }
 
   /** A new level: a fresh chip per goal, showing what's to go with no pop. */
   reset(goals: readonly GoalProgress[]): void {
-    this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal), this.icons.bonus));
+    this.element.classList.toggle('goal--many', goals.length > GOAL_TRAY.roomy);
+    const bonus = { points: this.icons.bonus, towardScore: this.towardScore };
+    this.chips = goals.map((goal) => new GoalChip(goal, goalPicture(goal, this.icons), bonus));
     this.row.replaceChildren(...this.chips.map((chip) => chip.element));
   }
 
@@ -40,39 +56,44 @@ export class GoalTray {
     const chip = this.chips.find((c) => c.kind === kind) ?? this.chips[0];
     return chip?.icon ?? this.element;
   }
-
-  /** Each goal type's picture (null: a star, for a score goal). One per type: a new goal asks for its icon here. */
-  private iconFor(goal: GoalProgress): string | null {
-    const icons: Readonly<Record<GoalType, () => string | null>> = {
-      lotus: () => this.icons.lotus,
-      koi: () => this.icons.koi[goal.koi ?? 0] ?? null,
-      score: () => null,
-    };
-    return icons[goal.kind]();
-  }
 }
 
-/** One goal's chip. */
-class GoalChip {
+/**
+ * A goal's picture: the lotus, or the koi of its colour; null for a score goal, which shows a star. One per goal type:
+ * a new goal asks for its icon here.
+ */
+export function goalPicture(goal: GoalProgress, icons: GoalIcons): string | null {
+  const pictures: Readonly<Record<GoalType, () => string | null>> = {
+    lotus: () => icons.lotus,
+    koi: () => icons.koi[goal.koi ?? 0] ?? null,
+    score: () => null,
+  };
+  return pictures[goal.kind]();
+}
+
+/**
+ * One goal's chip: its picture and how many are still to go, or a check once it's met. To a screen reader it is one
+ * picture, named by its goal and how far it has to go. Given a bonus, it shows it flying off as the goal is met.
+ */
+export class GoalChip {
   readonly element: HTMLElement;
   readonly icon = el('span', 'chip__icon');
   readonly kind: GoalProgress['kind'];
   private readonly count = el('span', 'number chip__count');
+  private readonly name: string;
   private left: number;
 
   constructor(
     goal: GoalProgress,
-    image: string | null,
-    private readonly bonus: number,
+    picture: string | null,
+    private readonly bonus: ChipBonus | null = null,
   ) {
     this.kind = goal.kind;
-    if (image) {
-      const picture = el('img', `chip__image chip__image--${goal.kind}`);
-      picture.src = image;
-      picture.alt = '';
-      this.icon.append(picture);
-    } else setIcon(this.icon, STAR);
+    this.name = goalName(goal);
+    if (picture) this.icon.append(chipImage(goal.kind, picture));
+    else setIcon(this.icon, STAR);
     this.element = el('div', 'chip', this.icon, this.count);
+    this.element.setAttribute('role', 'img');
     this.left = leftOf(goal);
     this.show();
   }
@@ -83,29 +104,36 @@ class GoalChip {
     this.left = left;
     this.show();
     bump(this.element, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
-    if (left === 0 && this.bonus > 0) this.showBonus();
+    if (left === 0 && this.bonus && this.bonus.points > 0) this.showBonus(this.bonus);
   }
 
   private show(): void {
     const done = this.left === 0;
     this.element.classList.toggle('chip--done', done);
+    this.element.setAttribute('aria-label', `${this.name}: ${done ? 'done' : `${this.left} to go`}`);
     if (done) setIcon(this.count, CHECK);
     else this.count.textContent = `${this.left}`;
   }
 
-  /** The goal's bonus rises out of the chip in gold and fades. */
-  private showBonus(): void {
-    const label = el('span', 'number chip__bonus', `+${this.bonus}`);
+  /**
+   * The goal's bonus pops out of the chip in gold, then flies into the score, which it was just added to. With less
+   * motion it only fades in and out where it is.
+   */
+  private showBonus(bonus: ChipBonus): void {
+    const label = el('span', 'number chip__bonus', `+${bonus.points}`);
     this.element.append(label);
-    const rise = label.animate(
+    const to = bonus.towardScore(this.element);
+    const pose = (transform: string): string => (wantsLessMotion() ? 'none' : transform);
+    const flight = label.animate(
       [
-        { transform: 'translate(-50%, 0) scale(0.6)', opacity: 0 },
-        { transform: 'translate(-50%, -18px) scale(1.15)', opacity: 1, offset: 0.25 },
-        { transform: 'translate(-50%, -34px) scale(1)', opacity: 0 },
+        { transform: pose('scale(0.6)'), opacity: 0, easing: 'ease-out' },
+        { transform: pose('scale(1.15)'), opacity: 1, offset: 0.2 },
+        { transform: 'none', opacity: 1, offset: 0.5, easing: 'ease-in' },
+        { transform: pose(`translate(${to.x}px, ${to.y}px) scale(0.6)`), opacity: 0 },
       ],
-      { duration: HUD_MOTION.bonusRise * 1000, easing: 'ease-out' },
+      HUD_MOTION.bonusFlight * 1000,
     );
-    rise.onfinish = () => {
+    flight.onfinish = () => {
       label.remove();
     };
   }
@@ -114,4 +142,19 @@ class GoalChip {
 /** How many a goal still needs. */
 function leftOf(goal: GoalProgress): number {
   return Math.max(0, goal.target - goal.done);
+}
+
+/** What a goal is called out loud: lotuses, red koi, points. */
+export function goalName(goal: GoalProgress): string {
+  if (goal.kind === 'lotus') return 'lotuses';
+  if (goal.kind === 'koi') return `${KOI_NAMES[goal.koi ?? 0] ?? ''} koi`;
+  return 'points';
+}
+
+/** A goal's picture, in proportion to the chip's icon box as its painting was made for (it spills out of the box). */
+function chipImage(kind: GoalProgress['kind'], src: string): HTMLImageElement {
+  const picture = image(`chip__image chip__image--${kind}`, src);
+  const size = kind === 'koi' ? GOAL_TRAY.koiSize : GOAL_TRAY.lotusSize;
+  picture.style.setProperty('--image-scale', `${size / THEME.size.goalIcon}`);
+  return picture;
 }

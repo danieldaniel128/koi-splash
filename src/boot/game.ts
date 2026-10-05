@@ -65,10 +65,14 @@ export interface GameParts {
   readonly hitStop: HitStop;
 }
 
-/** The game, started: what it's played on, and the boosters' presenter (the Escape key backs out of it). */
+/**
+ * The game, started: what it's played on, the boosters' presenter (the Escape key backs out of it) and their bar
+ * (the end card mentions the ones left).
+ */
 export interface StartedGame {
   readonly parts: GameParts;
   readonly control: BoosterControl;
+  readonly bar: BoosterBar;
 }
 
 /**
@@ -100,7 +104,7 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
     hitStop,
   };
   announceOnBanner(events, new BannerLane(screen.ui, bannerRect(board)));
-  return { parts, control: startGame(parts, screen, canvas) };
+  return { parts, ...startGame(parts, screen, canvas) };
 }
 
 /** The banner lane: as wide as the board, over its top rows. */
@@ -130,9 +134,13 @@ function announceOnBanner(events: GameEventBus, lane: BannerLane): void {
 /**
  * The game: the scene (presenter) wired to every display it drives, and the player's input that feeds it. Playing
  * again, from the end card, starts the level and the boosters over. Returns the boosters' presenter, for the Escape
- * key.
+ * key, and their bar.
  */
-function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasElement): BoosterControl {
+function startGame(
+  parts: GameParts,
+  screen: GameScreen,
+  canvas: HTMLCanvasElement,
+): Pick<StartedGame, 'control' | 'bar'> {
   const { boardView, hud, pads, screenFlow } = parts;
   const bar = new BoosterBar(screen.ui, screen.layout.bar, BOOSTERS);
   const level = { ...LEVEL, ...SCORE };
@@ -164,7 +172,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
     { scene, control, swaps },
     { bar, screenFlow, boardView, animator, canvas, cell: screen.layout.board.cell },
   );
-  return control;
+  return { control, bar };
 }
 
 /** The presenters the player's input goes to: the scene, the boosters, and the swap by hand. */

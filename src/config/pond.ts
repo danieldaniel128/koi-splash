@@ -66,16 +66,19 @@ export const POND = {
    */
   props: [] satisfies readonly PondPropSpot[],
 
-  /** Fireflies over the bank, where each one hovers: at the top of the screen, and on the bank below the pond. */
+  /**
+   * Fireflies over the bank, where each one hovers: at the top of the screen, and low round the pond, in the bays its
+   * shape leaves at its bottom corners (the booster bar under the pond would hide them).
+   */
   fireflies: {
     top: [
       { corner: 'top-left', offset: [34, 12] },
       { corner: 'top-right', offset: [-64, 8] },
     ] satisfies readonly Anchor[],
     belowPond: [
-      { corner: 'bottom-left', offset: [157, 40] },
-      { corner: 'bottom-right', offset: [-29, 28] },
-      { corner: 'bottom-left', offset: [91, 88] },
+      { corner: 'bottom-left', offset: [14, -20] },
+      { corner: 'bottom-right', offset: [-32, -38] },
+      { corner: 'bottom-left', offset: [68, -12] },
     ] satisfies readonly Anchor[],
   },
   /** How far a firefly wanders from its spot (px), and its glow's size (px). Its colour is in the theme. */
