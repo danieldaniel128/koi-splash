@@ -35,6 +35,11 @@ export const MOONLIT_GARDEN = {
     horizon: '#1d3862',
     moon: '#f7ecc8',
     moonGlow: 'rgba(247, 236, 200, 0.3)',
+    /** A cascade's colours, round by round (the banner and the points): gold, blossom, wisteria, then moonlight. */
+    combo1: '#ffe07a',
+    combo2: '#ffb0d8',
+    combo3: '#d8c2ff',
+    combo4: '#ffffff',
   },
   font: {
     /**

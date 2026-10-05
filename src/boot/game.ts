@@ -2,7 +2,7 @@ import type { PointData } from 'pixi.js';
 import { INPUT } from '../config/input';
 import { LEVEL, SCORE } from '../config/level';
 import { BOOSTER_MOTION } from '../config/specials';
-import { BOOSTERS, SPECIAL_MENU } from '../config/ui';
+import { BANNER, BOOSTERS, SPECIAL_MENU } from '../config/ui';
 import { Random, seedFromQuery } from '../core/Random';
 import { BoosterControl } from '../game/BoosterControl';
 import type { BoosterSounds } from '../game/BoosterControl';
@@ -10,8 +10,10 @@ import { SwapControl } from '../game/SwapControl';
 import type { GameEventBus } from '../game/events';
 import { GameScene } from '../game/GameScene';
 import type { ScreenFlow } from '../game/ScreenFlow';
-import type { GameLayout } from '../layout/gameLayout';
+import type { GameLayout, Rect } from '../layout/gameLayout';
 import type { Cell, Special } from '../model/types';
+import { BannerLane } from '../ui/BannerLane';
+import { comboBanner, plainBanner } from '../ui/banners';
 import { BoosterBar } from '../ui/BoosterBar';
 import type { Hud } from '../ui/Hud';
 import { InstructionPill } from '../ui/InstructionPill';
@@ -95,7 +97,29 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
     events,
     hitStop,
   };
+  announceOnBanner(events, new BannerLane(screen.ui, bannerRect(board)));
   return { parts, control: startGame(parts, screen, canvas) };
+}
+
+/** The banner lane: as wide as the board, over its top rows. */
+function bannerRect(board: GameLayout['board']): Rect {
+  const { x, width, cell } = board;
+  return { x, y: board.y + cell * BANNER.top, width, height: cell * BANNER.height };
+}
+
+/** What the banner lane announces: combos and specials made, a reshuffle, every goal met. */
+function announceOnBanner(events: GameEventBus, lane: BannerLane): void {
+  const { text } = BANNER;
+  events.on('match', ({ round, made }) => {
+    const banner = comboBanner(round, made);
+    if (banner) lane.show(banner);
+  });
+  events.on('reshuffle', () => {
+    lane.show(plainBanner(text.reshuffle));
+  });
+  events.on('allGoalsMet', () => {
+    lane.show(plainBanner(text.goalsMet, text.goalsMetSub));
+  });
 }
 
 /**
