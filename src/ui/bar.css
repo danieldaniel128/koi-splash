@@ -158,8 +158,12 @@
   transform: translate(-50%, 0);
 }
 
-/* The pill over the pond while a booster is armed: what to do, and an X to cancel. Taps pass through its text. */
+/*
+ * The pill over the pond while a booster is armed: what to do, and an X to cancel. Taps pass through its text. It
+ * stays over the petals' dim, so the X cancels while they're open too.
+ */
 .pill {
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,12 +224,17 @@
   height: 14px;
 }
 
-/* The special booster's petals round the picked koi, over a soft dim; a tap on the dim closes them. */
+/*
+ * The special booster's petals round the picked koi, over a soft dim; a tap on the dim closes them. A press shows no
+ * grey flash and a long press no image menu.
+ */
 .petals {
   position: absolute;
   inset: 0;
   pointer-events: auto;
   background: radial-gradient(circle at 50% 50%, rgba(4, 12, 28, 0.25), rgba(4, 12, 28, 0.45));
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 .petal {
@@ -247,6 +256,7 @@
   width: 92%;
   height: 92%;
   transform: rotate(-35deg);
+  pointer-events: none; /* the petal takes the press, never its picture */
 }
 
 .petal__name {

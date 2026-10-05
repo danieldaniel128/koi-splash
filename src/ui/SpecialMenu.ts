@@ -94,6 +94,7 @@ export class SpecialMenu implements SpecialPicker {
     const picture = el('img', 'petal__koi');
     picture.src = this.board.preview(at, choice.type);
     picture.alt = '';
+    picture.draggable = false; // a click that drifts a little still picks the petal
     const petal = el('button', 'petal', picture, el('span', 'petal__name', choice.name));
     petal.type = 'button';
     petal.setAttribute('aria-label', choice.name);
