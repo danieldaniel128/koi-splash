@@ -72,6 +72,8 @@ export const SPECIAL_MENU = {
 
 /** The end-of-level card fades in and pops (s). */
 export const RESULT_CARD = {
+  /** A won pond is celebrated for this long before the card opens (s). */
+  winBeat: 0.9,
   fadeIn: 0.3,
   popIn: 0.45,
   /** The stars earned land one by one: the first this long after the card, then one every `starStep` (s). */
@@ -101,4 +103,28 @@ export const SOUND_MENU = {
     { id: 'ambience', name: 'Ambience' },
     { id: 'sfx', name: 'Effects' },
   ] as const satisfies readonly { id: Bus; name: string }[],
+} as const;
+
+/**
+ * The banner lane over the top of the pond (after the prototype's): one banner at a time, the newest winning. It pops
+ * in over `popIn` s, holds and fades out over `fadeOut`, `lasts` s in all. Its top is `top` cells below the board's
+ * and it's `height` cells tall. A combo banner grows by `growPerRound` a round past the second, `maxGrowth` rounds
+ * at most.
+ */
+export const BANNER = {
+  lasts: 1.2,
+  popIn: 0.2,
+  fadeOut: 0.25,
+  top: 0.35,
+  height: 1.4,
+  growPerRound: 0.07,
+  maxGrowth: 4,
+  text: {
+    combo: 'Combo x',
+    made: { line: 'Striped koi!', whirl: 'Whirlpool!', rainbow: 'Rainbow koi!' },
+    reshuffle: 'Swirl!',
+    goalsMet: 'All goals met!',
+    goalsMetSub: 'Bonus moves',
+    won: 'Pond complete!',
+  },
 } as const;

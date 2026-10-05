@@ -179,6 +179,16 @@ Effects are layered separately: the animator only knows two small interfaces, th
 popups (`ScorePopups`), and the koi's swimming, wakes, shadows and foam run per frame in their own classes
 (`KoiLife`, `KoiWaterline`), outside the turn logic.
 
+The motions are built from one small library (`src/view/motion`): sink, rise, spiral, pop, squash, flash and a head
+shake, each a GSAP timeline that takes its numbers from config, so a dive is "kick, then sink" and a rainbow's hit is
+"pop and flash, then sink". `play()` resolves when a motion ends or is killed, so an awaited turn can't hang. How hard
+each moment hits is one listener on the game's events (`Impact`): a camera that shakes the canvas world (never the
+HTML HUD) and pushes in on a win, one hit-stop service, a white flash, and a short vibration on phones while the
+effects channel is on. The numbers are the prototype's (`CAMERA` and `IMPACT` in `src/config/fx.ts`). Over the pond,
+an HTML banner lane announces combos, specials made, a reshuffle and every goal met; points pop up in their cascade
+round's colour, sized by their match, and big gains fly over the HUD into the score, which takes them as they land.
+Popups and sparkles come from a generic `Pool`.
+
 ## Code standards
 
 ESLint enforces them, so I don't have to remember them:
@@ -205,7 +215,8 @@ Milestones:
 
 1. Playable core: board, swipe, swap/clear/fall animations, turn flow, moves, win/lose. Done.
 2. Goal system: lily pads and lotus buds that bloom, with the goal as a swappable piece. Done.
-3. Juice: dives, swims, ripples, the water shader, sound. Done except screen shake.
+3. Juice: dives, swims, ripples, the water shader, sound, screen shake, hit-stop, combo banners, points that fly
+   into the score, a win celebration. Done.
 4. Specials: special koi from bigger matches, and their combos.
 5. Boosters.
 6. Screens and content: title, tutorial, hint, handmade levels, an endless mode.

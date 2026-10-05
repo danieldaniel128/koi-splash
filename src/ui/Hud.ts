@@ -39,6 +39,16 @@ export class Hud implements StatusDisplay {
     return this.layer.centreOf(this.score.value);
   }
 
+  /** Big points are flying to the score: it waits for them. */
+  scoreFlying(amount: number): void {
+    this.score.hold(amount);
+  }
+
+  /** Flying points landed in the score. */
+  scoreLanded(amount: number): void {
+    this.score.land(amount);
+  }
+
   /** Where the lotus goal's icon is, in stage px (a bloomed lotus flies there). */
   goalAnchor(): PointData {
     return this.layer.centreOf(this.goal.iconOf('lotus'));
@@ -52,7 +62,10 @@ export class Hud implements StatusDisplay {
   }
 
   update(status: GameStatus): void {
-    this.moves.update(status.movesLeft);
+    this.moves.update(
+      status.movesLeft,
+      status.goals.every((goal) => goal.done >= goal.target),
+    );
     this.score.update(status.score);
     this.goal.update(status.goals);
     this.stars.update(status.score, status.stars);

@@ -37,9 +37,11 @@ const INSTRUMENTS: Readonly<Record<Part, (v: Voice, freqs: readonly number[], at
     v.noise(seconds * 0.9, vol * 0.3, freq, { delay, attack: 0.12, band: 8 });
   },
   drum: (v, _freqs, { delay }) => {
-    // a soft taiko under the water: a low thump falling in pitch, a hint of skin
+    // a soft taiko under the water: a low thump falling in pitch, a hint of skin, and a higher knock in the body
+    // of the drum so phone speakers, which can't play the thump, still carry the beat
     v.tone(85, 0.45, MUSIC.volumes.drum, { delay, glide: 48, attack: 0.004 });
-    v.noise(0.06, MUSIC.volumes.drum * 0.3, 400, { delay });
+    v.tone(190, 0.12, MUSIC.volumes.drum * 0.45, { delay, glide: 130, attack: 0.002, type: 'triangle' });
+    v.noise(0.06, MUSIC.volumes.drum * 0.35, 1100, { delay });
   },
 };
 

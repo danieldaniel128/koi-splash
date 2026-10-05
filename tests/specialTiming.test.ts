@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CascadeStep, Piece, Special } from '../src/model/types';
-import { planRound } from '../src/view/specialTiming';
+import { blastLands, planRound } from '../src/view/specialTiming';
 
 const TIMING = {
   merge: 0.36,
@@ -87,5 +87,29 @@ describe('planRound', () => {
     expect(plan.clears.get(drained.id)).toMatchObject({ how: 'drain', toward: { col: 4, row: 1 } });
     expect(plan.clears.get(drained.id)?.delay).toBeCloseTo(whirlFires + 0.32 + 0.03); // a corner
     expect(plan.end).toBeCloseTo(whirlFires + 0.32 + 0.03 + 0.34);
+  });
+});
+
+describe('blastLands', () => {
+  it('is when the blast takes its first koi, so its points show as it lands', () => {
+    const whirl = koi({ type: 'whirl' });
+    const round = step({
+      fired: [{ piece: whirl, at: { col: 3, row: 3 }, reach: [] }],
+      cleared: [
+        { piece: whirl, at: { col: 3, row: 3 } },
+        { piece: koi(), at: { col: 4, row: 3 }, blast: 0, order: 0 },
+        { piece: koi(), at: { col: 4, row: 4 }, blast: 0, order: 1 },
+      ],
+    });
+    expect(blastLands(round, planRound(round, TIMING), 0)).toBeCloseTo(TIMING.whirlSpin);
+  });
+
+  it('is when it fires, for a blast that takes nothing', () => {
+    const striped = koi({ type: 'line', along: 'row' });
+    const round = step({
+      fired: [{ piece: striped, at: { col: 0, row: 0 }, reach: [] }],
+      cleared: [{ piece: striped, at: { col: 0, row: 0 } }],
+    });
+    expect(blastLands(round, planRound(round, TIMING), 0)).toBe(0);
   });
 });

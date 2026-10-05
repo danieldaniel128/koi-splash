@@ -1,9 +1,15 @@
-import type { Application, Sprite } from 'pixi.js';
+import { Container } from 'pixi.js';
+import type { Application, Sprite, Texture } from 'pixi.js';
 import { LEVEL } from '../config/level';
 import { BootPipeline } from '../core/BootPipeline';
 import type { GameEventBus } from '../game/events';
 import type { ScreenFlow } from '../game/ScreenFlow';
 import type { GoalIcons } from '../ui/GoalTray';
+import { Camera } from '../view/Camera';
+import { Haptics } from '../view/Haptics';
+import type { HitStop } from '../view/HitStop';
+import { createFlash, Impact } from '../view/Impact';
+import { Sparkles } from '../view/Sparkles';
 import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
 import type { KoiTextures } from '../view/KoiTextures';
@@ -99,9 +105,11 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const { parts: game, control } = createGame(screen, materials, app.canvas);
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);
-  const stage = buildStage(game, { garden: made.garden, scenery: scenery.layer });
-  app.stage.addChild(stage);
-  keepFitted(app, { stage, ui }, layout.stage, game);
+  const celebration = createCelebration(layout.stage, made.specials.sparkle);
+  const stage = buildStage(game, { garden: made.garden, scenery: scenery.layer, celebration: celebration.layer });
+  app.stage.addChild(stage.root);
+  keepFitted(app, { stage: stage.root, ui }, layout.stage, game);
+  const impact = createImpact(wiring, { world: stage.world, hitStop: game.hitStop, ...celebration }, layout.board);
   restoreAfterContextLoss(app, pond);
   const { boardView, pads, boosters } = game;
   addFrameLoop(app.ticker, {
@@ -112,6 +120,37 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     koiLife,
     fireflies: scenery.fireflies,
     boardView,
+    impact,
+  });
+}
+
+/** Over everything on the canvas: the sparkles a win bursts into, and the white flash of a big moment. */
+function createCelebration(
+  stage: { width: number; height: number },
+  sparkle: Texture,
+): { layer: Container; flash: Sprite; sparkles: Sparkles } {
+  const flash = createFlash(stage);
+  const sparkles = new Sparkles(sparkle);
+  return { layer: new Container({ children: [sparkles, flash] }), flash, sparkles };
+}
+
+/**
+ * How hard each moment hits: the camera on the canvas's world, the shared hit-stop, the flash, the sparkles of a win,
+ * and the phone's vibration (with the effects channel).
+ */
+function createImpact(
+  { events, sound }: GameWiring,
+  on: { world: Container; hitStop: HitStop; flash: Sprite; sparkles: Sparkles },
+  board: GameScreen['layout']['board'],
+): Impact {
+  return new Impact(events, {
+    camera: new Camera(on.world),
+    hitStop: on.hitStop,
+    haptics: new Haptics(() => sound.mixer.isOn('sfx')),
+    flash: on.flash,
+    sparkles: on.sparkles,
+    boardCentre: { x: board.x + board.width / 2, y: board.y + board.height / 2 },
+    cell: board.cell,
   });
 }
 

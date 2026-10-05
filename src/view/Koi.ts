@@ -1,7 +1,13 @@
-import { Sprite } from 'pixi.js';
+import { Color, Sprite } from 'pixi.js';
 import type { PointData, Texture } from 'pixi.js';
 import { KOI_SWIM } from '../config/koi';
+import { TIMING } from '../config/timing';
+import { mixColor } from '../core/color';
 import type { Kind } from '../model/types';
+
+const WHITE = 0xffffff;
+/** Koi deep in the water take on this pale water-blue, keeping their own colour (a dark tint turns them muddy). */
+const UNDERWATER = new Color(TIMING.diveTint).toNumber();
 
 /**
  * One koi on the board. Its position, scale, alpha and tint belong to the animations (swap, dive, fall); how it
@@ -18,6 +24,8 @@ export class Koi extends Sprite {
    * whirlpool's koi, curled in its eye).
    */
   spin: number | null = null;
+  /** An extra turn on top of where it swims (radians), for the motions that rock it (a head shake). */
+  tilt = 0;
   private facing: number;
   private tailPhase: number;
   private readonly swayPhase: number;
@@ -60,15 +68,26 @@ export class Koi extends Sprite {
     this.tailPhase = phase % 1;
     this.texture = this.poses[this.pose] ?? this.texture;
     if (this.spin !== null) {
-      this.rotation += this.spin * deltaSeconds;
-      this.facing = this.heading = this.rotation;
+      this.facing += this.spin * deltaSeconds;
+      this.heading = this.facing;
+      this.rotation = this.facing + this.tilt;
       return;
     }
 
     const turn = 1 - Math.exp(-KOI_SWIM.turnRate * deltaSeconds);
     this.facing += shortestTurn(this.facing, this.heading) * turn;
     const sway = Math.sin(this.time * KOI_SWIM.swaySpeed + this.swayPhase) * KOI_SWIM.sway;
-    this.rotation = this.facing + sway;
+    this.rotation = this.facing + sway + this.tilt;
+  }
+
+  /**
+   * How deep it is under the surface, from 0 (at the surface, at scale `size`) to 1 (gone): it shrinks toward
+   * TIMING.diveScale, fades and takes on the water's colour. Diving, sinking and rising koi all look this way.
+   */
+  setDepth(depth: number, size = this.restScale): void {
+    this.scale.set(size + (this.restScale * TIMING.diveScale - size) * depth);
+    this.alpha = 1 - depth * depth;
+    this.tint = mixColor(WHITE, UNDERWATER, depth);
   }
 
   /** Swaps the koi's baked poses (it became a special koi), keeping its place in the tail beat. */

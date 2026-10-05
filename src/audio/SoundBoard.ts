@@ -11,8 +11,8 @@ const SOUND_OF: SoundMap = {
   invalidSwap: (v) => {
     sounds.invalid(v);
   },
-  moveSpent: (v, { movesLeft }) => {
-    sounds.tick(v, movesLeft);
+  moveSpent: (v, { movesLeft, goalsMet }) => {
+    sounds.tick(v, goalsMet ? Infinity : movesLeft); // a victory lap ticks calmly
   },
   match: (v, { round, size }) => {
     sounds.match(v, round, size);
@@ -37,6 +37,9 @@ const SOUND_OF: SoundMap = {
   },
   goalMet: (v, { n }) => {
     sounds.bonus(v, n + 4);
+  },
+  allGoalsMet: (v) => {
+    sounds.special(v);
   },
   specialBorn: (v, { type }) => {
     if (type === 'rainbow') sounds.rainbowBorn(v);

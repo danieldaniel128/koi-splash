@@ -2,13 +2,13 @@ import { gsap } from 'gsap';
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { paintBeam, SPECTRUM } from '../art/specialKoi';
+import { easeInOutCubic, easeOutBack, easeOutCubic } from '../core/easing';
 import { SPECIAL_FX } from '../config/specials';
 import { TIMING } from '../config/timing';
 import type { Cell, Fired, Kind } from '../model/types';
 import type { BlastPlan } from './specialTiming';
 import type { SpecialTextures } from './SpecialTextures';
 import type { GameEventBus } from '../game/events';
-import { hitStop } from './hitStop';
 import type { WaterSurface } from './water/PondWater';
 
 /** What the effects need from the board: where its cells are, and how big it is (board space). */
@@ -22,8 +22,8 @@ export interface FxBoard {
  * The specials' light, over the koi in the board's space (after the prototype's): a striped koi's beam racing along
  * its line, a whirlpool's vortex spinning up, a rainbow koi's prism beams arcing to every koi it takes, a flash when
  * a special is born. Each also moves the water (ripples along the sweep, the eddy's pull and pop, splashes where the
- * beams land) and the big moments slow the game's clock for an instant (hit-stop). Fire and forget: every effect
- * removes itself when done.
+ * beams land) and says when each moment happens, so the camera, the hit-stop and the sounds land with it. Fire and
+ * forget: every effect removes itself when done.
  */
 export class SpecialFx extends Container {
   private readonly beamTexture = Texture.from(paintBeam(128, 32));
@@ -70,11 +70,21 @@ export class SpecialFx extends Container {
       .call(() => {
         this.splash(at, look.push, look.pushRadius);
       })
-      .fromTo(flash, { alpha: 1 }, { alpha: 0, duration: look.life, ease: 'power2.out' }, 0)
+      .fromTo(
+        flash,
+        { alpha: 1 },
+        { alpha: 0, duration: look.life, ease: 'power2.out', immediateRender: false },
+        0,
+      )
       .fromTo(
         flash,
         { width: this.cell * 0.4, height: this.cell * 0.4 },
-        { width: this.cell * look.flash, height: this.cell * look.flash, duration: look.life },
+        {
+          width: this.cell * look.flash,
+          height: this.cell * look.flash,
+          duration: look.life,
+          immediateRender: false,
+        },
         0,
       );
   }
@@ -106,7 +116,7 @@ export class SpecialFx extends Container {
       ease: 'none',
       onUpdate: () => {
         const reach = Math.min(1, 2.2 * grow.k);
-        beam.width = this.length * look.length * (1 - Math.pow(1 - reach, 3)) + this.cell;
+        beam.width = this.length * look.length * easeOutCubic(reach) + this.cell;
         beam.height = this.cell * look.width * (1 - 0.6 * grow.k);
         beam.alpha = 1 - grow.k;
       },
@@ -143,7 +153,7 @@ export class SpecialFx extends Container {
         this.events.emit('whirlFired');
       },
       onUpdate: () => {
-        const grow = easeOutBack(Math.min(1, time.t / whirlSpin));
+        const grow = easeOutBack(Math.min(1, time.t / whirlSpin), 1.9);
         const out = Math.max(0, (time.t - stay) / look.fade);
         eddy.setSize(this.cell * (look.from + (look.to - look.from) * grow) * (1 + 0.2 * out));
         eddy.rotation = spinAngle(time.t, whirlSpin, look.spin0, look.spinMax);
@@ -156,7 +166,6 @@ export class SpecialFx extends Container {
     gsap.delayedCall(at + stay, () => {
       this.splash(fired.at, look.pop, look.popRadius);
       this.events.emit('whirlPopped');
-      hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
   }
 
@@ -168,7 +177,6 @@ export class SpecialFx extends Container {
     });
     gsap.delayedCall(at + rainbowRise, () => {
       this.events.emit('rainbowFired');
-      hitStop(SPECIAL_FX.hitStop.time, SPECIAL_FX.hitStop.scale);
     });
     fired.reach.forEach((cell, n) => {
       this.arc(fired, cell, n, at + rainbowRise + n * rainbowStep);
@@ -200,8 +208,8 @@ export class SpecialFx extends Container {
       duration: look.life,
       ease: 'none',
       onUpdate: () => {
-        const head = 1 - Math.pow(1 - Math.min(1, life.t / travel), 3);
-        const tail = easeInOut(Math.max(0, (life.t - travel) / (look.life - travel)));
+        const head = easeOutCubic(Math.min(1, life.t / travel));
+        const tail = easeInOutCubic(Math.max(0, (life.t - travel) / (look.life - travel)));
         drawArc(line, { from, control, to }, tail, head, colour);
       },
       onComplete: () => {
@@ -265,14 +273,4 @@ function pointOn({ from, control, to }: Curve, t: number): PointData {
 function spinAngle(t: number, rampUp: number, spin0: number, spinMax: number): number {
   const extra = spinMax - spin0;
   return spin0 * t + (t < rampUp ? (extra * t * t) / (2 * rampUp) : extra * (t - rampUp / 2));
-}
-
-function easeOutBack(t: number): number {
-  const c = 1.9;
-  const u = t - 1;
-  return 1 + (c + 1) * u * u * u + c * u * u;
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }

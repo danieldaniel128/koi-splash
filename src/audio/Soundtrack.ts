@@ -16,8 +16,11 @@ function moodsFrom(setMood: (mood: Mood) => void): EventHandlers<GameEvents> {
     levelStarted: () => {
       setMood('calm');
     },
-    moveSpent: ({ movesLeft }) => {
-      setMood(movesLeft <= LEVEL.movesWarning.low ? 'tense' : 'calm');
+    moveSpent: ({ movesLeft, goalsMet }) => {
+      setMood(!goalsMet && movesLeft <= LEVEL.movesWarning.low ? 'tense' : 'calm');
+    },
+    allGoalsMet: () => {
+      setMood('calm');
     },
     won: () => {
       setMood('won');

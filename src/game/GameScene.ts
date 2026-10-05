@@ -1,7 +1,9 @@
+import { RESULT_CARD } from '../config/ui';
 import { StateMachine } from '../core/StateMachine';
 import type { StateHooks, Transition } from '../core/StateMachine';
 import { runDetached } from '../core/detached';
 import type { Random } from '../core/Random';
+import { Timers } from '../core/Timers';
 import type { Board } from '../model/Board';
 import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
@@ -13,7 +15,7 @@ import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import { scoreRound } from '../model/score';
 import { starsFor, starsForWin } from '../model/stars';
 import type { StarRule } from '../model/stars';
-import type { BoardSpec, CascadeStep, Cell, Pad, PadEvent, PlacedPiece } from '../model/types';
+import type { BoardSpec, CascadeStep, Cell, Pad, PadEvent, PlacedPiece, Special } from '../model/types';
 import type { BoosterChange } from '../model/boosters';
 import type { BoosterGame } from './BoosterControl';
 import type { GameEventBus } from './events';
@@ -64,8 +66,8 @@ export interface TurnAnimator {
   /** A koi swiped into the bank, or into a lily pad: it bumps its nose and swims back. */
   bumpBank(koi: PlacedPiece, toward: Cell): Promise<void>;
   bumpPad(koi: PlacedPiece, padCell: Cell): Promise<void>;
-  /** One cascade round, with the points it scored. */
-  playStep(step: CascadeStep, points: number): Promise<void>;
+  /** One cascade round (`round` of its turn, 0 = the swap's own), with the points it scored. */
+  playStep(step: CascadeStep, points: number, round: number): Promise<void>;
   playBooster(use: BoosterUse, change: BoosterChange): Promise<void>;
 }
 
@@ -140,6 +142,8 @@ export class GameScene implements BoosterGame, SwapGame {
   private readonly board: Board;
   private readonly level: LevelState;
   private readonly turn: StateMachine<TurnState, LevelState>;
+  /** The end card waits for the win's celebration. */
+  private readonly timers = new Timers();
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
@@ -198,6 +202,7 @@ export class GameScene implements BoosterGame, SwapGame {
   /** Starts the level over with a fresh board. Only allowed once the level has ended. */
   restart(): void {
     if (!this.turn.is('won') && !this.turn.is('lost')) return;
+    this.timers.cancelAll();
     this.pads = PadField.scatter(this.deps.level.pads, this.deps.spec, this.deps.rng);
     resetBoard(this.board, this.deps.spec, this.deps.rng, this.pads.cells);
     this.level.movesLeft = this.deps.level.moves;
@@ -234,13 +239,14 @@ export class GameScene implements BoosterGame, SwapGame {
           view.setPlayable(false);
         },
       },
+      // a win is celebrated for a beat (the views follow the event) before the card opens; input stays locked
       won: {
         onEnter: () => {
-          result.show('won', {
-            ...this.status(),
-            stars: starsForWin(this.level.score, this.deps.level.stars),
-          });
+          const status = { ...this.status(), stars: starsForWin(this.level.score, this.deps.level.stars) };
           events.emit('won');
+          this.timers.after(RESULT_CARD.winBeat, () => {
+            result.show('won', status);
+          });
         },
       },
       lost: {
@@ -309,10 +315,11 @@ export class GameScene implements BoosterGame, SwapGame {
     }
 
     this.level.movesLeft--;
+    const lap = this.level.goal.isComplete(); // every goal met before this move: the moves left are a victory lap
     const spent = this.status(); // the move is spent at once; the score climbs as the rounds play
     const turn = this.count(result);
     this.deps.events.emit('swap');
-    this.deps.events.emit('moveSpent', { movesLeft: this.level.movesLeft });
+    this.deps.events.emit('moveSpent', { movesLeft: this.level.movesLeft, goalsMet: lap });
     this.deps.status.update(spent);
     await animator.swap(first, second);
     await this.playCascade(turn);
@@ -335,7 +342,10 @@ export class GameScene implements BoosterGame, SwapGame {
    */
   private async playRound({ step, round, points, met, status }: CountedRound): Promise<void> {
     this.announce(step, round, met);
-    await Promise.all([this.deps.animator.playStep(step, points), this.deps.pads.play(step.padEvents)]);
+    await Promise.all([
+      this.deps.animator.playStep(step, points, round),
+      this.deps.pads.play(step.padEvents),
+    ]);
     this.deps.status.update(status);
   }
 
@@ -370,12 +380,15 @@ export class GameScene implements BoosterGame, SwapGame {
   /** Says what a round did: its match, what happened to the lily pads (once each), and the goals it met. */
   private announce(step: CascadeStep, round: number, met: readonly number[]): void {
     const { events } = this.deps;
-    if (step.cleared.length > 0) events.emit('match', { round, size: step.cleared.length });
+    if (step.cleared.length > 0) {
+      events.emit('match', { round, size: step.cleared.length, ...strongestMade(step) });
+    }
     const pads = new Set(step.padEvents.map((event) => event.type));
     if (pads.has('hit')) events.emit('budHit');
     if (pads.has('bloom')) events.emit('bloom');
     if (pads.has('drift')) events.emit('padDrift');
     for (const n of met) events.emit('goalMet', { n });
+    if (met.at(-1) === this.level.goal.progress().length - 1) events.emit('allGoalsMet');
   }
 
   private status(): GameStatus {
@@ -400,3 +413,12 @@ export class GameScene implements BoosterGame, SwapGame {
     ];
   }
 }
+
+/** The strongest special a round made (a rainbow over a whirlpool over a striped koi), if it made one. */
+function strongestMade(step: CascadeStep): { made?: Special['type'] } {
+  const types = step.created.map(({ piece }) => piece.special?.type);
+  const made = SPECIAL_RANK.find((type) => types.includes(type));
+  return made ? { made } : {};
+}
+
+const SPECIAL_RANK: readonly Special['type'][] = ['rainbow', 'whirl', 'line'];

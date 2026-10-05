@@ -2,7 +2,7 @@ import type { PointData } from 'pixi.js';
 import { INPUT } from '../config/input';
 import { LEVEL, SCORE } from '../config/level';
 import { BOOSTER_MOTION } from '../config/specials';
-import { BOOSTERS, SPECIAL_MENU } from '../config/ui';
+import { BANNER, BOOSTERS, SPECIAL_MENU } from '../config/ui';
 import { Random, seedFromQuery } from '../core/Random';
 import { BoosterControl } from '../game/BoosterControl';
 import type { BoosterSounds } from '../game/BoosterControl';
@@ -10,8 +10,11 @@ import { SwapControl } from '../game/SwapControl';
 import type { GameEventBus } from '../game/events';
 import { GameScene } from '../game/GameScene';
 import type { ScreenFlow } from '../game/ScreenFlow';
-import type { GameLayout } from '../layout/gameLayout';
+import type { GameLayout, Rect } from '../layout/gameLayout';
 import type { Cell, Special } from '../model/types';
+import { BannerLane } from '../ui/BannerLane';
+import { comboBanner, plainBanner } from '../ui/banners';
+import { FlyingPoints } from '../ui/FlyingPoints';
 import { BoosterBar } from '../ui/BoosterBar';
 import type { Hud } from '../ui/Hud';
 import { InstructionPill } from '../ui/InstructionPill';
@@ -20,6 +23,7 @@ import { BoardAnimator } from '../view/BoardAnimator';
 import { BoardMarks } from '../view/BoardMarks';
 import type { BoardView } from '../view/BoardView';
 import { BoosterMotions } from '../view/BoosterMotions';
+import { HitStop } from '../view/HitStop';
 import type { KoiTextures } from '../view/KoiTextures';
 import { PadView } from '../view/PadView';
 import { ScorePopups } from '../view/ScorePopups';
@@ -56,6 +60,8 @@ export interface GameParts {
   readonly specials: { fx: SpecialFx; motions: SpecialMotions };
   readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
   readonly events: GameEventBus;
+  /** The one hit-stop: whatever holds the animations' clock still for a moment shares it. */
+  readonly hitStop: HitStop;
 }
 
 /** The game, started: what it's played on, and the boosters' presenter (the Escape key backs out of it). */
@@ -72,18 +78,52 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
   const { board } = screen.layout;
   const { pond, hud, events } = made;
   const boardView = createBoardView(made.koi, made.specials, screen.spec, board);
+  const hitStop = new HitStop();
   const parts: GameParts = {
     boardView,
     pond,
-    popups: createScorePopups(hud, board),
+    popups: createScorePopups(new FlyingPoints(screen.ui, hud), board),
     hud,
     pads: createPads(pond, hud, board, screen.resolution.art),
     screenFlow: made.screenFlow,
     specials: createSpecialEffects({ boardView, textures: made.specials, pond, board, events }),
-    boosters: createBoosterViews({ boardView, specials: made.specials, pond, cell: board.cell, events }),
+    boosters: createBoosterViews({
+      boardView,
+      specials: made.specials,
+      pond,
+      board,
+      events,
+      hitStop,
+    }),
     events,
+    hitStop,
   };
+  announceOnBanner(events, new BannerLane(screen.ui, bannerRect(board)));
   return { parts, control: startGame(parts, screen, canvas) };
+}
+
+/** The banner lane: as wide as the board, over its top rows. */
+function bannerRect(board: GameLayout['board']): Rect {
+  const { x, width, cell } = board;
+  return { x, y: board.y + cell * BANNER.top, width, height: cell * BANNER.height };
+}
+
+/** What the banner lane announces: combos and specials made, a reshuffle, every goal met, the pond won. */
+function announceOnBanner(events: GameEventBus, lane: BannerLane): void {
+  const { text } = BANNER;
+  events.on('match', ({ round, made }) => {
+    const banner = comboBanner(round, made);
+    if (banner) lane.show(banner);
+  });
+  events.on('reshuffle', () => {
+    lane.show(plainBanner(text.reshuffle));
+  });
+  events.on('allGoalsMet', () => {
+    lane.show(plainBanner(text.goalsMet, text.goalsMetSub));
+  });
+  events.on('won', () => {
+    lane.show(plainBanner(text.won));
+  });
 }
 
 /**
@@ -118,7 +158,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
   const swaps = new SwapControl(scene, parts.boosters.marks);
   listenToPlayer(
     { scene, control, swaps },
-    { bar, screenFlow, boardView, canvas, cell: screen.layout.board.cell },
+    { bar, screenFlow, boardView, animator, canvas, cell: screen.layout.board.cell },
   );
   return control;
 }
@@ -140,11 +180,17 @@ function listenToPlayer(
     bar: BoosterBar;
     screenFlow: ScreenFlow;
     boardView: BoardView;
+    animator: BoardAnimator;
     canvas: HTMLCanvasElement;
     cell: number;
   },
 ): void {
   const gestures = (): BoardGestures => (control.armed ? control : swaps);
+  // a koi under a finger answers at once, before the gesture is known
+  on.boardView.on('pointerdown', (event) => {
+    const cell = on.boardView.pointToCell(on.boardView.toLocal(event.global));
+    if (cell && scene.canSwap && scene.hasKoi(cell)) on.animator.touch(cell);
+  });
   new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
     swipe: (from, to) => {
       gestures().swipe(from, to);
@@ -194,16 +240,20 @@ function createBoosterViews(on: {
   boardView: BoardView;
   specials: SpecialTextures;
   pond: PondWater;
-  cell: number;
+  board: GameLayout['board'];
   events: GameEventBus;
+  hitStop: HitStop;
 }): { motions: BoosterMotions; marks: BoardMarks } {
-  const { boardView, cell, events } = on;
+  const { boardView, events, board } = on;
+  const { cell } = board;
   const motions = new BoosterMotions({
     view: boardView,
     water: on.pond,
     cell,
     sparkle: on.specials.sparkle,
     events,
+    hitStop: on.hitStop,
+    centre: { x: board.width / 2, y: board.height / 2 },
   });
   const marks = new BoardMarks(boardView, cell);
   for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);
@@ -292,12 +342,9 @@ function createSpecialEffects(on: {
   return { fx, motions: new SpecialMotions() };
 }
 
-/** The points each match earns, over the board; they fly to the score in the HUD. */
-function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
-  const popups = new ScorePopups(() => {
-    const score = hud.scoreAnchor();
-    return { x: score.x - boardOrigin.x, y: score.y - boardOrigin.y };
-  });
+/** The points each match earns, over the board; the big ones fly into the score in the HUD. */
+function createScorePopups(flights: FlyingPoints, boardOrigin: PointData): ScorePopups {
+  const popups = new ScorePopups(flights);
   popups.position.set(boardOrigin.x, boardOrigin.y);
   return popups;
 }

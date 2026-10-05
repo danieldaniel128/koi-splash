@@ -1,10 +1,15 @@
 import { sameCell } from '../model/types';
 import type { CascadeStep, Cell } from '../model/types';
 
-/** One popup of a round's points: the cells it shows over (it pops up at their centre) and its share. */
+/**
+ * One popup of a round's points: the cells it shows over (it pops up at their centre), its share, how many koi it
+ * counts (a bigger match shows bigger points) and, for a special's blast, which one (its index in the round's fired).
+ */
 export interface PointsShare {
   readonly over: readonly Cell[];
   readonly amount: number;
+  readonly size: number;
+  readonly blast?: number;
 }
 
 /** A cell the round took: a koi cleared (by a blast, or not), or a koi turned into a new special. */
@@ -20,9 +25,9 @@ interface Taken {
  * (the score counter climbs by what they show). Pure. O(T * M) for T cells taken and M matches.
  */
 export function splitPoints(step: CascadeStep, points: number): PointsShare[] {
-  const groups = [
+  const groups: { over: readonly Cell[]; cells: number; blast?: number }[] = [
     ...step.matches.map((match) => ({ over: match.cells, cells: 0 })),
-    ...step.fired.map((fired) => ({ over: [fired.at], cells: 0 })),
+    ...step.fired.map((fired, blast) => ({ over: [fired.at], cells: 0, blast })),
   ];
   const taken: Taken[] = [
     ...step.cleared.map(({ at, piece, blast }) => ({ at, id: piece.id, blast })),
@@ -35,10 +40,11 @@ export function splitPoints(step: CascadeStep, points: number): PointsShare[] {
     else groups.push({ over: [cell.at], cells: 1 });
   }
   let before = 0;
-  const shares = groups.map(({ over, cells }) => {
+  const shares = groups.map(({ over, cells, blast }) => {
     const start = Math.round((points * before) / taken.length);
     before += cells;
-    return { over, amount: Math.round((points * before) / taken.length) - start };
+    const amount = Math.round((points * before) / taken.length) - start;
+    return blast === undefined ? { over, amount, size: cells } : { over, amount, size: cells, blast };
   });
   return shares.filter((share) => share.amount > 0);
 }

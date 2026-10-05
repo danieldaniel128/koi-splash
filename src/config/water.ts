@@ -37,8 +37,19 @@ export const WATER = {
   surfacePush: 0.07,
   /** A swap shoves the water apart between the two koi (push, radius), and each koi settles with a smaller push. */
   swapPush: 0.32,
+  /**
+   * A match splashes at its middle as it clears: at least a swap's push, more for each koi past three and for each
+   * cascade round past the first.
+   */
+  matchPush: 0.34,
+  matchRadius: 16,
+  matchPushPerKoi: 0.12,
+  matchPushPerRound: 0.25,
   swapRadius: 15,
   swapSettlePush: 0.1,
+  /** A refused move dims the water round each koi for a moment: a small dip (a negative push). */
+  refuseDip: -0.22,
+  refuseRadius: 11,
   /** A swap that makes no match shoves the water this share of swapPush. */
   invalidSwapPush: 0.6,
   /** The small splash where a koi bumps into a lily pad. */

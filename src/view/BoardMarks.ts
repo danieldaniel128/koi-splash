@@ -25,6 +25,8 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
   private test: ((cell: Cell) => boolean) | null = null;
   private picked: Koi | null = null;
   private readonly ring = new Graphics();
+  /** The koi still dimmed after the marks were cleared: they brighten back over the next frames. */
+  private readonly brightening = new Set<Koi>();
   private dim = 0;
   private time = 0;
 
@@ -37,15 +39,19 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
     this.addChild(this.ring);
   }
 
-  /** Marks the koi a booster can take (`test`), or clears the marks (null): every koi back as it was. */
+  /**
+   * Marks the koi a booster can take (`test`), or clears the marks (null): every koi back to its size, and the dimmed
+   * ones brightening back over a few frames.
+   */
   show(test: ((cell: Cell) => boolean) | null): void {
     this.test = test;
+    this.brightening.clear();
     if (test) return;
     this.lift(null);
     this.dim = 0;
     for (const koi of this.board.koi()) {
-      koi.alpha = 1;
       koi.scale.set(koi.restScale);
+      if (koi.alpha < 1) this.brightening.add(koi);
     }
   }
 
@@ -79,7 +85,20 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
       this.dim += (1 - this.dim) * Math.min(1, deltaSeconds * BOOSTER_MARKS.dimIn);
       for (const koi of this.board.koi()) if (koi !== this.picked) this.mark(koi, test);
     }
+    this.brighten(deltaSeconds);
     this.drawPicked();
+  }
+
+  /** The koi dimmed when the marks were cleared ease back to full brightness, at the rate they dimmed. */
+  private brighten(deltaSeconds: number): void {
+    const share = Math.min(1, deltaSeconds * BOOSTER_MARKS.dimIn);
+    for (const koi of this.brightening) {
+      koi.alpha += (1 - koi.alpha) * share;
+      if (koi.destroyed || koi.alpha > 0.99) {
+        koi.alpha = 1;
+        this.brightening.delete(koi);
+      }
+    }
   }
 
   /** A koi the booster can take pulses in a wave across the pond; one it can't dims. */
