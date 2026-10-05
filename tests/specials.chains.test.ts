@@ -6,17 +6,17 @@ import { resolveRound } from '../src/model/specials';
 import type { BoardSpec, Cell, Cleared, Fired } from '../src/model/types';
 import { boardFrom, cellKeys, lineOf, makeSpecial } from './support/boards';
 
-const SPEC: BoardSpec = { cols: 6, rows: 6, kinds: 5 };
+const SPEC: BoardSpec = { cols: 6, rows: 6, colorCount: 5 };
 
 /**
- * No match and no swap that makes one, so a swap on it does only what its specials do (a special keeps the kind of
+ * No match and no swap that makes one, so a swap on it does only what its specials do (a special keeps the color of
  * the koi it was made on, and a koi never matches into a rainbow koi's cell).
  */
 const STUCK = ['012301', '230123', '012301', '230123', '012301', '230123'];
 
 const cell = (col: number, row: number): Cell => ({ col, row });
 
-/** The kind of each special that fired in a round, in firing order. */
+/** The type of each special that fired in a round, in firing order. */
 const types = (round: { readonly fired: readonly Fired[] }): string[] =>
   round.fired.map((f) => f.piece.special?.type ?? 'none');
 
@@ -61,10 +61,10 @@ describe('what each special reaches', () => {
   it('a rainbow koi: every koi of its colour but another rainbow koi, nearest first', () => {
     const board = boardFrom(STUCK);
     makeSpecial(board, cell(0, 0), { type: 'rainbow' });
-    const otherRainbow = makeSpecial(board, cell(1, 0), { type: 'rainbow' }); // on a kind-1 koi
-    const ones = [...board.cells()].filter((c) => board.get(c)?.kind === 1 && !board.get(c)?.special);
+    const otherRainbow = makeSpecial(board, cell(1, 0), { type: 'rainbow' }); // on a color-1 koi
+    const ones = [...board.cells()].filter((c) => board.get(c)?.color === 1 && !board.get(c)?.special);
     const [blast] = resolveRound(board, [], [], [{ at: cell(0, 0), target: 1 }]).fired;
-    expect(otherRainbow.kind).toBe(1);
+    expect(otherRainbow.color).toBe(1);
     expect(ones).toHaveLength(8); // the board's nine 1s but the rainbow koi
     expect(blast?.target).toBe(1);
     expect(cellKeys(blast?.reach ?? [])).toEqual(cellKeys(ones));
@@ -133,7 +133,7 @@ describe('chains', () => {
     expect(round.fired[1]?.target).toBe(3);
     const taken = round.cleared.filter((c) => c.blast === 1);
     expect(taken).toHaveLength(12); // the 16 threes but the 4 on the swept row
-    expect(taken.every((c) => c.piece.kind === 3)).toBe(true);
+    expect(taken.every((c) => c.piece.color === 3)).toBe(true);
   });
 
   it('a striped koi sweeping over a lily pad hits it, though no koi beside the pad cleared', () => {
@@ -171,15 +171,15 @@ describe('two specials swapped together', () => {
   it("a rainbow koi swapped with a striped koi takes the striped koi's colour, and the striped koi fires", () => {
     const board = boardFrom(STUCK);
     makeSpecial(board, cell(2, 2), { type: 'rainbow' });
-    const striped = makeSpecial(board, cell(3, 2), { type: 'line', along: 'col' }); // on a kind-3 koi
-    const threes = [...board.cells()].filter((c) => board.get(c)?.kind === 3);
+    const striped = makeSpecial(board, cell(3, 2), { type: 'line', along: 'col' }); // on a color-3 koi
+    const threes = [...board.cells()].filter((c) => board.get(c)?.color === 3);
     const result = trySwap(board, cell(2, 2), cell(3, 2), SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const first = result.rounds[0];
     if (!first) throw new Error('no round');
     expect(first.matches).toEqual([]);
     expect(types(first)).toEqual(['rainbow', 'line']);
-    expect(first.fired[0]?.target).toBe(striped.kind);
+    expect(first.fired[0]?.target).toBe(striped.color);
     // every 3, the striped koi too (it moved to (2, 2) in the swap), then the striped koi's column
     expect(cellKeys(clearedBy(first, 0))).toEqual(
       cellKeys(threes.map((c) => (c.col === 3 && c.row === 2 ? cell(2, 2) : c))),

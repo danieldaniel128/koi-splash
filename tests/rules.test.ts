@@ -13,9 +13,9 @@ import {
 import type { BoardSpec } from '../src/model/types';
 import { parseShape } from '../src/model/shape';
 
-const SPEC: BoardSpec = { cols: 7, rows: 9, kinds: 5 };
+const SPEC: BoardSpec = { cols: 7, rows: 9, colorCount: 5 };
 
-/** Builds a board from rows of digits (each digit is a kind), e.g. ['012', '120']. */
+/** Builds a board from rows of digits (each digit is a color), e.g. ['012', '120']. */
 function boardFrom(rows: string[]): Board {
   const first = rows[0] ?? '';
   const board = new Board(first.length, rows.length);
@@ -31,7 +31,7 @@ function kindsOf(board: Board): string[] {
   const rows: string[] = [];
   for (let row = 0; row < board.rows; row++) {
     let line = '';
-    for (let col = 0; col < board.cols; col++) line += String(board.kindAt({ col, row }) ?? '.');
+    for (let col = 0; col < board.cols; col++) line += String(board.colorAt({ col, row }) ?? '.');
     rows.push(line);
   }
   return rows;
@@ -69,7 +69,7 @@ describe('findMatches', () => {
     const board = boardFrom(['1112', '3243', '3214', '3241']);
     const matches = findMatches(board);
     expect(matches).toHaveLength(3);
-    expect(matches.map((m) => [m.direction, m.kind, m.cells.length])).toEqual([
+    expect(matches.map((m) => [m.direction, m.color, m.cells.length])).toEqual([
       ['row', 1, 3],
       ['col', 3, 3],
       ['col', 2, 3],
@@ -149,7 +149,7 @@ describe('trySwap', () => {
     board.setBlocked({ col: 0, row: 0 }, true); // a pad on the left, the bank on the right
     const special = { ...board.createPiece(1), special: { type: 'whirl' as const } };
     board.set({ col: 1, row: 0 }, special);
-    const spec = { cols: 3, rows: 1, kinds: 5 };
+    const spec = { cols: 3, rows: 1, colorCount: 5 };
     for (const into of [
       { col: 0, row: 0 },
       { col: 2, row: 0 },
@@ -193,7 +193,7 @@ describe('trySwap', () => {
       board,
       { col: 1, row: 1 },
       { col: 1, row: 2 },
-      { cols: 4, rows: 3, kinds: 5 },
+      { cols: 4, rows: 3, colorCount: 5 },
       seeded(3),
     );
     if (!result.valid) throw new Error('expected a valid swap');
@@ -260,7 +260,7 @@ describe('a shaped board (holes)', () => {
   // a notch at the top, a bay on the right that splits column 6, the bottom corners cut off
   const shaped: BoardSpec = {
     ...parseShape(['##...##', '#######', '#######', '######.', '######.', '#######', '#######', '.#####.']),
-    kinds: 5,
+    colorCount: 5,
   };
   const holes = shaped.holes ?? [];
   const isHole = (cell: { col: number; row: number }): boolean =>

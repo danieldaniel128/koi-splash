@@ -82,14 +82,14 @@ export class BoardAnimator implements TurnAnimator {
   async playBooster(use: BoosterUse, change: BoosterChange): Promise<void> {
     const { motions, feedFrom } = this.boosters;
     if (use.type === 'swap') await motions.leap(change.moved);
-    else if (use.type === 'feed' && change.fed !== undefined) {
-      await motions.feed(change.moved, use.at, change.fed, feedFrom());
+    else if (use.type === 'feed' && change.fedColor !== undefined) {
+      await motions.feed(change.moved, use.at, change.fedColor, feedFrom());
     } else {
       await Promise.all(
         change.made.map(({ piece, at }) =>
           motions.powerUp(piece, at, () => {
             this.view.makeSpecial(piece);
-            this.specials.fx.birth(at, piece.kind, 0);
+            this.specials.fx.birth(at, piece.color, 0);
             if (piece.special) this.events.emit('specialBorn', { type: piece.special.type });
           }),
         ),
@@ -205,7 +205,7 @@ export class BoardAnimator implements TurnAnimator {
   /** A special is born once its shape has spiralled into it: it takes its look, with a flash and a ring. */
   private async birth(made: Created): Promise<void> {
     const merge = made.from.length > 0 ? TIMING.specials.merge : 0;
-    this.specials.fx.birth(made.at, made.piece.kind, merge);
+    this.specials.fx.birth(made.at, made.piece.color, merge);
     await wait(merge);
     this.view.makeSpecial(made.piece);
     if (made.piece.special) this.events.emit('specialBorn', { type: made.piece.special.type });

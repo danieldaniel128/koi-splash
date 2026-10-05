@@ -6,7 +6,7 @@ import { scoreRound } from '../src/model/score';
 import type { Cell, Special } from '../src/model/types';
 import { splitPoints } from '../src/view/splitPoints';
 
-const SPEC = { cols: 7, rows: 9, kinds: 5 };
+const SPEC = { cols: 7, rows: 9, colorCount: 5 };
 const SPECIALS: Special[] = [{ type: 'line', along: 'row' }, { type: 'whirl' }, { type: 'rainbow' }];
 
 /** A swap that does something on this board: a match, or else a special swapped with the koi beside it. */

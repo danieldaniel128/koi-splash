@@ -15,7 +15,7 @@ const TIMING = {
   dive: 0.32,
 };
 let nextId = 1;
-const koi = (special?: Special): Piece => ({ id: nextId++, kind: 0, ...(special ? { special } : {}) });
+const koi = (special?: Special): Piece => ({ id: nextId++, color: 0, ...(special ? { special } : {}) });
 const cascadeRound = (over: Partial<CascadeRound>): CascadeRound => ({
   matches: [],
   created: [],

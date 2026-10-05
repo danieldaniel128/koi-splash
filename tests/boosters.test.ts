@@ -3,7 +3,7 @@ import { Board } from '../src/model/Board';
 import { applyBooster, canTarget } from '../src/model/boosters';
 import { findMatches } from '../src/model/rules';
 
-/** A board from rows of digits (each digit is a kind). */
+/** A board from rows of digits (each digit is a color). */
 function boardFrom(rows: string[]): Board {
   const board = new Board(rows[0]?.length ?? 0, rows.length);
   rows.forEach((line, row) => {
@@ -12,11 +12,11 @@ function boardFrom(rows: string[]): Board {
   });
   return board;
 }
-// shifted diagonals: no matches, every kind spread out
+// shifted diagonals: no matches, every color spread out
 const ROWS = ['012340', '123401', '234012', '340123', '401234', '012340'];
 
 const kindsOf = (board: Board): number[] =>
-  [...board.cells()].map((cell) => board.get(cell)?.kind ?? -1).sort();
+  [...board.cells()].map((cell) => board.get(cell)?.color ?? -1).sort();
 
 describe('boosters', () => {
   it('swap trades any two koi, however far apart', () => {
@@ -47,7 +47,7 @@ describe('boosters', () => {
     const change = applyBooster(board, { type: 'feed', at: { col: 2, row: 2 }, lines: 2 });
     expect(change?.moved.length).toBeGreaterThan(0);
     expect(kindsOf(board)).toEqual(before);
-    const matches = findMatches(board).filter((m) => m.kind === 4); // (2, 2) is a 4
+    const matches = findMatches(board).filter((m) => m.color === 4); // (2, 2) is a 4
     expect(matches.length).toBeGreaterThanOrEqual(2);
     for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
   });

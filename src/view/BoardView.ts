@@ -82,7 +82,7 @@ export class BoardView extends Container implements BoardDisplay {
   /** A picture of the koi in a cell as a special (the special booster's petals). */
   previewAt(cell: Cell, special: Special): string {
     const koi = this.koiAt(cell);
-    return this.specials.preview(special, koi?.kind ?? 0);
+    return this.specials.preview(special, koi?.color ?? 0);
   }
 
   /** The cell a koi rests in (nearest to where it is now), or null when it's off the board. */
@@ -110,7 +110,7 @@ export class BoardView extends Container implements BoardDisplay {
   makeSpecial(piece: Piece): void {
     if (!piece.special) return;
     const koi = this.spriteOf(piece.id);
-    koi.setPoses(this.specials.poses(piece.special, piece.kind));
+    koi.setPoses(this.specials.poses(piece.special, piece.color));
     this.dress(koi, piece.special);
   }
 
@@ -166,9 +166,9 @@ export class BoardView extends Container implements BoardDisplay {
 
   /** Creates a piece's koi (a special one in its look), which the animations move, and sets it in the water. */
   private createKoi(piece: Piece): Koi {
-    const { id, kind, special } = piece;
-    const poses = special ? this.specials.poses(special, kind) : this.textures.swim(kind);
-    const koi = new Koi(kind, poses, this.layout.koiSize, this.random);
+    const { id, color, special } = piece;
+    const poses = special ? this.specials.poses(special, color) : this.textures.swim(color);
+    const koi = new Koi(color, poses, this.layout.koiSize, this.random);
     this.pieces.set(id, koi);
     this.koiLayer.addChild(koi);
     this.waterline.add(koi);
@@ -179,7 +179,7 @@ export class BoardView extends Container implements BoardDisplay {
   /** A special koi's look, and what it casts into the water when its shape changed (a whirlpool's curled koi). */
   private dress(koi: Koi, special: Special): void {
     this.looks.add(koi, special);
-    const marks = this.specials.marks(special, koi.kind);
+    const marks = this.specials.marks(special, koi.color);
     if (marks) this.waterline.reshape(koi, marks);
   }
 

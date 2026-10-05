@@ -2,7 +2,7 @@ import { Board } from '../../src/model/Board';
 import type { Cell, Piece, Special } from '../../src/model/types';
 
 /**
- * A board drawn row by row from the top: a digit is a koi of that kind, '*' a lily pad (a blocked cell) and '.' a
+ * A board drawn row by row from the top: a digit is a koi of that color, '*' a lily pad (a blocked cell) and '.' a
  * hole (no cell, the bank). Every row must be as wide as the first.
  */
 export function boardFrom(rows: readonly string[]): Board {
@@ -21,7 +21,7 @@ export function boardFrom(rows: readonly string[]): Board {
   return board;
 }
 
-/** Turns the koi at `at` into a special, keeping its kind and id, and returns it. */
+/** Turns the koi at `at` into a special, keeping its color and id, and returns it. */
 export function makeSpecial(board: Board, at: Cell, special: Special): Piece {
   const koi = board.get(at);
   if (!koi) throw new Error(`no koi at ${at.col},${at.row}`);
@@ -30,12 +30,12 @@ export function makeSpecial(board: Board, at: Cell, special: Special): Piece {
   return piece;
 }
 
-/** The board drawn back as rows: each koi's kind, '-' for an empty cell (a pad, a hole or a cleared koi). */
+/** The board drawn back as rows: each koi's color, '-' for an empty cell (a pad, a hole or a cleared koi). */
 export function drawBoard(board: Board): string[] {
   const rows: string[] = [];
   for (let row = 0; row < board.rows; row++) {
     let line = '';
-    for (let col = 0; col < board.cols; col++) line += String(board.get({ col, row })?.kind ?? '-');
+    for (let col = 0; col < board.cols; col++) line += String(board.get({ col, row })?.color ?? '-');
     rows.push(line);
   }
   return rows;

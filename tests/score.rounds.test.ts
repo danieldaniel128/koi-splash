@@ -12,9 +12,9 @@ const cells = (count: number, row = 0): Cell[] => Array.from({ length: count }, 
 
 /** A round that cleared `count` koi and made these specials, each from a shape of `size` koi. */
 function round(count: number, made: readonly { special: Special; size: number }[] = []): CascadeRound {
-  const cleared: Cleared[] = cells(count).map((at, i) => ({ piece: { id: i + 1, kind: 0 }, at }));
+  const cleared: Cleared[] = cells(count).map((at, i) => ({ piece: { id: i + 1, color: 0 }, at }));
   const created: Created[] = made.map(({ special, size }, i) => ({
-    piece: { id: 100 + i, kind: 0, special },
+    piece: { id: 100 + i, color: 0, special },
     at: { col: 0, row: i + 1 },
     from: cells(size - 1, i + 1), // the rest of the shape swam into the special's cell
   }));
@@ -54,7 +54,7 @@ describe('scoreRound', () => {
       board,
       { col: 2, row: 1 },
       { col: 2, row: 0 },
-      { cols: 5, rows: 3, kinds: 5 },
+      { cols: 5, rows: 3, colorCount: 5 },
       seeded(1),
     );
     if (!result.valid) throw new Error('refused');

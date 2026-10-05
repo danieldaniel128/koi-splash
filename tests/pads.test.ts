@@ -5,7 +5,7 @@ import { PadField } from '../src/model/pads';
 import type { Pad } from '../src/model/types';
 import { createBoard, findMove, trySwap } from '../src/model/rules';
 
-const SPEC = { cols: 7, rows: 9, kinds: 5 };
+const SPEC = { cols: 7, rows: 9, colorCount: 5 };
 
 /** A bud on cell col,row: matches in the four cells next to it hit it. */
 function bud(id: number, col: number, row: number, hits = 2): Pad {
@@ -78,7 +78,7 @@ describe('PadField', () => {
         if (mark !== '.') board.set({ col, row }, board.createPiece(Number(mark)));
       }
     });
-    const spec = { cols: 6, rows: 6, kinds: 5 };
+    const spec = { cols: 6, rows: 6, colorCount: 5 };
     const result = trySwap(board, { col: 2, row: 2 }, { col: 2, row: 1 }, spec, seeded(1), field);
     if (!result.valid) throw new Error('refused');
     const [first] = result.rounds;

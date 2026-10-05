@@ -7,7 +7,7 @@ import type {
   CascadeRound,
   Cell,
   Fall,
-  Kind,
+  PieceColor,
   Match,
   PadEvent,
   Piece,
@@ -32,7 +32,7 @@ const MAX_CASCADE = 50;
 export function createBoard(spec: BoardSpec, rng: RandomSource, blocked: readonly Cell[] = []): Board {
   const board = new Board(spec.cols, spec.rows, spec.holes);
   for (const cell of blocked) board.setBlocked(cell, true);
-  fillSafely(board, spec.kinds, rng);
+  fillSafely(board, spec.colorCount, rng);
   return board;
 }
 
@@ -48,11 +48,11 @@ export function resetBoard(
 ): void {
   for (const cell of board.cells()) board.setBlocked(cell, false);
   for (const cell of blocked) board.setBlocked(cell, true);
-  fillSafely(board, spec.kinds, rng);
+  fillSafely(board, spec.colorCount, rng);
 }
 
 /**
- * Every straight run of 3 or more same-kind pieces (a T or L shape gives one row match and one column match).
+ * Every straight run of 3 or more same-color pieces (a T or L shape gives one row match and one column match).
  * O(N): one pass over the rows and one over the columns.
  */
 export function findMatches(board: Board): Match[] {
@@ -163,12 +163,12 @@ export function settle(
     ];
     const padEvents = hitPads(board, start.pads, struck);
     const falls = applyGravity(board);
-    const spawns = refill(board, spec.kinds, rng);
+    const spawns = refill(board, spec.colorCount, rng);
     const { created, fired, cleared } = round;
     rounds.push({ matches, created, fired, cleared, padEvents, falls, spawns });
   }
   const reshuffled = !hasAnyMove(board);
-  if (reshuffled) fillSafely(board, spec.kinds, rng);
+  if (reshuffled) fillSafely(board, spec.colorCount, rng);
   return { rounds, reshuffled };
 }
 
@@ -178,24 +178,24 @@ export function settle(
  * Fills every cell with new pieces, avoiding ready-made matches, until the board has at least one move.
  * O(N) per try plus a findMove check. Almost always one try, but there is no fixed upper bound on retries.
  */
-function fillSafely(board: Board, kinds: number, rng: RandomSource): void {
+function fillSafely(board: Board, colorCount: number, rng: RandomSource): void {
   do {
     for (const cell of board.cells()) {
-      if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
+      if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeColor(board, cell, colorCount, rng)));
     }
   } while (!hasAnyMove(board));
 }
 
-/** A kind for `cell` that does not complete a run with the two pieces to its left or the two above. */
-function safeKind(board: Board, cell: Cell, kinds: number, rng: RandomSource): Kind {
-  const banned = new Set<Kind>();
-  const left = board.kindAt({ col: cell.col - 1, row: cell.row });
-  if (left !== null && left === board.kindAt({ col: cell.col - 2, row: cell.row })) banned.add(left);
-  const up = board.kindAt({ col: cell.col, row: cell.row - 1 });
-  if (up !== null && up === board.kindAt({ col: cell.col, row: cell.row - 2 })) banned.add(up);
+/** A color for `cell` that does not complete a run with the two pieces to its left or the two above. */
+function safeColor(board: Board, cell: Cell, colorCount: number, rng: RandomSource): PieceColor {
+  const banned = new Set<PieceColor>();
+  const left = board.colorAt({ col: cell.col - 1, row: cell.row });
+  if (left !== null && left === board.colorAt({ col: cell.col - 2, row: cell.row })) banned.add(left);
+  const up = board.colorAt({ col: cell.col, row: cell.row - 1 });
+  if (up !== null && up === board.colorAt({ col: cell.col, row: cell.row - 2 })) banned.add(up);
 
-  const allowed: Kind[] = [];
-  for (let k = 0; k < kinds; k++) if (!banned.has(k)) allowed.push(k);
+  const allowed: PieceColor[] = [];
+  for (let k = 0; k < colorCount; k++) if (!banned.has(k)) allowed.push(k);
   return pick(rng, allowed);
 }
 
@@ -217,19 +217,19 @@ function lineCells(board: Board, direction: Match['direction'], line: number): C
   );
 }
 
-/** Runs of 3+ same-kind pieces along one line, given its cells in order. */
+/** Runs of 3+ same-color pieces along one line, given its cells in order. */
 function runsInLine(board: Board, cells: readonly Cell[], direction: Match['direction']): Match[] {
-  const kinds = cells.map((cell) => board.kindAt(cell));
+  const colorCount = cells.map((cell) => board.colorAt(cell));
   const matches: Match[] = [];
   let start = 0;
   for (let i = 1; i <= cells.length; i++) {
-    const runKind = kinds[start] ?? null;
-    const runContinues = i < cells.length && runKind !== null && kinds[i] === runKind;
+    const runColor = colorCount[start] ?? null;
+    const runContinues = i < cells.length && runColor !== null && colorCount[i] === runColor;
     if (runContinues) continue;
 
     const runLength = i - start;
-    if (runKind !== null && runLength >= MIN_RUN) {
-      matches.push({ kind: runKind, cells: cells.slice(start, i), direction });
+    if (runColor !== null && runLength >= MIN_RUN) {
+      matches.push({ color: runColor, cells: cells.slice(start, i), direction });
     }
     start = i;
   }
@@ -248,11 +248,11 @@ function neighbours(cell: Cell): Cell[] {
 
 /** True when the piece at `cell` is part of a horizontal or vertical run of 3+. */
 function runThrough(board: Board, cell: Cell): boolean {
-  const kind = board.kindAt(cell);
-  if (kind === null) return false;
+  const color = board.colorAt(cell);
+  if (color === null) return false;
   const reach = (dc: number, dr: number): number => {
     let n = 0;
-    while (board.kindAt({ col: cell.col + dc * (n + 1), row: cell.row + dr * (n + 1) }) === kind) n++;
+    while (board.colorAt({ col: cell.col + dc * (n + 1), row: cell.row + dr * (n + 1) }) === color) n++;
     return n;
   };
   return reach(-1, 0) + reach(1, 0) + 1 >= MIN_RUN || reach(0, -1) + reach(0, 1) + 1 >= MIN_RUN;
@@ -309,13 +309,13 @@ function stretches(board: Board, col: number): number[][] {
 }
 
 /** Fills the empty cells at the top of each stretch of water with new koi rising from the deep, the lowest first. */
-function refill(board: Board, kinds: number, rng: RandomSource): Spawn[] {
+function refill(board: Board, colorCount: number, rng: RandomSource): Spawn[] {
   const spawns: Spawn[] = [];
   for (let col = 0; col < board.cols; col++) {
     for (const slots of stretches(board, col)) {
       const empty = slots.filter((row) => !board.get({ col, row })); // bottom to top
       empty.forEach((row, order) => {
-        const piece = board.createPiece(int(rng, 0, kinds - 1));
+        const piece = board.createPiece(int(rng, 0, colorCount - 1));
         const to = { col, row };
         board.set(to, piece);
         spawns.push({ piece, to, order });

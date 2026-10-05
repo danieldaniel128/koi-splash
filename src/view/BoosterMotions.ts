@@ -7,7 +7,7 @@ import { BOOSTER_MOTION } from '../config/specials';
 import { WATER } from '../config/water';
 import { THEME } from '../theme/theme';
 import type { Moved } from '../model/boosters';
-import type { Cell, Kind, Piece } from '../model/types';
+import type { Cell, PieceColor, Piece } from '../model/types';
 import type { BoardView } from './BoardView';
 import type { GameEventBus } from '../game/events';
 import type { HitStop } from './HitStop';
@@ -108,12 +108,12 @@ export class BoosterMotions extends Container {
    * Feeding: pellets are lobbed from `thrownFrom` (board space) to the food, the koi of its colour turn to it, then
    * each moved koi swims to its new cell, the school first and the koi pushed aside after them.
    */
-  async feed(moved: readonly Moved[], food: Cell, kind: Kind, thrownFrom: PointData): Promise<void> {
+  async feed(moved: readonly Moved[], food: Cell, color: PieceColor, thrownFrom: PointData): Promise<void> {
     const look = BOOSTER_MOTION.feed;
     const target = this.view.cellToPoint(food);
     this.throwPellets(thrownFrom, target);
     this.events.emit('pelletsThrown');
-    const school = moved.filter((move) => move.piece.kind === kind);
+    const school = moved.filter((move) => move.piece.color === color);
     for (const move of school) this.faceToward(this.koiOf(move.piece), target);
     const start = look.throw + look.turn * 0.5;
     await Promise.all(

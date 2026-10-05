@@ -1,17 +1,17 @@
-import type { Kind, PadEvent } from './types';
+import type { PieceColor, PadEvent } from './types';
 
 /** What one cascade round did, as far as a goal cares. */
 export interface RoundOutcome {
   readonly points: number;
   readonly padEvents: readonly PadEvent[];
-  /** The kinds of the koi it cleared, one entry per koi. */
-  readonly cleared: readonly Kind[];
+  /** The colors of the koi it cleared, one entry per koi. */
+  readonly cleared: readonly PieceColor[];
 }
 
 /** How far one goal has got; `koi` says which colour, for a koi goal. */
 export interface GoalProgress {
-  readonly kind: GoalDef['type'];
-  readonly koi?: Kind;
+  readonly type: GoalDef['type'];
+  readonly color?: PieceColor;
   readonly done: number;
   readonly target: number;
 }
@@ -33,7 +33,7 @@ export interface Goal {
 export type GoalDef =
   | { readonly type: 'lotus'; readonly count: number }
   | { readonly type: 'score'; readonly target: number }
-  | { readonly type: 'koi'; readonly kind: Kind; readonly count: number };
+  | { readonly type: 'koi'; readonly color: PieceColor; readonly count: number };
 
 /** How many of these goals are met. O(goals). */
 export function goalsMet(goals: readonly GoalProgress[]): number {
@@ -53,7 +53,7 @@ export function recordRound(goal: Goal, round: RoundOutcome, bonus: number): num
   return round.points + recordRound(goal, { points: met * bonus, padEvents: [], cleared: [] }, bonus);
 }
 
-/** Which kind of goal: bloom lotuses, score points or clear koi of a colour. */
+/** Which type of goal: bloom lotuses, score points or clear koi of a color. */
 export type GoalType = GoalDef['type'];
 
 /**
@@ -62,13 +62,16 @@ export type GoalType = GoalDef['type'];
  */
 export function checkGoals(
   defs: readonly GoalDef[],
-  board: { readonly buds: number; readonly kinds: number },
+  board: { readonly buds: number; readonly colorCount: number },
 ): void {
   for (const def of defs) {
     if (def.type === 'lotus' && def.count > board.buds)
       throw new RangeError(`goals: ${def.count} lotuses to bloom, but only ${board.buds} buds on the board`);
-    if (def.type === 'koi' && !(Number.isInteger(def.kind) && def.kind >= 0 && def.kind < board.kinds))
-      throw new RangeError(`goals: koi colour ${def.kind} is not in play (0 to ${board.kinds - 1})`);
+    if (
+      def.type === 'koi' &&
+      !(Number.isInteger(def.color) && def.color >= 0 && def.color < board.colorCount)
+    )
+      throw new RangeError(`goals: koi color ${def.color} is not in play (0 to ${board.colorCount - 1})`);
   }
 }
 
@@ -81,17 +84,17 @@ export function createGoal(def: GoalDef): Goal {
   switch (def.type) {
     case 'lotus':
       return new CountingGoal(
-        { kind: 'lotus' },
+        { type: 'lotus' },
         def.count,
         (round) => round.padEvents.filter((e) => e.type === 'bloom').length,
       );
     case 'score':
-      return new CountingGoal({ kind: 'score' }, def.target, (round) => round.points);
+      return new CountingGoal({ type: 'score' }, def.target, (round) => round.points);
     case 'koi':
       return new CountingGoal(
-        { kind: 'koi', koi: def.kind },
+        { type: 'koi', color: def.color },
         def.count,
-        (round) => round.cleared.filter((kind) => kind === def.kind).length,
+        (round) => round.cleared.filter((color) => color === def.color).length,
       );
   }
 }
@@ -101,7 +104,7 @@ class CountingGoal implements Goal {
   private done = 0;
 
   constructor(
-    private readonly label: Pick<GoalProgress, 'kind' | 'koi'>,
+    private readonly label: Pick<GoalProgress, 'type' | 'color'>,
     private readonly target: number,
     private readonly gain: (round: RoundOutcome) => number,
   ) {}

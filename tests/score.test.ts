@@ -5,7 +5,7 @@ import type { CascadeRound, Cleared } from '../src/model/types';
 /** A cascade round that cleared `count` pieces (only the count matters for scoring). */
 function round(count: number): CascadeRound {
   const cleared: Cleared[] = Array.from({ length: count }, (_, i) => ({
-    piece: { id: i, kind: 0 },
+    piece: { id: i, color: 0 },
     at: { col: i, row: 0 },
   }));
   return { matches: [], created: [], fired: [], cleared, padEvents: [], falls: [], spawns: [] };

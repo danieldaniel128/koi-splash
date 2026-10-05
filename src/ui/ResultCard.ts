@@ -132,7 +132,7 @@ export class ResultCard implements ResultDisplay {
   /** What to try next: a tip for the first goal missed, and the free boosters left unused. */
   private tipFor(goals: readonly GoalProgress[]): string {
     const missed = goals.find((goal) => goal.done < goal.target);
-    const tip = missed ? RESULT_CARD.tips[missed.kind].replace('{goal}', goalName(missed)) : '';
+    const tip = missed ? RESULT_CARD.tips[missed.type].replace('{goal}', goalName(missed)) : '';
     const unused = this.game?.boostersLeft() ?? 0;
     const nudge =
       unused === 0

@@ -25,7 +25,7 @@ interface Layers {
 /**
  * The special koi's life at rest (after the prototype's): a striped koi faces its line over a pulsing glow, a sheen
  * sweeping along it now and then; a rainbow koi's colours flow over a spinning prism glow with sparkles orbiting it;
- * a whirlpool's eddy turns under its curled koi. One look per kind of special (LOOKS); each follows its koi.
+ * a whirlpool's eddy turns under its curled koi. one look per special type (LOOKS); each follows its koi.
  */
 export class SpecialLooks {
   readonly under = new Container();
@@ -91,7 +91,7 @@ class RainbowHue {
 
 type LookMaker = (koi: Koi, special: Special, textures: SpecialTextures, layers: Layers) => Look;
 
-/** One look per kind of special (Strategy): a new special is one entry here. */
+/** one look per special type (Strategy): a new special is one entry here. */
 const LOOKS: Readonly<Record<Special['type'], LookMaker>> = {
   line: (koi, special, textures, layers) => new StripedLook(koi, special, textures, layers),
   rainbow: (koi, _special, textures, layers) => new RainbowLook(koi, textures, layers),
@@ -110,8 +110,8 @@ class StripedLook implements Look {
     // along its line, whichever way round is nearer to where it was heading (head up is 0, right is PI / 2)
     const axis = special.type === 'line' && special.along === 'row' ? Math.PI / 2 : 0;
     this.facing = Math.cos(koi.heading - axis) >= 0 ? axis : axis + Math.PI;
-    this.glow = additive(textures.glow, textures.color(koi.kind).glow);
-    this.frames = textures.sheen(koi.kind);
+    this.glow = additive(textures.glow, textures.tintsOf(koi.color).glow);
+    this.frames = textures.sheen(koi.color);
     this.sheen = additive(this.frames[0] ?? textures.glow);
     layers.under.addChild(this.glow);
     layers.over.addChild(this.sheen);
@@ -191,7 +191,7 @@ class WhirlLook implements Look {
     textures: SpecialTextures,
     layers: Layers,
   ) {
-    this.eddy = new Sprite(textures.eddy(koi.kind));
+    this.eddy = new Sprite(textures.eddy(koi.color));
     this.eddy.anchor.set(0.5);
     layers.under.addChild(this.eddy);
     koi.spin = SPECIAL_LOOK.whirl.koiSpin; // the curled koi turns in the eye, head first, with the water

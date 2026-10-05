@@ -21,7 +21,7 @@ import type { BoosterGame } from './BoosterControl';
 import type { GameEventBus } from './events';
 import type { GameStatus } from './GameStatus';
 import type { SwapGame } from './SwapControl';
-import { colourOf } from '../model/types';
+import { colorOf } from '../model/types';
 
 type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
 
@@ -148,7 +148,7 @@ export class GameScene implements BoosterGame, SwapGame {
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
-    checkGoals(deps.level.goals, { buds: deps.level.pads.buds, kinds: deps.spec.kinds });
+    checkGoals(deps.level.goals, { buds: deps.level.pads.buds, colorCount: deps.spec.colorCount });
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
@@ -364,7 +364,7 @@ export class GameScene implements BoosterGame, SwapGame {
     const { goal } = this.level;
     const points = scoreRound(round, roundIndex, this.deps.level.pointsPerPiece);
     // a rainbow koi has no colour of its own: it counts toward no colour goal
-    const cleared = round.cleared.map(({ piece }) => colourOf(piece)).filter((kind) => kind !== null);
+    const cleared = round.cleared.map(({ piece }) => colorOf(piece)).filter((color) => color !== null);
     const metBefore = goalsMet(goal.progress());
     this.level.score += recordRound(
       goal,

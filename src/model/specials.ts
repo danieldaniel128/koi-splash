@@ -1,19 +1,19 @@
 import type { Board } from './Board';
 import { groupMatches } from './groups';
 import type { MatchGroup } from './groups';
-import { alongOf, cellKey, colourOf, distanceSq, sameCell } from './types';
-import type { Cell, Cleared, Created, Fired, Kind, Match, Piece, Special } from './types';
+import { alongOf, cellKey, colorOf, distanceSq, sameCell } from './types';
+import type { Cell, Cleared, Created, Fired, PieceColor, Match, Piece, Special } from './types';
 
 /**
  * The special koi, as in the prototype. A shape makes one (specialFor), it appears on one of the shape's cells
- * (spawnCellFor), and when it is matched, swapped or caught in another special's blast it fires: each kind of special
- * reaches its own cells (SPECIAL_REACH, one entry per kind). Pure board logic, no timing.
+ * (spawnCellFor), and when it is matched, swapped or caught in another special's blast it fires: each special type
+ * reaches its own cells (SPECIAL_REACH, one entry per type). Pure board logic, no timing.
  */
 
 /** A special about to fire, and for a rainbow koi the colour it was swapped with ('all' for another rainbow). */
 export interface Trigger {
   readonly at: Cell;
-  readonly target?: Kind | 'all';
+  readonly target?: PieceColor | 'all';
 }
 
 /** What one round of a cascade did with matches and specials, before the koi fall. */
@@ -59,7 +59,7 @@ export function swapTriggers(board: Board, a: Cell, b: Cell): Trigger[] {
     const piece = board.get(at);
     if (!piece?.special) continue;
     const partner = board.get(other);
-    const target = partner?.special?.type === 'rainbow' ? 'all' : partner?.kind;
+    const target = partner?.special?.type === 'rainbow' ? 'all' : partner?.color;
     triggers.push(target === undefined ? { at } : { at, target });
   }
   return triggers;
@@ -128,7 +128,7 @@ function fire(
   const piece = firingPiece(board, outcome, trigger.at);
   if (!piece?.special) return;
   const { special } = piece;
-  const target = special.type === 'rainbow' ? (trigger.target ?? commonKind(board)) : undefined;
+  const target = special.type === 'rainbow' ? (trigger.target ?? mostCommonColor(board)) : undefined;
   const reach = SPECIAL_REACH[special.type](board, trigger.at, special, target);
   const blast = outcome.fired.length;
   outcome.fired.push({ piece, at: trigger.at, reach, ...(target === undefined ? {} : { target }) });
@@ -157,9 +157,9 @@ function firingPiece(board: Board, outcome: RoundOutcome, at: Cell): Piece | nul
 const AROUND = [-1, 0, 1].flatMap((dr) => [-1, 0, 1].map((dc) => [dc, dr] as const));
 
 /** The cells a special reaches from its cell, nearest first (`target`: the colour a rainbow koi takes). */
-type Reach = (board: Board, at: Cell, special: Special, target?: Kind | 'all') => Cell[];
+type Reach = (board: Board, at: Cell, special: Special, target?: PieceColor | 'all') => Cell[];
 
-/** What each kind of special reaches (Strategy, one entry per kind; the full list for a new special is at Special). */
+/** What each special type reaches (Strategy, one entry per type; the full list for a new special is at Special). */
 const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   // a striped koi sweeps its whole row or column, outward from itself
   line: (board, at, special) => {
@@ -182,20 +182,20 @@ const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   rainbow: (board, at, _special, target) => {
     const cells = [...board.cells()].filter((cell) => {
       const piece = board.get(cell);
-      return !!piece && !sameCell(cell, at) && (target === 'all' || colourOf(piece) === target);
+      return !!piece && !sameCell(cell, at) && (target === 'all' || colorOf(piece) === target);
     });
     return byDistance(cells, at);
   },
 };
 
-/** The colour most koi on the board have (lowest kind on a tie): what a rainbow koi caught in a blast takes. */
-function commonKind(board: Board): Kind {
+/** The color most koi on the board have (lowest color on a tie): what a rainbow koi caught in a blast takes. */
+function mostCommonColor(board: Board): PieceColor {
   const counts: number[] = [];
   for (const cell of board.cells()) {
-    const kind = board.kindAt(cell); // null for a rainbow koi
-    if (kind !== null) counts[kind] = (counts[kind] ?? 0) + 1;
+    const color = board.colorAt(cell); // null for a rainbow koi
+    if (color !== null) counts[color] = (counts[color] ?? 0) + 1;
   }
-  return counts.reduce<Kind>((best, count, kind) => (count > (counts[best] ?? 0) ? kind : best), 0);
+  return counts.reduce<PieceColor>((best, count, color) => (count > (counts[best] ?? 0) ? color : best), 0);
 }
 
 function byDistance(cells: Cell[], from: Cell): Cell[] {

@@ -52,7 +52,7 @@ function stubScene(stub: StubLevel = {}): Seen & { scene: GameScene } {
   };
   events.on('invalidSwap', () => seen.said.push('invalidSwap'));
   const deps: GameSceneDeps = {
-    spec: { cols: 7, rows: 9, kinds: 5 },
+    spec: { cols: 7, rows: 9, colorCount: 5 },
     level: {
       moves: stub.moves ?? 10,
       pointsPerPiece: 10,
@@ -146,7 +146,7 @@ describe('GameScene', () => {
     if (!board) throw new Error('nothing rendered');
     const cells = [...board.cells()].filter((cell) => board.get(cell));
     const a = cells[0];
-    const b = cells.find((cell) => cell !== a && board.get(cell)?.kind === (a && board.get(a)?.kind));
+    const b = cells.find((cell) => cell !== a && board.get(cell)?.color === (a && board.get(a)?.color));
     if (!a || !b) throw new Error('no two koi of one colour');
     const other = board.get(b);
 

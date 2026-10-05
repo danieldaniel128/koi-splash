@@ -11,7 +11,7 @@ import { parseShape } from '../src/model/shape';
 import type { BoardSpec } from '../src/model/types';
 
 /** The level's board, read the way the game reads it while booting (see measureScreen). */
-const SPEC: BoardSpec = { ...parseShape(LEVEL.shape), kinds: BOARD.kinds };
+const SPEC: BoardSpec = { ...parseShape(LEVEL.shape), colorCount: BOARD.colorCount };
 
 /** The level as shipped: these catch a slip in the config before a player meets it. */
 describe('the shipped level', () => {
@@ -26,18 +26,18 @@ describe('the shipped level', () => {
   });
 
   it('plays every koi colour with a koi of its own, each with its special colours', () => {
-    expect(BOARD.kinds).toBeGreaterThanOrEqual(3);
-    expect(BOARD.kinds).toBeLessThanOrEqual(KOI_SET.length);
+    expect(BOARD.colorCount).toBeGreaterThanOrEqual(3);
+    expect(BOARD.colorCount).toBeLessThanOrEqual(KOI_SET.length);
     expect(KOI_COLORS).toHaveLength(KOI_SET.length);
   });
 
   it('has goals the board can meet: no more lotuses than buds, koi of a colour in play, nothing zero', () => {
     expect(() => {
-      checkGoals(LEVEL.goals, { buds: LEVEL.pads.buds, kinds: BOARD.kinds });
+      checkGoals(LEVEL.goals, { buds: LEVEL.pads.buds, colorCount: BOARD.colorCount });
     }).not.toThrow();
     for (const goal of LEVEL.goals) {
       if (goal.type === 'lotus') expect(goal.count).toBeLessThanOrEqual(LEVEL.pads.buds);
-      if (goal.type === 'koi') expect(goal.kind).toBeLessThan(BOARD.kinds);
+      if (goal.type === 'koi') expect(goal.color).toBeLessThan(BOARD.colorCount);
       expect(goal.type === 'score' ? goal.target : goal.count).toBeGreaterThan(0);
     }
   });

@@ -6,10 +6,10 @@ import { findMatches, trySwap } from '../src/model/rules';
 import { specialFor } from '../src/model/specials';
 import type { Special } from '../src/model/types';
 
-const SPEC = { cols: 6, rows: 6, kinds: 5 };
+const SPEC = { cols: 6, rows: 6, colorCount: 5 };
 
 /**
- * A board from rows of characters: a digit is a koi of that kind; a letter is a special on a koi of kind 4: 'h' a
+ * A board from rows of characters: a digit is a koi of that color; a letter is a special on a koi of color 4: 'h' a
  * striped koi along its row, 'v' along its column, 'w' a whirlpool, 'r' a rainbow koi.
  */
 function boardFrom(rows: string[]): Board {
@@ -89,7 +89,7 @@ describe('specials in a cascade', () => {
     expect(blast?.target).toBe(3);
     const taken = first?.cleared.filter((c) => c.blast === 0) ?? [];
     expect(taken.length).toBeGreaterThan(5);
-    expect(taken.every((c) => c.piece.kind === 3)).toBe(true);
+    expect(taken.every((c) => c.piece.color === 3)).toBe(true);
     const from = blast?.at ?? { col: 0, row: 0 };
     const distances = taken.map((c) => (c.at.col - from.col) ** 2 + (c.at.row - from.row) ** 2);
     expect(distances).toEqual([...distances].sort((a, b) => a - b)); // nearest first

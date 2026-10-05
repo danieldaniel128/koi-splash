@@ -5,7 +5,7 @@ import { paintBeam, SPECTRUM } from '../art/specialKoi';
 import { easeInOutCubic, easeOutBack, easeOutCubic } from '../core/easing';
 import { SPECIAL_FX } from '../config/specials';
 import { TIMING } from '../config/timing';
-import type { Cell, Fired, Kind } from '../model/types';
+import type { Cell, Fired, PieceColor } from '../model/types';
 import type { BlastPlan } from './specialTiming';
 import type { SpecialTextures } from './SpecialTextures';
 import type { GameEventBus } from '../game/events';
@@ -55,9 +55,9 @@ export class SpecialFx extends Container {
   }
 
   /** A special was born at `at`: a flash of its glow and a ring in the water, `delay` s from now. */
-  birth(at: Cell, kind: Kind, delay: number): void {
+  birth(at: Cell, color: PieceColor, delay: number): void {
     const look = SPECIAL_FX.birth;
-    const flash = this.additive(this.textures.glow, this.textures.color(kind).glow);
+    const flash = this.additive(this.textures.glow, this.textures.tintsOf(color).glow);
     flash.position.copyFrom(this.board.cellToPoint(at));
     flash.alpha = 0;
     gsap
@@ -100,7 +100,7 @@ export class SpecialFx extends Container {
   /** A beam of the koi's colour races along its row or column, and the water ripples as the sweep passes. */
   private beam({ fired, at }: BlastPlan): void {
     const look = SPECIAL_FX.beam;
-    const beam = this.additive(this.beamTexture, this.textures.color(fired.piece.kind).glow);
+    const beam = this.additive(this.beamTexture, this.textures.tintsOf(fired.piece.color).glow);
     beam.position.copyFrom(this.board.cellToPoint(fired.at));
     beam.rotation =
       fired.piece.special?.type === 'line' && fired.piece.special.along === 'col' ? Math.PI / 2 : 0;
@@ -137,7 +137,7 @@ export class SpecialFx extends Container {
     const look = SPECIAL_FX.vortex;
     const { whirlSpin, whirlPull, whirlCorner } = TIMING.specials;
     const stay = whirlSpin + whirlCorner + whirlPull;
-    const eddy = new Sprite(this.textures.eddy(fired.piece.kind));
+    const eddy = new Sprite(this.textures.eddy(fired.piece.color));
     eddy.anchor.set(0.5);
     eddy.position.copyFrom(this.board.cellToPoint(fired.at));
     eddy.alpha = 0;
