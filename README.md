@@ -1,32 +1,66 @@
 # Koi Splash
 
 A calm match-3 on a moonlit koi pond, built for the mini-game home assignment. Swipe a koi into its neighbour's
-cell to line up three or more of a colour. Lily pads float between the koi; matches next to a lotus bud open it, and
-the goal is to bloom all three lotuses in 15 moves.
+cell (or tap one koi, then the other) to line up three or more of a colour. Lily pads float between the koi, and
+matches next to a lotus bud open it. To win, bloom all three lotuses and clear 10 red koi in 15 moves. The score
+earns up to three stars.
 
-Play it here: https://danieldaniel128.github.io/koi-splash/ (GitHub Pages, deployed by GitHub Actions from `main`
-only, so it always shows the last finished milestone).
+**Play it:** https://danieldaniel128.github.io/koi-splash/ (phone or desktop). It's on GitHub Pages, deployed from
+`main` only, so it always shows the last finished milestone.
 
-## Running it
-
-Needs Node 22.22.1 or newer (`.nvmrc` and CI use 24).
-
-```
-npm install
-npm run dev      # local server on http://localhost:5173, also reachable from a phone on the same Wi-Fi
-npm run check    # typecheck + lint + tests
-npm run build    # static web build in dist/
-npm run preview  # serves that build
-```
-
-The board is dealt from the clock; add `?seed=42` (any whole number) to the address to deal the same board every
-time, to play a bug again.
+**Run it:** `npm ci`, then `npm run dev` and open http://localhost:5173 (also reachable from a phone on the same
+Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` makes the web build in `dist/`.
 
 ## Stack & assets
 
-TypeScript (strict), Vite, PixiJS 8 on WebGL, GSAP for tweens. Apart from the page's icon there are no image files:
-the koi, stones and lily pads are painted on canvases once, while the game loads (`src/art/`), and uploaded as
-textures.
+- **Engine and tools:** PixiJS 8 on WebGL 2, TypeScript (strict), Vite, GSAP for the tweens, Vitest, ESLint and
+  Prettier, husky and lint-staged for a pre-commit hook, and GitHub Actions, which checks every pull request and
+  publishes to GitHub Pages.
+- **Third-party packages** the game ships with (everything else is a dev tool):
+  - `pixi.js` 8: MIT.
+  - `gsap` 3: GSAP's standard "no charge" license.
+  - `@fontsource/nunito` 5, the Nunito font, bundled so the text looks the same on every phone: SIL Open Font
+    License 1.1.
+- **Visual assets:** all drawn in code, none from outside. The koi, lily pads, lotuses, stones and the garden are
+  painted on canvases while the game loads (`src/art/`), and the water, the bank and the foam are shaders
+  (`src/view/water/shaders/`). The booster icons are small inline SVGs (`src/ui/icons.ts`). The only image file is
+  the page's icon.
+- **Audio assets:** none. Every sound is synthesized live with Web Audio (`src/audio/`): the effects, the music and
+  the night ambience. There are no sound files.
+- **Requirements:** a browser with WebGL 2 (an up-to-date Chrome, Safari or Firefox; without it the game says so).
+  To build it, Node 22.22.1 or newer (`engines` in `package.json`; `.nvmrc` and CI use 24).
+
+## AI usage
+
+I used Claude throughout. AI wrote the code:
+
+- the project setup and tooling (Vite, TypeScript, ESLint, Prettier, the CI and deploy workflows)
+- the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
+- the model and its tests
+- the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
+- the water and the effects (simulation, shaders, dives and swims, wakes, shadows, ripples, waterline foam)
+
+My part:
+
+- I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
+  standards into ESLint config.
+- I designed the state machine: guarded transitions in a table, with enter/exit hooks.
+- I planned the lotus goal: the rules, a goal interface so a level can swap goals, and every number in config (hits
+  to bloom, lotuses, moves).
+- I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
+  for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
+- I reviewed the code and play-tested it on desktop and on my phone.
+
+AI also built a throwaway prototype before this repo, and helped me write this README.
+
+## Next steps
+
+- The same preset approach as the UI theme for the effects.
+- The prototype's combos (two specials swapped together: cross, giant current, rainbow wave, maelstrom). Swapping
+  two specials already fires both.
+- Earning more boosters (a level gives one of each for now).
+- A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
+- A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
 
 ## Tech art
 
@@ -227,35 +261,3 @@ Milestones:
 new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole. The rest
 cover scoring, the lily pads and goals, the state machine's guards and hooks, and how a swipe picks its cell. They
 run in CI on every pull request, so when I work on the feel I find out before merging if I broke the rules.
-
-## AI usage
-
-I used Claude throughout. AI wrote the code:
-
-- the project setup and tooling (Vite, TypeScript, ESLint, Prettier, the CI and deploy workflows)
-- the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
-- the model and its tests
-- the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
-- the water and the effects (simulation, shaders, dives and swims, wakes, shadows, ripples, waterline foam)
-
-My part:
-
-- I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
-  standards into ESLint config.
-- I designed the state machine: guarded transitions in a table, with enter/exit hooks.
-- I planned the lotus goal: the rules, a goal interface so a level can swap goals, and every number in config (hits
-  to bloom, lotuses, moves).
-- I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
-  for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
-- I reviewed the code and play-tested it on desktop and on my phone.
-
-AI also built a throwaway prototype before this repo, and helped me write this README.
-
-## Next steps
-
-- The same preset approach as the UI theme for the effects.
-- The prototype's combos (two specials swapped together: cross, giant current, rainbow wave, maelstrom). Swapping
-  two specials already fires both.
-- Earning more boosters (a level gives one of each for now).
-- A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
-- A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.

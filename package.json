@@ -2,6 +2,11 @@
   "name": "koi-splash",
   "version": "1.0.0",
   "description": "Koi Splash - a calm but juicy match-3 on a moonlit pond (PixiJS + TypeScript)",
+  "homepage": "https://danieldaniel128.github.io/koi-splash/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danieldaniel128/koi-splash.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
