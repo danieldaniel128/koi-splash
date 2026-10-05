@@ -147,6 +147,15 @@ export class SpecialTextures {
     });
   }
 
+  /**
+   * Every texture baked so far: the glows and the sparkle, every special koi's poses, sheen and eddy, and the
+   * whirlpools' shadows and waterlines (for the GPU to take them early).
+   */
+  allTextures(): Texture[] {
+    const marks = [...this.curledMarks.values()].flatMap((mark) => [mark.shadow, ...mark.contacts]);
+    return [this.glow, this.sparkle, this.rainbowGlow, ...[...this.cache.values()].flat(), ...marks];
+  }
+
   /** A whirlpool's eddy in its color's glow. */
   eddy(color: PieceColor): Texture {
     const [texture] = this.cached(`eddy:${color}`, () => {
