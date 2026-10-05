@@ -30,6 +30,30 @@ Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` 
 - **Requirements:** a browser with WebGL 2 (an up-to-date Chrome, Safari or Firefox; without it the game says so).
   To build it, Node 22.22.1 or newer (`engines` in `package.json`; `.nvmrc` and CI use 24).
 
+### Why this stack
+
+- **PixiJS 8 on WebGL 2.** A fast 2D renderer for the web that batches sprites and lets me write my own shaders. The
+  water is a GPU simulation, so I needed real WebGL, not a DOM or canvas-only engine. Pixi gives me that without the
+  weight of a full engine, and it runs the same on a phone browser and a desktop.
+- **TypeScript, strict.** The game has a lot of small data types (cells, pieces, rounds, blasts, boosters). Strict
+  types catch mistakes at build time and make refactors safe; the type maps also tell me every place to touch when I
+  add a special, a goal or a booster.
+- **Vite.** Instant dev server with hot reload, so I could tune feel and look while playing, and a small, fast
+  production build that splits Pixi and GSAP into their own chunks.
+- **GSAP.** Game feel lives in timing and easing. GSAP gives me timelines I can chain and await, like DOTween in
+  Unity, so a turn is just `await`ed animations, and one clock I can slow for hit-stop.
+- **Web Audio, no sound files.** Every sound is synthesized live, so it stays in key with the music, never needs
+  loading, and adds nothing to the download.
+- **Art painted in code and shaders, no image files.** Everything is drawn on canvases while the game loads and baked
+  once, at the screen's real pixel density. It stays sharp on any phone, can be restyled from config and the theme,
+  and keeps the download tiny.
+- **HTML and CSS for the UI, over the canvas.** Text stays crisp, the UI is accessible (real buttons, focus, screen
+  readers) and themed with the same tokens as the game.
+- **Vitest, ESLint, Prettier, husky.** Tests for the rules and the systems, lint rules that keep each layer to its own
+  imports and keep functions small, and formatting and checks on every commit.
+- **GitHub Actions and Pages.** Every pull request is checked, and `main` deploys itself, so the play link always has
+  the latest stable build.
+
 ## AI usage
 
 I built Koi Splash with Claude as my main tool, and I'm upfront about it: most of the code was written by AI, under
