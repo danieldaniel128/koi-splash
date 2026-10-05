@@ -5,7 +5,8 @@
 // - a faint moonlit sheen: broad, slow patches of light on the open water, so even the deep middle isn't flat
 // - the simulated waves as soft relief: slopes facing the moon light up, crests catch a little light, troughs
 //   darken, and only strong fronts get a clean bright rim
-// - the moon's reflection, broken by the water into a loose column of twinkling glints over a soft glow
+// - the moon's reflection, broken by the water into a loose column of twinkling glints over a soft glow; it lies
+//   under the koi in a corner of the pond (there is little open water round the board), softened there
 // The waves refract all of it. Outside the shore it's transparent (the bank shows through), antialiased.
 // common.glsl and waves.glsl are prepended to this file.
 
@@ -36,8 +37,9 @@ uniform float uTroughShade;
 // rim on strong fronts: slope where it starts and where it's full, strength
 uniform vec3 uRim;
 uniform vec3 uMoon;
-// moon reflection centre (x, y) and radius, stage px
+// moon reflection centre (x, y) and radius, stage px, and how much of it shows under the board
 uniform vec3 uMoonAt;
+uniform float uMoonUnderBoard;
 
 // Soft, wide bands of light on the bottom: two layers of slow noise, slowly warped and drifting, each glowing
 // around where it crosses zero. The glow's width follows the noise (in pattern units, not screen px), so where the
@@ -113,7 +115,7 @@ vec3 water(vec2 p, float edge, vec3 w) {
     color += uInk * smoothstep(0.3, 0.95, sheen) * uSheen;
     color *= 1.0 - uLip.x * (1.0 - smoothstep(0.0, uLip.y, fromShore));
     color = relief(color, w);
-    return moonlight(color, seen, smoothstep(0.0, 14.0, rectEdge(p, uBoard)));
+    return moonlight(color, seen, mix(uMoonUnderBoard, 1.0, smoothstep(0.0, 14.0, rectEdge(p, uBoard))));
 }
 
 // Distance (px) to where the water gets shallow: the shore, or a stone or pad in it. A pad leaving the water

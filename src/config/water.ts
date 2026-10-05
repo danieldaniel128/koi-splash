@@ -86,6 +86,8 @@ export const WATER = {
   glowUnderBoard: 0,
   /** A faint moonlit sheen drifting over the whole pond in broad patches (added light at its brightest). */
   sheen: 0.045,
+  /** How much of the moon's reflection shows under the board (1 = as on open water): soft, so the koi stay clear. */
+  moonUnderBoard: 0.5,
 
   // --- the simulated waves, drawn as soft relief (no lines)
   /** Moonlight colour on the waves. */

@@ -55,7 +55,10 @@ export const POND = {
   /** Width (px) of the dark wet band on the bank along the water (the bank's colours are in the theme). */
   wetBand: 16,
 
-  /** Where the moon's reflection sits on the water, under the koi (from the pond's corner). */
+  /**
+   * Where the moon's reflection sits on the water, under the koi (from the pond's corner): there is little open
+   * water round the board, so it shows there, softened (WATER.moonUnderBoard).
+   */
   moonSpot: { corner: 'bottom-right', offset: [-100, -40] } satisfies Anchor,
 
   /**

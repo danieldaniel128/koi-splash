@@ -366,6 +366,7 @@ function waterLook({ board, moonAt }: PondLayout): UniformDefs {
     uRim: { value: [...WATER.rimGate, WATER.rimStrength], type: 'vec3<f32>' },
     uMoon: { value: color(THEME.scene.moon), type: 'vec3<f32>' },
     uMoonAt: { value: [...moonAt, THEME.scene.moonReflection], type: 'vec3<f32>' },
+    uMoonUnderBoard: { value: WATER.moonUnderBoard, type: 'f32' },
   };
 }
 
