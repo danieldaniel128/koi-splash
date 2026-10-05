@@ -80,9 +80,9 @@ and every effect also moves the water. The timings and sizes are in `TIMING.spec
 
 MVP with a passive view. The model (`src/model`) is plain TypeScript with no Pixi in it. On a swipe it works out the
 whole cascade at once and returns it as data: a list of steps, each with what matched, what cleared, what fell and
-what spawned. The presenter (`GameScene`) plays those steps through the animator one at a time. The view never
-decides anything, so the board on screen can't drift from the real one, and the rules can be tested without a
-browser.
+what spawned. The presenter (`GameScene`) scores each step and plays it through the animator with its points, one at
+a time. The view never decides anything, so the board on screen can't drift from the real one (and the points that
+pop up add up to the score), and the rules can be tested without a browser.
 
 The win condition is a goal object (Strategy, `src/model/goals.ts`): the scene feeds it every cascade round and asks
 if it's complete, without knowing which goal it is. A goal can be lotuses to bloom, points to score or koi of one
@@ -231,4 +231,3 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 - Earning more boosters (a level gives one of each for now).
 - A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
 - A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
-- Have the scene pass each round's points to the animator, so the score popups can't drift from the score.

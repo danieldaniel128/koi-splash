@@ -259,7 +259,6 @@ function createAnimator(parts: GameParts, screen: Screen, bar: BoosterBar): Boar
     cell: board.cell,
     water: pond,
     popups,
-    pointsPerPiece: SCORE.pointsPerPiece,
     specials,
     boosters: { motions: boosters.motions, feedFrom },
     events,

@@ -259,15 +259,15 @@ export class GameScene {
    * cell too), and the goal counts it.
    */
   private async playRound(step: CascadeStep, round: number): Promise<void> {
-    const met = this.countRound(step, round);
+    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+    const met = this.countRound(step, points);
     this.announce(step, round, met);
-    await Promise.all([this.deps.animator.playStep(step), this.deps.pads.play(step.padEvents)]);
+    await Promise.all([this.deps.animator.playStep(step, points), this.deps.pads.play(step.padEvents)]);
     this.deps.status.update(this.status()); // the score and the goal climb with each round of the cascade
   }
 
-  /** Scores a round and feeds it to the goals. Returns the goals it met, numbered by when (0 = the first met). */
-  private countRound(step: CascadeStep, round: number): number[] {
-    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+  /** Adds a round's points and feeds it to the goals. Returns the goals it met, numbered by when (0 = the first met). */
+  private countRound(step: CascadeStep, points: number): number[] {
     this.level.score += points;
     // a rainbow koi has no colour of its own: it counts toward no colour goal
     const cleared = step.cleared

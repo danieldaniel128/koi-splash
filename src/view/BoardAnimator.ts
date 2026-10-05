@@ -3,7 +3,6 @@ import { Color, Point } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
-import { scoreRound } from '../model/score';
 import type { BoosterChange, BoosterUse } from '../model/boosters';
 import type { CascadeStep, Cell, Cleared, Created, Piece, Spawn } from '../model/types';
 import type { BoosterMotions } from './BoosterMotions';
@@ -12,6 +11,7 @@ import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
 import { planRound } from './specialTiming';
 import type { ClearPlan } from './specialTiming';
+import { splitPoints } from './splitPoints';
 import type { SpecialFx } from './SpecialFx';
 import type { SpecialMotions } from './SpecialMotions';
 import type { WaterSurface } from './water/PondWater';
@@ -30,8 +30,6 @@ export interface AnimatorDeps {
   readonly water: WaterSurface;
   /** The points that pop up over the matches. */
   readonly popups: MatchEffects;
-  /** The level's points per piece, the same value the scene scores with. */
-  readonly pointsPerPiece: number;
   /** The specials' effects and the ways koi leave around them. */
   readonly specials: { readonly fx: SpecialFx; readonly motions: SpecialMotions };
   /** The boosters' motions, and where the feed's pellets are thrown from (board space). */
@@ -56,16 +54,10 @@ const UNDERWATER = new Color(TIMING.diveTint).toNumber();
  * the turn step by step instead of chaining callbacks.
  */
 export class BoardAnimator {
-  /**
-   * Cascade round within the current turn, for the points shown (later rounds are worth more). The scene doesn't
-   * pass the round in, so this counter mirrors its loop index; the scene passing the round's points would be cleaner.
-   */
-  private round = 0;
   private readonly view: BoardView;
   private readonly cellSize: number;
   private readonly water: WaterSurface;
   private readonly fx: MatchEffects;
-  private readonly pointsPerPiece: number;
   private readonly specials: AnimatorDeps['specials'];
   private readonly boosters: AnimatorDeps['boosters'];
   private readonly events: GameEventBus;
@@ -75,7 +67,6 @@ export class BoardAnimator {
     this.cellSize = deps.cell;
     this.water = deps.water;
     this.fx = deps.popups;
-    this.pointsPerPiece = deps.pointsPerPiece;
     this.specials = deps.specials;
     this.boosters = deps.boosters;
     this.events = deps.events;
@@ -83,7 +74,6 @@ export class BoardAnimator {
 
   /** A booster changed the board: the view plays it (a leap, a feeding, a koi powering up) before it settles. */
   async playBooster(use: BoosterUse, change: BoosterChange): Promise<void> {
-    this.round = 0;
     const { motions, feedFrom } = this.boosters;
     if (use.type === 'swap') await motions.leap(change.moved);
     else if (use.type === 'feed' && change.fed !== undefined) {
@@ -106,7 +96,6 @@ export class BoardAnimator {
    * the water apart as they go, and each one settles into its new cell with a small push.
    */
   async swap(first: PlacedPiece, second: PlacedPiece): Promise<void> {
-    this.round = 0;
     const lifted = this.view.spriteOf(first.piece.id);
     this.view.bringToFront(lifted);
     this.stir(first.at, second.at, 1);
@@ -164,10 +153,11 @@ export class BoardAnimator {
   /**
    * One cascade round, timed by planRound: matched koi dive (a special's shape spirals into it), specials fire and
    * their blasts take their koi in their own rhythm, then the koi above swim down and new ones rise into the gaps.
+   * `points` is what the scene scored for the round: its popups show exactly that.
    */
-  async playStep(step: CascadeStep): Promise<void> {
+  async playStep(step: CascadeStep, points: number): Promise<void> {
     const plan = planRound(step, TIMING.specials);
-    this.score(step);
+    this.score(step, points);
     for (const blast of plan.blasts) this.specials.fx.fire(blast);
     // the koi above start swimming down while the last ones are still going
     const swimDelay =
@@ -180,7 +170,6 @@ export class BoardAnimator {
       ),
       ...step.spawns.map((spawn) => this.rise(spawn, swimDelay)),
     ]);
-    this.round++;
   }
 
   /** A special is born once its shape has spiralled into it: it takes its look, with a flash and a ring. */
@@ -222,22 +211,11 @@ export class BoardAnimator {
     }
   }
 
-  /** Each match's points pop up over it (a cell shared by two matches counts once), and each blast's over its special. */
-  private score(step: CascadeStep): void {
-    const perPiece = scoreRound(step, this.round, this.pointsPerPiece) / Math.max(step.cleared.length, 1);
-    const counted = new Set<string>();
-    for (const match of step.matches) {
-      const fresh = match.cells.filter((cell) => !counted.has(`${cell.col},${cell.row}`));
-      for (const cell of fresh) counted.add(`${cell.col},${cell.row}`);
-      if (fresh.length === 0) continue;
-      const points = match.cells.map((cell) => this.view.cellToPoint(cell));
-      this.fx.points(centreOf(points), Math.round(fresh.length * perPiece));
+  /** The round's points pop up over its matches and over each special that fired (see splitPoints). */
+  private score(step: CascadeStep, points: number): void {
+    for (const { over, amount } of splitPoints(step, points)) {
+      this.fx.points(centreOf(over.map((cell) => this.view.cellToPoint(cell))), amount);
     }
-    // each special's blast pops its points over the special
-    step.fired.forEach((fired, blast) => {
-      const taken = step.cleared.filter((cleared) => cleared.blast === blast).length;
-      if (taken > 0) this.fx.points(this.view.cellToPoint(fired.at), Math.round(taken * perPiece));
-    });
   }
 
   /** The water is shoved apart between two cells (a swap): a push at the midpoint, `strength` times the full one. */
