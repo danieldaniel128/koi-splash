@@ -12,7 +12,7 @@ export class StarBar {
   private readonly fill = el('span', 'stars__fill');
   private readonly stars: HTMLElement[];
   private readonly top: number;
-  private lit = -1;
+  private lit = 0;
 
   constructor(rule: StarRule) {
     this.top = rule.scores[2];
@@ -25,12 +25,20 @@ export class StarBar {
     this.element = el('div', 'stars', el('span', 'track stars__track', this.fill), ...this.stars);
   }
 
+  /** Shows a new level's score and stars at once, with no pop. */
+  reset(score: number, stars: number): void {
+    this.show(score, stars);
+  }
+
   update(score: number, stars: number): void {
+    const earned = stars > this.lit ? this.stars.slice(this.lit, stars) : [];
+    this.show(score, stars);
+    for (const star of earned) bump(star, HUD_MOTION.starEarned, HUD_MOTION.goalSettle);
+  }
+
+  private show(score: number, stars: number): void {
     this.fill.style.width = `${Math.min(1, score / this.top) * 100}%`;
-    if (stars === this.lit) return;
-    const earned = this.lit >= 0 && stars > this.lit ? this.stars.slice(this.lit, stars) : [];
     this.lit = stars;
     this.stars.forEach((star, i) => star.classList.toggle('stars__star--lit', i < stars));
-    for (const star of earned) bump(star, HUD_MOTION.starEarned, HUD_MOTION.goalSettle);
   }
 }

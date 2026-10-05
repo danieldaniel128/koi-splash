@@ -25,6 +25,12 @@ export interface Piece {
   readonly special?: Special;
 }
 
+/** A piece and the cell it sits in when a move starts (read before the model changes the board). */
+export interface PlacedPiece {
+  readonly piece: Piece;
+  readonly at: Cell;
+}
+
 /** A straight run of 3+ same-kind pieces. */
 export interface Match {
   readonly kind: Kind;

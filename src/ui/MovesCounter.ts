@@ -5,19 +5,27 @@ import { bump, el } from './UiLayer';
 export class MovesCounter {
   readonly element: HTMLElement;
   private readonly value = el('span', 'number moves__value');
-  private shown = -1;
+  private shown = 0;
 
   constructor() {
     this.element = el('div', 'orb moves', this.value, el('span', 'label', 'moves'));
   }
 
+  /** Shows the moves a new level starts with, without the pop. */
+  reset(movesLeft: number): void {
+    this.show(movesLeft);
+  }
+
   update(movesLeft: number): void {
     if (movesLeft === this.shown) return;
-    const first = this.shown < 0;
+    this.show(movesLeft);
+    bump(this.value, HUD_MOTION.movesBump, HUD_MOTION.movesSettle);
+  }
+
+  private show(movesLeft: number): void {
     this.shown = movesLeft;
     this.value.textContent = `${movesLeft}`;
     this.element.classList.toggle('moves--low', movesLeft <= HUD_MOTION.lowMoves);
     this.element.classList.toggle('moves--last', movesLeft <= HUD_MOTION.lastMoves);
-    if (!first) bump(this.value, HUD_MOTION.movesBump, HUD_MOTION.movesSettle);
   }
 }

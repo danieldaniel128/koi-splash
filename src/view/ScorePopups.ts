@@ -2,12 +2,13 @@ import { gsap } from 'gsap';
 import { Container, Text } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { POINTS } from '../config/fx';
+import type { MatchEffects } from './BoardAnimator';
 
 /**
  * The points each match earns: they pop up over the match, then fly up to the score and shrink into it.
  * Positions are in the board's space: this layer sits exactly on the board.
  */
-export class ScorePopups extends Container {
+export class ScorePopups extends Container implements MatchEffects {
   /** Labels are reused: making a Text draws a canvas, too slow to do for every match. */
   private readonly spareLabels: Text[] = [];
 

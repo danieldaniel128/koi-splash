@@ -1,5 +1,6 @@
 import { RESULT_CARD } from '../config/ui';
 import { Timers } from '../core/Timers';
+import type { ResultDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
 import type { GoalProgress } from '../model/goals';
 import { STAR, setIcon } from './icons';
@@ -11,7 +12,7 @@ import { el } from './UiLayer';
  * score and the goal, and a button to play again. It dims the whole screen and its card scales with the stage (--ui-scale). Display only: whoever owns the
  * level decides what playing again means (onRestart).
  */
-export class ResultCard {
+export class ResultCard implements ResultDisplay {
   private readonly root: HTMLElement;
   private readonly card: HTMLElement;
   private readonly title = el('h2', 'number result__title');

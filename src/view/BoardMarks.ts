@@ -2,6 +2,8 @@ import { gsap } from 'gsap';
 import { Container, Graphics } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { BOOSTER_MARKS } from '../config/specials';
+import type { BoosterMarks } from '../game/BoosterControl';
+import type { PickMark } from '../game/SwapControl';
 import type { Cell } from '../model/types';
 import type { Koi } from './Koi';
 
@@ -19,7 +21,7 @@ export interface MarkedBoard {
  * makes that koi wobble. A koi picked to swap by hand lifts over the same ring. Follows the koi every frame; lives in
  * the board's space, under the koi (the ring).
  */
-export class BoardMarks extends Container {
+export class BoardMarks extends Container implements BoosterMarks, PickMark {
   private test: ((cell: Cell) => boolean) | null = null;
   private picked: Koi | null = null;
   private readonly ring = new Graphics();
