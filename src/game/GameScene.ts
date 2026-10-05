@@ -103,6 +103,15 @@ export class GameScene {
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
     this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoals(deps.level.goals) };
     this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
+      // the board shows it takes a move only while it's still (between turns, with the level on)
+      idle: {
+        onEnter: () => {
+          deps.view.setPlayable(true);
+        },
+        onExit: () => {
+          deps.view.setPlayable(false);
+        },
+      },
       won: {
         onEnter: () => {
           deps.result.show('won', this.status());
@@ -117,6 +126,7 @@ export class GameScene {
       },
     });
     deps.view.render(this.board);
+    deps.view.setPlayable(true);
     deps.pads.reset(this.pads.pads);
     deps.status.update(this.status());
   }
@@ -169,15 +179,24 @@ export class GameScene {
     this.turn.transition('idle');
   }
 
+  /** True when the board takes a swap: it is still and the level is on. */
+  get canSwap(): boolean {
+    return this.turn.can('swapping');
+  }
+
+  /** Whether a koi rests in this cell (not a lily pad, a hole or off the board). */
+  hasKoi(cell: Cell): boolean {
+    return this.board.get(cell) !== null;
+  }
+
   private async playTurn(from: Cell, to: Cell): Promise<void> {
-    const koi = this.board.get(from);
-    if (koi && this.board.isBlocked(to)) {
-      await this.runTurn(() => this.bumpPad({ piece: koi, at: from }, to));
-      return;
-    }
+    const piece = this.board.get(from);
+    if (!piece) return; // the swipe started on a lily pad or a hole
+    const koi = { piece, at: from };
     const pair = this.placedPair(from, to);
-    if (!pair) return; // swiped off the edge of the board
-    await this.runTurn(() => this.resolveSwap(pair));
+    if (this.isBank(to)) await this.runTurn(() => this.bumpBank(koi, to));
+    else if (this.board.isBlocked(to)) await this.runTurn(() => this.bumpPad(koi, to));
+    else if (pair) await this.runTurn(() => this.resolveSwap(pair));
   }
 
   /** Runs one turn's animations, keeping the game playable if one fails. */
@@ -191,6 +210,13 @@ export class GameScene {
       this.deps.view.render(this.board);
       if (this.turn.can('idle')) this.turn.transition('idle');
     }
+  }
+
+  /** A koi swiped into the bank: refused like a swap that makes nothing, with its sound. No move is spent. */
+  private async bumpBank(koi: PlacedPiece, bank: Cell): Promise<void> {
+    this.deps.events.emit('invalidSwap');
+    await this.deps.animator.bumpBank(koi, bank);
+    this.turn.transition('idle');
   }
 
   /** A koi swiped into a lily pad: it bumps its nose and swims back, the pad rocks. No move is spent. */
@@ -269,6 +295,11 @@ export class GameScene {
     const { movesLeft, score, goal } = this.level;
     const { moves, stars } = this.deps.level;
     return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goal.progress() };
+  }
+
+  /** True where a koi meets the bank: off the board, or a hole in its shape. */
+  private isBank(cell: Cell): boolean {
+    return !this.board.inBounds(cell) || this.board.isHole(cell);
   }
 
   /** The two pieces being swapped, with their cells, read before the model changes the board. */

@@ -126,6 +126,13 @@ export class BoardAnimator {
     await Promise.all([this.lean(first, second.at, TIMING.swapLift), this.lean(second, first.at, 1)]);
   }
 
+  /** A koi swiped into the bank (off the board, or a hole): it leans toward it and springs back, like a bad swap. */
+  async bumpBank(koi: PlacedPiece, toward: Cell): Promise<void> {
+    this.view.bringToFront(this.view.spriteOf(koi.piece.id));
+    this.stir(koi.at, toward, WATER.invalidSwapPush);
+    await this.lean(koi, toward, TIMING.swapLift);
+  }
+
   /**
    * A koi swiped into a lily pad: it darts toward the pad, squashes against it with a small splash, and swims back
    * to its place.

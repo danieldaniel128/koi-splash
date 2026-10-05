@@ -94,6 +94,11 @@ export class BoardView extends Container {
     yield* this.pieces.values();
   }
 
+  /** Shows whether the board takes a move now: the pointer cursor over it while it does. */
+  setPlayable(playable: boolean): void {
+    this.cursor = playable ? 'pointer' : 'default';
+  }
+
   /** What the koi cast into the water follows them. Call once per frame after the koi moved, before the pond draws. */
   follow(deltaSeconds: number): void {
     this.waterline.follow(deltaSeconds);

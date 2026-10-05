@@ -43,10 +43,14 @@ export function petalSpots(
  * The special booster's choice (after the prototype's petal menu): three frosted-glass petals bloom round the picked
  * koi, each showing the koi as that special with its name; tapping one chooses it, tapping anywhere else closes
  * them. The pond behind dims.
+ *
+ * The menu opens as the finger lifts off the koi, and on a touch screen the browser sends that tap's click a moment
+ * later, right where the petals start to bloom. So the menu only takes a click whose press began on it once open.
  */
 export class SpecialMenu implements SpecialPicker {
   private readonly root = el('div', 'petals');
   private settle: ((choice: Special['type'] | null) => void) | null = null;
+  private pressed = false;
 
   constructor(
     private readonly layer: UiLayer,
@@ -54,13 +58,17 @@ export class SpecialMenu implements SpecialPicker {
     private readonly choices: readonly PetalChoice[],
     private readonly cell: number,
   ) {
+    this.root.addEventListener('pointerdown', () => {
+      this.pressed = true;
+    });
     this.root.addEventListener('click', (event) => {
-      if (event.target === this.root) this.finish(null); // tapped away from the petals
+      if (event.target === this.root && this.takes(event)) this.finish(null); // tapped away from the petals
     });
   }
 
   pick(at: Cell): Promise<Special['type'] | null> {
     this.finish(null);
+    this.pressed = false;
     const centre = this.board.cellCentre(at);
     const look = SPECIAL_MENU;
     const spots = petalSpots(centre, at.row < look.topRows, {
@@ -86,6 +94,7 @@ export class SpecialMenu implements SpecialPicker {
     const picture = el('img', 'petal__koi');
     picture.src = this.board.preview(at, choice.type);
     picture.alt = '';
+    picture.draggable = false; // a click that drifts a little still picks the petal
     const petal = el('button', 'petal', picture, el('span', 'petal__name', choice.name));
     petal.type = 'button';
     petal.setAttribute('aria-label', choice.name);
@@ -107,10 +116,15 @@ export class SpecialMenu implements SpecialPicker {
         fill: 'backwards',
       },
     );
-    petal.addEventListener('click', () => {
-      this.finish(choice.type);
+    petal.addEventListener('click', (event) => {
+      if (this.takes(event)) this.finish(choice.type);
     });
     return petal;
+  }
+
+  /** A click the menu answers: its press began on the open menu, or it came from a key (a click with no press). */
+  private takes(click: MouseEvent): boolean {
+    return this.pressed || click.detail === 0;
   }
 
   private finish(choice: Special['type'] | null): void {

@@ -46,18 +46,22 @@ import { SpecialTextures } from './view/SpecialTextures';
 import { PondProps } from './view/water/PondProps';
 import { PondWater } from './view/water/PondWater';
 import { SwipeInput } from './view/SwipeInput';
+import type { BoardGestures } from './view/SwipeTracker';
 import { BoardMarks } from './view/BoardMarks';
 import { BoosterMotions } from './view/BoosterMotions';
 import { BoosterControl } from './game/BoosterControl';
 import type { BoosterSounds } from './game/BoosterControl';
+import { SwapControl } from './game/SwapControl';
 import { InstructionPill } from './ui/InstructionPill';
 import { SpecialMenu } from './ui/SpecialMenu';
 import { SoundSettings } from './ui/SoundSettings';
+import { closeOnEscape } from './ui/escapeKey';
 import { SOUND_ICONS } from './ui/icons';
 import { storedSetting } from './core/storedSetting';
 import { placeSoundMenu } from './layout/soundMenu';
 import { GardenMusic } from './audio/GardenMusic';
 import { byBus, Mixer } from './audio/Mixer';
+import type { Bus } from './audio/Mixer';
 import { NightAmbience } from './audio/NightAmbience';
 import { SampleTrack } from './audio/SampleTrack';
 import { SoundBoard } from './audio/SoundBoard';
@@ -88,7 +92,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const ui = new UiLayer(host, layout.stage);
   const hud = new Hud(ui, layout.hud, { goalIcons: goalIcons(app), stars: LEVEL.stars });
   const events = createGameEvents(); // what happens in the game, for whoever listens (the sound)
-  startSound(app, events, { ui, layout });
+  const sound = startSound(app, events, { ui, layout });
 
   const bake = koiBake(app, board.piece);
   const textures = new KoiTextures(KOI_SET, bake); // the koi, baked once at the screen's resolution
@@ -103,7 +107,8 @@ async function boot(host: HTMLElement): Promise<void> {
   const effects = createSpecialEffects({ boardView, textures: specials, pond, board, events });
   const boosters = createBoosterViews(app, { boardView, specials, pond, cell: board.cell, events });
   const parts = { boardView, pond, popups, hud, pads, result, specials: effects, boosters, events };
-  startGame(parts, { ui, layout });
+  const control = startGame(parts, { ui, layout }, app.canvas);
+  closeOnEscape(document, [() => sound.close(), () => control.back()]); // the top one open closes first
 
   const stage = buildStage(app, parts, { layout, shore });
   app.stage.addChild(stage);
@@ -167,8 +172,11 @@ function keepFitted(
   app.renderer.on('resize', fit);
 }
 
-/** The game: the scene (presenter) wired to every display it drives, and the swipe input that feeds it. */
-function startGame(parts: GameParts, screen: Screen): void {
+/**
+ * The game: the scene (presenter) wired to every display it drives, and the player's input that feeds it. Returns
+ * the boosters' presenter, for the Escape key.
+ */
+function startGame(parts: GameParts, screen: Screen, canvas: HTMLCanvasElement): BoosterControl {
   const { boardView, hud, pads, result } = parts;
   const bar = new BoosterBar(screen.ui, screen.layout.bar, BOOSTERS);
   const level = { ...LEVEL, ...SCORE };
@@ -192,17 +200,46 @@ function startGame(parts: GameParts, screen: Screen): void {
     boardView,
     events: parts.events,
   });
-  result.onRestart(() => {
-    scene.restart();
-    control.reset();
-  });
-  new SwipeInput(boardView, screen.layout.board.cell * INPUT.swipeThreshold, {
+  const swaps = new SwapControl(scene, parts.boosters.marks);
+  listenToPlayer(
+    { scene, control, swaps },
+    { bar, result, boardView, canvas, cell: screen.layout.board.cell },
+  );
+  return control;
+}
+
+/** The presenters the player's input goes to: the scene, the boosters, and the swap by hand. */
+interface Presenters {
+  readonly scene: GameScene;
+  readonly control: BoosterControl;
+  readonly swaps: SwapControl;
+}
+
+/**
+ * The player's input: the board's taps and drags go to the armed booster, or else to the swap. Arming a booster or
+ * starting the level over drops a picked koi.
+ */
+function listenToPlayer(
+  { scene, control, swaps }: Presenters,
+  on: { bar: BoosterBar; result: ResultCard; boardView: BoardView; canvas: HTMLCanvasElement; cell: number },
+): void {
+  const gestures = (): BoardGestures => (control.armed ? control : swaps);
+  new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
     swipe: (from, to) => {
-      if (!control.armed) scene.handleSwipe(from, to); // while a booster is armed, the board takes its taps
+      gestures().swipe(from, to);
     },
     tap: (cell) => {
-      control.tap(cell);
+      gestures().tap(cell);
     },
+  });
+  on.bar.onPress((type) => {
+    control.press(type);
+    if (control.armed) swaps.drop();
+  });
+  on.result.onRestart(() => {
+    scene.restart();
+    control.reset();
+    swaps.drop();
   });
 }
 
@@ -248,7 +285,10 @@ interface Screen {
   readonly layout: GameLayout;
 }
 
-/** The boosters' views on the board: their motions (over the koi) and the marks while one is armed (under them). */
+/**
+ * The boosters' views on the board: their motions (over the koi) and the marks while one is armed (under them), which
+ * also lift a koi picked to swap by hand.
+ */
 function createBoosterViews(
   app: Application,
   on: {
@@ -275,7 +315,7 @@ function createBoosterViews(
   return { motions, marks };
 }
 
-/** The boosters' presenter, wired to the bar, the pill over the pond, the board's marks and the petal menu. */
+/** The boosters' presenter, wired to the bar's counts, the pill over the pond, the board's marks and the petals. */
 function createBoosterControl(
   scene: GameScene,
   views: { bar: BoosterBar; marks: BoardMarks; screen: Screen; boardView: BoardView; events: GameEventBus },
@@ -304,9 +344,6 @@ function createBoosterControl(
     feedLines: BOOSTER_MOTION.feed.lines,
     random: Math.random,
   });
-  views.bar.onPress((type) => {
-    control.press(type);
-  });
   pill.onClose(() => {
     control.cancel();
   });
@@ -316,19 +353,15 @@ function createBoosterControl(
 /**
  * The sound, on three channels: the effects (the prototype's synth playing what each game event sounds like), the
  * music and the ambience (made as they play, or recorded loops when the config names files). A menu at the end of
- * the booster bar switches each channel (kept between visits). Browsers only allow sound after a touch, so the first
- * touch (or key) starts it; it sleeps while the page is hidden.
+ * the booster bar switches each channel (kept between visits). Browsers only allow sound after the player's gesture,
+ * so the first tap, click or key starts it; it sleeps while the page is hidden. Returns the menu, for the Escape key.
  */
-function startSound(app: Application, events: GameEventBus, screen: Screen): void {
+function startSound(app: Application, events: GameEventBus, screen: Screen): SoundSettings<Bus> {
   const settings = byBus((bus) => storedSetting(`${AUDIO.storageKey}.${bus}`));
   const mixer = new Mixer(byBus((bus) => settings[bus].load()));
   new SoundBoard(events, new Synth(mixer, 'sfx'));
   const soundtrack = new Soundtrack(events, [musicTrack(mixer), ambienceTrack(mixer)], mixer);
-  for (const gesture of ['pointerdown', 'keydown'] as const) {
-    window.addEventListener(gesture, () => {
-      mixer.unlock();
-    });
-  }
+  mixer.listenForUnlock(window);
   document.addEventListener('visibilitychange', () => {
     mixer.setAwake(!document.hidden);
   });
@@ -336,7 +369,7 @@ function startSound(app: Application, events: GameEventBus, screen: Screen): voi
     soundtrack.update();
   });
   const { look, channels } = SOUND_MENU;
-  new SoundSettings(screen.ui, placeSoundMenu(screen.layout.bar, channels.length, look), {
+  return new SoundSettings(screen.ui, placeSoundMenu(screen.layout.bar, channels.length, look), {
     channels: channels.map((channel) => ({ ...channel, icon: SOUND_ICONS[channel.id] })),
     isOn: (bus) => mixer.isOn(bus),
     onChange: (bus, on) => {
