@@ -14,6 +14,7 @@ import type { Container as Layer, PointData, Renderer, TextureSource } from 'pix
 import { POND } from '../../config/pond';
 import type { PondProp } from '../../config/pond';
 import { bakeDistanceField } from '../../art/distanceField';
+import type { DistanceField } from '../../art/distanceField';
 import { toPolygon } from '../../layout/outline';
 import type { Outline } from '../../layout/outline';
 import { WATER } from '../../config/water';
@@ -36,8 +37,8 @@ export interface PondLayout {
   readonly board: SimArea;
   /** The pond's bounding rectangle: the board plus the water around it. */
   readonly pond: SimArea;
-  /** The shore, traced from the board's shape (see traceShore): where the water ends. */
-  readonly shore: readonly Outline[];
+  /** The shore, where the water ends, as a distance field (see bakeShoreField). */
+  readonly shoreField: DistanceField;
   /** Stones and pads in the water: the waves stop at them and the foam outlines them. */
   readonly props: readonly PondProp[];
   /** The centre of the moon's reflection. */
@@ -266,22 +267,27 @@ function quadGeometry({ x, y, width, height }: SimArea): Geometry {
 }
 
 /**
- * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend, uProps, uPropAxes in common.glsl): the
- * shore as a distance field baked once from its traced loops, and the stones and pads in the water. Shared by the
- * simulation and every pass, so they all agree on the shore. The field reaches past the water far enough for the
- * wet band on the bank.
+ * The shore, traced from the board's shape (see traceShore), baked once into a distance field round the pond. It
+ * reaches past the water far enough for the wet band and the pond's light on the ground.
  */
-function pondShape(layout: PondLayout): PondShapeResources {
-  // far enough out for the wet band and the pond's light on the ground
+export function bakeShoreField(pond: SimArea, shore: readonly Outline[]): DistanceField {
   const reach = Math.max(POND.wetBand, THEME.scene.spill.reach * 3) + POND.shoreWobble + FIELD_MARGIN;
-  const { pond } = layout;
   const area = {
     x: pond.x - reach,
     y: pond.y - reach,
     width: pond.width + reach * 2,
     height: pond.height + reach * 2,
   };
-  const field = bakeDistanceField(layout.shore.map(toPolygon), area, FIELD_TEXEL);
+  return bakeDistanceField(shore.map(toPolygon), area, FIELD_TEXEL);
+}
+
+/**
+ * Where the water is, for the shaders (uShoreField, uShoreArea, uShoreBend, uProps, uPropAxes in common.glsl): the
+ * shore's distance field and the stones and pads in the water. Shared by the simulation and every pass, so they all
+ * agree on the shore.
+ */
+function pondShape(layout: PondLayout): PondShapeResources {
+  const field = layout.shoreField;
   const source = new BufferImageSource({
     resource: field.data,
     width: field.width,

@@ -41,7 +41,8 @@ export class KoiTextures {
 
   /**
    * O(kinds x frames) canvas paints, twice: the inked poses and their blurred contact masks, plus one shadow per
-   * kind, then GPU uploads. The heavy part of boot, done once (about 0.7 s on a desktop at 2.5x).
+   * kind, then GPU uploads. Done once while the game loads: about 0.15 s in a laptop's Chrome, and the GPU's drawing
+   * of the canvases on top, when they're first uploaded.
    */
   constructor(varietyIds: readonly string[], bake: KoiBake) {
     this.poses = varietyIds.map((id) => bakePoses(id, bake));

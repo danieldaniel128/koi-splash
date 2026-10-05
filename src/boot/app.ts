@@ -7,10 +7,11 @@ import type { UiLayer } from '../ui/UiLayer';
 import type { BoardView } from '../view/BoardView';
 import type { PondWater } from '../view/water/PondWater';
 
-/** The Pixi app, filling the game's element. */
+/** The Pixi app, filling the game's element. Its clock stays stopped until the game is shown (app.start). */
 export async function createApp(host: HTMLElement): Promise<Application> {
   const app = new Application();
   await app.init({
+    autoStart: false,
     resizeTo: host,
     background: THEME.scene.bank, // the bank shader covers the screen; this only shows before the first frame
     preference: 'webgl', // the water shaders are written in GLSL

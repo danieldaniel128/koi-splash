@@ -10,25 +10,28 @@ import type { Track } from '../audio/Track';
 import { AMBIENCE, AUDIO, MUSIC } from '../config/audio';
 import { SOUND_MENU } from '../config/ui';
 import { storedSetting } from '../core/storedSetting';
+import type { StoredSetting } from '../core/storedSetting';
 import type { GameEventBus } from '../game/events';
 import { placeSoundMenu } from '../layout/soundMenu';
 import { SOUND_ICONS } from '../ui/icons';
 import { SoundSettings } from '../ui/SoundSettings';
 import type { GameScreen } from './screen';
 
-/** The game's sound: the soundtrack, written a little ahead on every frame, and the menu that switches it. */
+/** The game's sound: the mixer, each channel's switch as the player left it, and the soundtrack. */
 export interface Sound {
+  readonly mixer: Mixer;
+  readonly settings: Record<Bus, StoredSetting>;
+  /** Written a little ahead on every frame. */
   readonly soundtrack: Soundtrack;
-  readonly menu: SoundSettings<Bus>;
 }
 
 /**
  * The sound, on three channels: the effects (the prototype's synth playing what each game event sounds like), the
- * music and the ambience (made as they play, or recorded loops when the config names files). A menu at the end of
- * the booster bar switches each channel (kept between visits). Browsers only allow sound after the player's gesture,
- * so the first tap, click or key starts it; it sleeps while the page is hidden.
+ * music and the ambience (made as they play, or recorded loops when the config names files). Each channel's switch
+ * is kept between visits. Browsers only allow sound after the player's gesture, so the first tap, click or key starts
+ * it; it sleeps while the page is hidden.
  */
-export function startSound(events: GameEventBus, screen: GameScreen): Sound {
+export function startSound(events: GameEventBus): Sound {
   const settings = byBus((bus) => storedSetting(`${AUDIO.storageKey}.${bus}`));
   const mixer = new Mixer(byBus((bus) => settings[bus].load()));
   new SoundBoard(events, new Synth(mixer, 'sfx'));
@@ -37,6 +40,15 @@ export function startSound(events: GameEventBus, screen: GameScreen): Sound {
   document.addEventListener('visibilitychange', () => {
     mixer.setAwake(!document.hidden);
   });
+  return { mixer, settings, soundtrack };
+}
+
+/** The menu at the end of the booster bar that switches each channel. Returned for the Escape key. */
+export function addSoundMenu(
+  screen: GameScreen,
+  { mixer, settings }: Sound,
+  events: GameEventBus,
+): SoundSettings<Bus> {
   const { look, channels } = SOUND_MENU;
   const menu = new SoundSettings(screen.ui, placeSoundMenu(screen.layout.bar, channels.length, look), {
     channels: channels.map((channel) => ({ ...channel, icon: SOUND_ICONS[channel.id] })),
@@ -49,7 +61,7 @@ export function startSound(events: GameEventBus, screen: GameScreen): Sound {
       events.emit('buttonClicked');
     },
   });
-  return { soundtrack, menu };
+  return menu;
 }
 
 /** The music: composed as it plays, or the recorded loop the config names. */

@@ -1,5 +1,6 @@
 import { Container } from 'pixi.js';
 import type { Renderer, Sprite } from 'pixi.js';
+import type { DistanceField } from '../art/distanceField';
 import { SHORE_STYLES } from '../art/shoreStyles';
 import { LAYOUT } from '../config/layout';
 import { POND } from '../config/pond';
@@ -14,17 +15,22 @@ import { createBackdrop } from '../view/Backdrop';
 import { Fireflies } from '../view/Fireflies';
 import { ShoreRing } from '../view/ShoreRing';
 import { PondProps } from '../view/water/PondProps';
-import { PondWater } from '../view/water/PondWater';
+import { bakeShoreField, PondWater } from '../view/water/PondWater';
 import type { GameScreen } from './screen';
 
-/** The bank, and the water below and above the board. */
-export function createPond(renderer: Renderer, { layout, shore }: GameScreen): PondWater {
+/** The pond's shore as a distance field, which every water shader reads (see bakeShoreField). */
+export function bakeShore({ layout, shore }: GameScreen): DistanceField {
+  return bakeShoreField(layout.pond, shore);
+}
+
+/** The bank, and the water below and above the board, inside the shore. */
+export function createPond(renderer: Renderer, { layout }: GameScreen, shoreField: DistanceField): PondWater {
   return new PondWater(renderer, {
     stageWidth: layout.stage.width,
     stageHeight: layout.stage.height,
     board: layout.board,
     pond: layout.pond,
-    shore,
+    shoreField,
     props: placeProps(layout.pond),
     moonAt: placeOn(layout.pond, POND.moonSpot),
   });
