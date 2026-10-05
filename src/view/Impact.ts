@@ -1,10 +1,12 @@
 import { Sprite, Texture } from 'pixi.js';
-import { IMPACT } from '../config/fx';
+import type { PointData } from 'pixi.js';
+import { CELEBRATION, IMPACT } from '../config/fx';
 import { SPECIAL_FX } from '../config/specials';
 import type { GameEventBus } from '../game/events';
 import type { Camera } from './Camera';
 import type { Haptics } from './Haptics';
 import type { HitStop } from './HitStop';
+import type { Sparkles } from './Sparkles';
 
 /** What makes a moment hit: the camera, the hit-stop, a white flash over the pond and the phone's vibration. */
 export interface ImpactParts {
@@ -13,13 +15,17 @@ export interface ImpactParts {
   readonly haptics: Haptics;
   /** The flash's sprite, over the effects and covering the stage. */
   readonly flash: Sprite;
+  /** The sparkles a win bursts into, and where the board's middle is and how big a cell is (stage px). */
+  readonly sparkles: Sparkles;
+  readonly boardCentre: PointData;
+  readonly cell: number;
 }
 
 /**
  * How hard each moment hits (after the prototype): every match shakes the pond a little, more for big ones and deep
  * in a cascade, and the big rounds hold the clock for an instant; each special shakes it as it fires, a newborn
- * special flashes white, and phones buzz on the specials and the long cascades. It listens to the game's events, which
- * are said when each moment happens on screen.
+ * special flashes white, and phones buzz on the specials and the long cascades; a won pond bursts into sparkles as
+ * the camera pushes in. It listens to the game's events, which are said when each moment happens on screen.
  */
 export class Impact {
   constructor(
@@ -45,6 +51,9 @@ export class Impact {
       this.hit(shake.rainbow, IMPACT.flash.special);
       parts.hitStop.hold(SPECIAL_FX.hitStop.time);
     });
+    events.on('won', () => {
+      this.celebrate();
+    });
   }
 
   /** Fades the flash on the app's clock (a hit-stop doesn't hold it). */
@@ -65,6 +74,16 @@ export class Impact {
       this.parts.hitStop.hold(huge ? hitStop.huge : hitStop.big);
     }
     if (round >= IMPACT.vibrateFrom) this.parts.haptics.pulse(IMPACT.vibrate.combo);
+  }
+
+  /** The pond is won: sparkles burst from its middle as the camera pushes in on it, with a flash and a buzz. */
+  private celebrate(): void {
+    const { camera, sparkles, boardCentre, cell } = this.parts;
+    camera.punch(boardCentre);
+    camera.shake(IMPACT.shake.win);
+    this.parts.flash.alpha = IMPACT.flash.win;
+    sparkles.burst(boardCentre, CELEBRATION.count, CELEBRATION.reach * cell);
+    this.parts.haptics.pulse(IMPACT.vibrate.win);
   }
 
   /** A special's moment: a shake, a flash over the pond (0 for none) and a buzz. */

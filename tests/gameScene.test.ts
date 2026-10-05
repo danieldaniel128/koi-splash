@@ -158,8 +158,12 @@ describe('GameScene', () => {
   });
 
   it('is won on the last move when every goal is met by then', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
     const { scene, board, outcomes } = stubScene({ moves: 1, goals: [{ type: 'score', target: 1 }] });
     await playAMove(scene, board);
+    expect(outcomes).toEqual([]); // the win is celebrated for a beat first
+    vi.runAllTimers();
+    vi.useRealTimers();
     expect(outcomes).toEqual(['won']);
     expect(scene.canSwap).toBe(false);
   });
@@ -178,7 +182,10 @@ describe('GameScene', () => {
       goals: [{ type: 'score', target: 1 }],
       animator: failing,
     });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
     await playAMove(scene, board);
+    vi.runAllTimers();
+    vi.useRealTimers();
     expect(outcomes).toEqual(['won']);
     const last = statuses.at(-1);
     expect(last?.score).toBeGreaterThan(0);

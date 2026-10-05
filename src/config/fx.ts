@@ -61,3 +61,19 @@ export const IMPACT = {
   /** A vibration for cascades from this round on (0 = the swap's own). */
   vibrateFrom: 2,
 } as const;
+
+/**
+ * The pond is won: before the end card, a beat of celebration (s): sparkles burst from the board's middle (`count`,
+ * up to `reach` cells out, `size` px, each living about `life` s, drifting `drift` px up, starting within `spread`
+ * s), the camera pushes in and the pond flashes.
+ */
+export const CELEBRATION = {
+  count: 36,
+  reach: 3.2,
+  size: 26,
+  life: 1.1,
+  drift: 40,
+  spread: 0.25,
+  /** The most sparkles kept for reuse. */
+  sparkles: 48,
+} as const;

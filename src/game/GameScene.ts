@@ -1,7 +1,9 @@
+import { RESULT_CARD } from '../config/ui';
 import { StateMachine } from '../core/StateMachine';
 import type { StateHooks, Transition } from '../core/StateMachine';
 import { runDetached } from '../core/detached';
 import type { Random } from '../core/Random';
+import { Timers } from '../core/Timers';
 import type { Board } from '../model/Board';
 import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
@@ -140,6 +142,8 @@ export class GameScene implements BoosterGame, SwapGame {
   private readonly board: Board;
   private readonly level: LevelState;
   private readonly turn: StateMachine<TurnState, LevelState>;
+  /** The end card waits for the win's celebration. */
+  private readonly timers = new Timers();
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
@@ -198,6 +202,7 @@ export class GameScene implements BoosterGame, SwapGame {
   /** Starts the level over with a fresh board. Only allowed once the level has ended. */
   restart(): void {
     if (!this.turn.is('won') && !this.turn.is('lost')) return;
+    this.timers.cancelAll();
     this.pads = PadField.scatter(this.deps.level.pads, this.deps.spec, this.deps.rng);
     resetBoard(this.board, this.deps.spec, this.deps.rng, this.pads.cells);
     this.level.movesLeft = this.deps.level.moves;
@@ -234,13 +239,14 @@ export class GameScene implements BoosterGame, SwapGame {
           view.setPlayable(false);
         },
       },
+      // a win is celebrated for a beat (the views follow the event) before the card opens; input stays locked
       won: {
         onEnter: () => {
-          result.show('won', {
-            ...this.status(),
-            stars: starsForWin(this.level.score, this.deps.level.stars),
-          });
+          const status = { ...this.status(), stars: starsForWin(this.level.score, this.deps.level.stars) };
           events.emit('won');
+          this.timers.after(RESULT_CARD.winBeat, () => {
+            result.show('won', status);
+          });
         },
       },
       lost: {

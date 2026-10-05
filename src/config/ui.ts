@@ -72,6 +72,8 @@ export const SPECIAL_MENU = {
 
 /** The end-of-level card fades in and pops (s). */
 export const RESULT_CARD = {
+  /** A won pond is celebrated for this long before the card opens (s). */
+  winBeat: 0.9,
   fadeIn: 0.3,
   popIn: 0.45,
   /** The stars earned land one by one: the first this long after the card, then one every `starStep` (s). */
