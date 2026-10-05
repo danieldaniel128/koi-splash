@@ -92,13 +92,13 @@ button:focus-visible > .orb {
   border-radius: var(--radius-lg);
 }
 
-/* A round glass button or counter: lit from the top left, darker underneath. */
+/* A round glass button or counter: lit from the top left, darker underneath, over an --orb-base (none by default). */
 .orb {
   display: grid;
   place-content: center;
   justify-items: center;
   border-radius: 50%;
-  background: var(--color-glassRound);
+  background: var(--color-glassRound), var(--orb-base, transparent);
   box-shadow:
     var(--rim),
     inset 0 2px 1px color-mix(in srgb, var(--color-shine) 28%, transparent),

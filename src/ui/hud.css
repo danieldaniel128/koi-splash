@@ -7,11 +7,12 @@
 }
 
 .moves {
+  --orb-base: var(--color-glassBase);
   position: relative;
   z-index: 1; /* over the panel's left end */
   flex: none;
-  width: 78px;
-  height: 78px;
+  height: 100%; /* the HUD's height from the layout; the panel is a little shorter, so the orb stands out */
+  aspect-ratio: 1;
   transition: box-shadow var(--time-normal);
 }
 
@@ -44,14 +45,13 @@
   }
 }
 
+/* The panel is as tall as what it holds: the score and the goals, and the star bar under them. */
 .hud__panel {
   flex: 1;
-  height: 70px;
   margin-left: calc(-1 * var(--tuck));
-  padding: var(--space-sm) var(--space-md) var(--space-sm) calc(var(--tuck) + var(--space-sm));
+  padding: var(--space-xs) var(--space-md) var(--space-xs) calc(var(--tuck) + var(--space-sm));
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: 1fr auto;
 }
 
 .hud__row {
@@ -131,25 +131,28 @@
   color: var(--color-gold);
 }
 
+/* The star bar, inset by half a star at each end, so the stars at its ends stay inside the panel. */
 .stars {
+  --star: 22px;
   position: relative;
-  height: 18px;
-  margin-top: var(--space-xs);
+  height: var(--star);
+  margin: 0 calc(var(--star) / 2);
 }
 
 .stars__track {
   position: absolute;
   left: 0;
   right: 0;
-  top: 6px;
+  top: 50%;
+  translate: 0 -50%;
 }
 
 .stars__star {
   --star-glow: 4px;
   position: absolute;
-  top: -3px;
-  width: 22px;
-  height: 22px;
+  top: 0;
+  width: var(--star);
+  height: var(--star);
   translate: -50% 0;
 }
 

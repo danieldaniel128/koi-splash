@@ -44,7 +44,7 @@ export interface LayoutConfig {
 export const LAYOUT = {
   designWidth: 360,
   designHeight: 640,
-  hudHeight: 80,
+  hudHeight: 84,
   barHeight: 76,
   sidePadding: 8,
   sectionGap: 6,

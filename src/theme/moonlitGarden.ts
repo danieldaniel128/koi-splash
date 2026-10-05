@@ -23,6 +23,8 @@ export const MOONLIT_GARDEN = {
     glass: 'linear-gradient(180deg, rgba(30, 62, 104, 0.94), rgba(9, 22, 46, 0.96))',
     glassRound:
       'radial-gradient(circle at 34% 26%, rgba(190, 225, 255, 0.36), rgba(22, 52, 96, 0.92) 55%, rgba(6, 16, 36, 0.96))',
+    /** Deep indigo under round glass that lies over a panel, so the panel's edge doesn't show through it. */
+    glassBase: '#0b1a33',
     /** Gold for badges and fills, from light to deep, and the dark brown printed on it; coral when moves run low. */
     goldLight: '#ffeaa8',
     goldDeep: '#f5b54e',
