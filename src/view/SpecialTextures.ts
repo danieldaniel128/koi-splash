@@ -78,10 +78,10 @@ export class SpecialTextures {
       });
     return [
       ...forEachColour((kind) => this.spanOf(kind)),
+      // the whirlpool's first: curling its koi (and its shadow and waterline) reads them back, best before the
+      // other two are painted
+      ...forEachColour((kind) => this.marks(specialOf('whirl'), kind)),
       ...forEachColour((kind) => {
-        // the whirlpool's first: curling its koi (and its shadow and waterline) reads them back, best before the
-        // other two are painted
-        this.marks(specialOf('whirl'), kind);
         for (const special of PREVIEWED) this.picture(special, kind);
       }),
       () => {
@@ -90,10 +90,8 @@ export class SpecialTextures {
       () => {
         this.readPictures();
       },
-      ...forEachColour((kind) => {
-        this.poses(specialOf('line'), kind);
-        this.sheen(kind);
-      }),
+      ...forEachColour((kind) => this.poses(specialOf('line'), kind)),
+      ...forEachColour((kind) => this.sheen(kind)),
       ...forEachColour((kind) => this.poses(specialOf('rainbow'), kind)),
     ];
   }
