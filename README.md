@@ -9,11 +9,14 @@ only, so it always shows the last finished milestone).
 
 ## Running it
 
+Needs Node 22.22.1 or newer (`.nvmrc` and CI use 24).
+
 ```
 npm install
-npm run dev      # local server, also reachable from a phone on the same Wi-Fi
+npm run dev      # local server on http://localhost:5173, also reachable from a phone on the same Wi-Fi
 npm run check    # typecheck + lint + tests
 npm run build    # static web build in dist/
+npm run preview  # serves that build
 ```
 
 ## Stack & assets
