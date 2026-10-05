@@ -1,5 +1,6 @@
 import { runDetached } from '../core/detached';
-import type { Bus, Mixer, Output } from './Mixer';
+import type { Bus } from '../config/audio';
+import type { Mixer, Output } from './Mixer';
 import type { Track } from './Track';
 
 /**

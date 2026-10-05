@@ -7,9 +7,8 @@ import type { GameStatus } from '../src/game/GameStatus';
 import type { GameEventBus } from '../src/game/events';
 import type { Board } from '../src/model/Board';
 import type { GoalDef } from '../src/model/goals';
-import type { Pad } from '../src/model/pads';
 import { findMove } from '../src/model/rules';
-import type { Cell } from '../src/model/types';
+import type { Cell, Pad } from '../src/model/types';
 
 const done = (): Promise<void> => Promise.resolve();
 /** Lets a turn played through the stubs (which finish at once) run to its end. */

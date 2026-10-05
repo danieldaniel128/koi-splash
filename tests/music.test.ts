@@ -3,7 +3,7 @@ import { Composer, nearestTone, semitonesOf } from '../src/audio/composer';
 import type { BarMood, MusicNote } from '../src/audio/composer';
 import { GardenMusic } from '../src/audio/GardenMusic';
 import { NightAmbience } from '../src/audio/NightAmbience';
-import type { Bus } from '../src/audio/Mixer';
+import type { Bus } from '../src/config/audio';
 import { Soundtrack } from '../src/audio/Soundtrack';
 import { noteOf } from '../src/audio/Synth';
 import type { Voice } from '../src/audio/Synth';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { layoutGame } from '../src/layout/gameLayout';
-import type { LayoutConfig } from '../src/layout/gameLayout';
+import type { LayoutConfig } from '../src/config/layout';
 
 const CONFIG: LayoutConfig = {
   cols: 7,

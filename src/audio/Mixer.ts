@@ -1,9 +1,6 @@
-import { AUDIO } from '../config/audio';
-
-/** The sound's channels: each has its own volume and switch, and they all meet in the master. */
-export type Bus = 'sfx' | 'music' | 'ambience';
-
-export const BUSES: readonly Bus[] = ['music', 'ambience', 'sfx'];
+import { AUDIO, BUSES } from '../config/audio';
+import type { Bus } from '../config/audio';
+import type { Ducker } from './Soundtrack';
 
 /** Something for every bus. Pure. */
 export function byBus<T>(make: (bus: Bus) => T): Record<Bus, T> {
@@ -34,7 +31,7 @@ interface Channel {
  * one), sleeps while the page is hidden, and a missing Web Audio just means silence. A channel that's off gives no
  * output, so nothing is even scheduled on it.
  */
-export class Mixer {
+export class Mixer implements Ducker {
   private ctx: AudioContext | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly channels = new Map<Bus, Channel>();

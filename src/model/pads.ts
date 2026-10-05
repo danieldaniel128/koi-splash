@@ -1,27 +1,5 @@
 import type { Random } from '../core/Random';
-import type { BoardSpec } from './rules';
-import type { Cell } from './types';
-
-/**
- * A lily pad on the board. A pad takes a whole cell: no koi can be in it, and koi fall past it. Matches right next
- * to it (up, down, left, right) hit it.
- */
-export interface Pad {
-  readonly id: number;
-  readonly at: Cell;
-  /** A bud is a lotus waiting to bloom; an empty pad is scenery that drifts off when splashed. */
-  readonly kind: 'bud' | 'empty';
-  /** Hits still needed: a bud blooms at 0, an empty pad drifts away at 0. */
-  readonly hitsLeft: number;
-  /** Hits it took in total, so the view can show how far a bud has opened. */
-  readonly hitsNeeded: number;
-}
-
-/** What happened to a pad when a cascade round cleared koi next to it. */
-export type PadEvent =
-  | { readonly type: 'hit'; readonly pad: Pad }
-  | { readonly type: 'bloom'; readonly pad: Pad }
-  | { readonly type: 'drift'; readonly pad: Pad };
+import type { BoardSpec, Cell, Pad, PadEvent } from './types';
 
 export interface PadSpec {
   /** Lotus buds on the board (the lotus goal counts their blooms). */

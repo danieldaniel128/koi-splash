@@ -3,8 +3,45 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
-/** Layers that draw, play sound or run the game loop. The model and core must never depend on them. */
-const PRESENTATION_LAYERS = ['**/view/**', '**/fx/**', '**/audio/**', '**/game/**', '**/ui/**'];
+/**
+ * Module boundaries (the asmdef equivalent). Imports point one way: core <- model <- game <- view, ui, audio, art,
+ * layout <- boot and main.ts, the composition root, which alone wires them all. config and theme are data anything
+ * may read; they import nothing but model types. Each folder lists the folders it must not import, and whether it
+ * stays engine-free (no Pixi, no GSAP). Import cycles are caught by tests/imports.test.ts.
+ */
+const LAYERS = {
+  core: {
+    forbids: ['model', 'game', 'view', 'ui', 'audio', 'art', 'layout', 'boot', 'config', 'theme'],
+    engineFree: true,
+  },
+  model: {
+    forbids: ['game', 'view', 'ui', 'audio', 'art', 'layout', 'boot', 'config', 'theme'],
+    engineFree: true,
+  },
+  game: { forbids: ['view', 'ui', 'audio', 'art', 'layout', 'boot'], engineFree: true },
+  view: { forbids: ['ui', 'audio', 'boot'], engineFree: false },
+  ui: { forbids: ['view', 'audio', 'art', 'boot'], engineFree: false },
+  audio: { forbids: ['view', 'ui', 'art', 'layout', 'boot', 'theme'], engineFree: true },
+  art: { forbids: ['game', 'view', 'ui', 'audio', 'layout', 'boot'], engineFree: true },
+  layout: { forbids: ['game', 'view', 'ui', 'audio', 'art', 'boot'], engineFree: true },
+  config: { forbids: ['game', 'view', 'ui', 'audio', 'art', 'layout', 'boot'], engineFree: true },
+  theme: { forbids: ['game', 'view', 'ui', 'audio', 'layout', 'boot', 'config'], engineFree: true },
+};
+
+const ENGINE = ['pixi.js', 'pixi.js/*', 'gsap', 'gsap/*'];
+
+/** The no-restricted-imports block for one folder of src. */
+function boundary(folder, { forbids, engineFree }) {
+  const patterns = [
+    {
+      group: forbids.flatMap((other) => [`**/${other}/**`, `../${other}`, `./${other}/**`]),
+      message: `${folder}/ must not import ${forbids.join(', ')} (see LAYERS in eslint.config.js).`,
+    },
+  ];
+  if (engineFree)
+    patterns.push({ group: ENGINE, message: `${folder}/ stays engine-free: no Pixi, no GSAP.` });
+  return { files: [`src/${folder}/**/*.ts`], rules: { 'no-restricted-imports': ['error', { patterns }] } };
+}
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'src/art/koiBank.ts'] },
@@ -60,32 +97,13 @@ export default tseslint.config(
     // Size and nesting limits for game code (tests are allowed long describe blocks)
     files: ['src/**/*.ts'],
     rules: {
-      'max-lines-per-function': ['warn', { max: 40, skipBlankLines: true, skipComments: true }],
-      'max-depth': ['warn', 3],
-      complexity: ['warn', 10],
+      'max-lines-per-function': ['error', { max: 40, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['error', 3],
+      complexity: ['error', 10],
     },
   },
-  {
-    // Module boundaries (the asmdef equivalent): pure logic stays free of rendering, tweening and the game loop
-    files: ['src/model/**/*.ts', 'src/core/**/*.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['pixi.js', 'pixi.js/*', 'gsap', 'gsap/*'],
-              message: 'The model and core stay engine-free.',
-            },
-            {
-              group: PRESENTATION_LAYERS,
-              message: 'The model and core must not depend on presentation layers.',
-            },
-          ],
-        },
-      ],
-    },
-  },
+  ...Object.entries(LAYERS).map(([folder, layer]) => boundary(folder, layer)),
   { files: ['eslint.config.js'], ...tseslint.configs.disableTypeChecked },
+  { files: ['eslint.config.js'], rules: { '@typescript-eslint/explicit-function-return-type': 'off' } },
   prettier,
 );

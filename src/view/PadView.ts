@@ -4,8 +4,7 @@ import type { PointData } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
 import type { PadDisplay } from '../game/GameScene';
-import type { Pad, PadEvent } from '../model/pads';
-import type { Cell } from '../model/types';
+import type { Cell, Pad, PadEvent } from '../model/types';
 import type { Circle, WaterSurface } from './water/PondWater';
 
 /** The water the pads float on: they push it, and it outlines them with foam (see PondWater.float). */

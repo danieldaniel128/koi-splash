@@ -1,9 +1,17 @@
-import type { PadEvent } from './pads';
-
 /** A board position. Column 0 is the left edge, row 0 is the top row. */
 export interface Cell {
   readonly col: number;
   readonly row: number;
+}
+
+/** A board to play: its size, the koi colours in play, and the cells its shape doesn't have. */
+export interface BoardSpec {
+  readonly cols: number;
+  readonly rows: number;
+  /** How many koi colours are in play. */
+  readonly kinds: number;
+  /** The cells the board's shape doesn't have (see parseShape); none for a plain rectangle. */
+  readonly holes?: readonly Cell[];
 }
 
 /** Which koi colour a piece is (an index into the koi set). */
@@ -18,6 +26,9 @@ export type Special =
   | { readonly type: 'whirl' }
   | { readonly type: 'rainbow' };
 
+/** Which special a koi is: striped (line), whirlpool or rainbow. */
+export type SpecialType = Special['type'];
+
 /** One koi on the board. The id stays with the piece while it moves, so the view can follow its sprite. */
 export interface Piece {
   readonly id: number;
@@ -30,6 +41,27 @@ export interface PlacedPiece {
   readonly piece: Piece;
   readonly at: Cell;
 }
+
+/**
+ * A lily pad on the board. A pad takes a whole cell: no koi can be in it, and koi fall past it. Matches right next
+ * to it (up, down, left, right) hit it.
+ */
+export interface Pad {
+  readonly id: number;
+  readonly at: Cell;
+  /** A bud is a lotus waiting to bloom; an empty pad is scenery that drifts off when splashed. */
+  readonly kind: 'bud' | 'empty';
+  /** Hits still needed: a bud blooms at 0, an empty pad drifts away at 0. */
+  readonly hitsLeft: number;
+  /** Hits it took in total, so the view can show how far a bud has opened. */
+  readonly hitsNeeded: number;
+}
+
+/** What happened to a pad when a cascade round cleared koi next to it. */
+export type PadEvent =
+  | { readonly type: 'hit'; readonly pad: Pad }
+  | { readonly type: 'bloom'; readonly pad: Pad }
+  | { readonly type: 'drift'; readonly pad: Pad };
 
 /** A straight run of 3+ same-kind pieces. */
 export interface Match {

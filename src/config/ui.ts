@@ -1,7 +1,22 @@
-import type { Bus } from '../audio/Mixer';
-import type { SoundMenuLook } from '../layout/soundMenu';
-import type { BoosterSlot } from '../ui/BoosterBar';
-import type { PetalChoice } from '../ui/SpecialMenu';
+import type { BoosterSlot } from '../model/boosters';
+import type { SpecialType } from '../model/types';
+import type { Bus } from './audio';
+
+/** One petal of the special booster's menu: which special it makes, and its name. */
+export interface PetalChoice {
+  readonly type: SpecialType;
+  readonly name: string;
+}
+
+/** The sound menu's sizes (stage px): the button, a booster orb to line up with, the panel, a row, its padding and gap. */
+export interface SoundMenuLook {
+  readonly button: number;
+  readonly barOrb: number;
+  readonly width: number;
+  readonly row: number;
+  readonly padding: number;
+  readonly gap: number;
+}
 
 /** How the HUD moves (s, scale). Its look is in the theme (src/theme). */
 export const HUD_MOTION = {

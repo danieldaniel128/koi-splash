@@ -7,6 +7,10 @@
  * - landGap, diveGap: the closest two landings or dives may sound (s), so a school stays gentle
  * - bell: the partials of the struck bell (frequency ratios)
  */
+/** The sound's channels: each has its own volume and switch, and they all meet in the master. */
+export const BUSES = ['music', 'ambience', 'sfx'] as const;
+export type Bus = (typeof BUSES)[number];
+
 export const AUDIO = {
   master: 0.5,
   buses: { sfx: 1, music: 0.6, ambience: 0.8 },

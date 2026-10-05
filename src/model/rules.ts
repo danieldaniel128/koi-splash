@@ -1,19 +1,21 @@
 import type { Random } from '../core/Random';
 import { Board } from './Board';
-import type { PadEvent, PadField } from './pads';
-import type { CascadeStep, Cell, Fall, Kind, Match, Piece, Spawn, SwapResult } from './types';
+import type { PadField } from './pads';
+import type {
+  BoardSpec,
+  CascadeStep,
+  Cell,
+  Fall,
+  Kind,
+  Match,
+  PadEvent,
+  Piece,
+  Spawn,
+  SwapResult,
+} from './types';
 import { isAdjacent, sameCell } from './types';
 import { resolveRound, swapTriggers } from './specials';
 import type { Trigger } from './specials';
-
-export interface BoardSpec {
-  readonly cols: number;
-  readonly rows: number;
-  /** How many koi colours are in play. */
-  readonly kinds: number;
-  /** The cells the board's shape doesn't have (see parseShape); none for a plain rectangle. */
-  readonly holes?: readonly Cell[];
-}
 
 const MIN_RUN = 3;
 /** Safety net: a cascade this long means a bug, not a lucky player. */

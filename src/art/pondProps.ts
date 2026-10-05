@@ -1,3 +1,4 @@
+import type { PropKind } from '../config/pond';
 import { Random } from '../core/Random';
 import { drawShadowOnly } from './blur';
 
@@ -8,8 +9,6 @@ import { drawShadowOnly } from './blur';
  *
  * No framework code: bake a canvas with `bakeProp` and upload it as a texture.
  */
-
-export type PropKind = 'stone' | 'pad';
 
 export interface PropPaint {
   readonly kind: PropKind;

@@ -1,5 +1,5 @@
 import { parseShape } from '../model/shape';
-import type { BoardSpec } from '../model/rules';
+import type { BoardSpec } from '../model/types';
 import { LEVEL } from './level';
 
 /** The board's shape for the level (drawn in LEVEL.shape). */

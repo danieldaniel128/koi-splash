@@ -4,7 +4,7 @@ import type { DistanceField } from '../art/distanceField';
 import { SHORE_STYLES } from '../art/shoreStyles';
 import { LAYOUT } from '../config/layout';
 import { POND } from '../config/pond';
-import type { PondProp } from '../config/pond';
+import type { PondProp, PondPropSpot } from '../config/pond';
 import { Random } from '../core/Random';
 import { placeOn } from '../layout/anchor';
 import type { Rect } from '../layout/gameLayout';
@@ -79,8 +79,8 @@ export function createScenery({ layout, shore, resolution }: GameScreen): Scener
 }
 
 /** The pond's stones in the water, each at its corner of this pond. O(props). */
-function placeProps(pond: Rect): PondProp[] {
-  return POND.props.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
+function placeProps(pond: Rect, spots: readonly PondPropSpot[] = POND.props): PondProp[] {
+  return spots.map((spot) => ({ ...spot, at: placeOn(pond, spot) }));
 }
 
 /** The border along the pond's shore, in the style the config picks. */

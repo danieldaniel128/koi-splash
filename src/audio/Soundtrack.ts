@@ -1,7 +1,7 @@
 import { AUDIO, MUSIC } from '../config/audio';
 import type { EventHandlers } from '../core/EventBus';
 import type { GameEventBus, GameEvents } from '../game/events';
-import type { Bus } from './Mixer';
+import type { Bus } from '../config/audio';
 import type { Mood, Track } from './Track';
 
 /** What dips a channel for a moment. */

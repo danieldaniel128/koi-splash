@@ -71,9 +71,9 @@ function setup(
       petals: () => undefined,
     },
     slots: [
-      { type: 'swap', count: 1, tip: 'Pick two koi to swap' },
-      { type: 'special', count: 1, tip: 'Pick a koi to power up' },
-      { type: 'feed', count: 1, tip: 'Tap a colour to feed' },
+      { type: 'swap', name: 'Swap', count: 1, tip: 'Pick two koi to swap' },
+      { type: 'special', name: 'Special', count: 1, tip: 'Pick a koi to power up' },
+      { type: 'feed', name: 'Feed', count: 1, tip: 'Tap a colour to feed' },
     ],
     feedLines: 3,
     random: () => 0.2,

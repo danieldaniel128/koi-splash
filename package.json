@@ -7,7 +7,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -36,7 +36,7 @@
   "private": true,
   "lint-staged": {
     "*.ts": [
-      "eslint --fix",
+      "eslint --fix --max-warnings 0",
       "prettier --write"
     ],
     "*.{json,css,html,md}": [

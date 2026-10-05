@@ -1,5 +1,6 @@
 import { AUDIO } from '../config/audio';
-import type { Bus, Mixer, Output } from './Mixer';
+import type { Bus } from '../config/audio';
+import type { Mixer, Output } from './Mixer';
 
 /** What a sound recipe plays with: tones, noise bursts and the two small building blocks, on the game's scale. */
 export interface Voice {

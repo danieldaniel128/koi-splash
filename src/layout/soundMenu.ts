@@ -1,14 +1,7 @@
+import type { SoundMenuLook } from '../config/ui';
 import type { Rect } from './gameLayout';
 
 /** The sound button's size, the bar's buttons it lines up with, and the menu's width, rows and padding (stage px). */
-export interface SoundMenuLook {
-  readonly button: number;
-  readonly barOrb: number;
-  readonly width: number;
-  readonly row: number;
-  readonly padding: number;
-  readonly gap: number;
-}
 
 /**
  * Where the sound button and its menu go: the button at the bar's right end, level with the boosters' orbs, and the

@@ -1,7 +1,7 @@
 import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import { runDetached } from '../core/detached';
-import type { BoosterType, BoosterUse } from '../model/boosters';
+import type { BoosterSlot, BoosterType, BoosterUse } from '../model/boosters';
 import type { Cell, Special } from '../model/types';
 import { sameCell } from '../model/types';
 
@@ -46,13 +46,6 @@ export interface BoosterSounds {
   wrong(): void;
   lift(): void;
   petals(): void;
-}
-
-/** One booster on the bar: how many the level gives, and the pill's tip. */
-export interface BoosterSlot {
-  readonly type: BoosterType;
-  readonly count: number;
-  readonly tip: string;
 }
 
 /** The steps of using a booster. */

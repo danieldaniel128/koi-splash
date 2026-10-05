@@ -10,7 +10,7 @@ import {
   swapMakesMatch,
   trySwap,
 } from '../src/model/rules';
-import type { BoardSpec } from '../src/model/rules';
+import type { BoardSpec } from '../src/model/types';
 import { parseShape } from '../src/model/shape';
 
 const SPEC: BoardSpec = { cols: 7, rows: 9, kinds: 5 };

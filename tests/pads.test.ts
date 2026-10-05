@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
 import { Board } from '../src/model/Board';
 import { PadField } from '../src/model/pads';
-import type { Pad } from '../src/model/pads';
+import type { Pad } from '../src/model/types';
 import { createBoard, findMove, trySwap } from '../src/model/rules';
 
 const SPEC = { cols: 7, rows: 9, kinds: 5 };
