@@ -20,8 +20,10 @@ export class ResultCard {
   private readonly score = el('p', 'number result__score');
   private readonly detail = el('p', 'label result__detail');
   private readonly again = el('button', 'btn', 'Play again');
-  /** The stars still to land: cancelled when the card closes, so none chimes in the next game. */
+  /** The card's own timeouts (its stars landing, its taps opening): cancelled when it closes, so none fires later. */
   private readonly timers = new Timers();
+  /** Taps count once the card is fully up, so a last swipe on the board can't press Play again by accident. */
+  private takesTaps = false;
 
   constructor(
     host: HTMLElement,
@@ -44,6 +46,7 @@ export class ResultCard {
 
   onRestart(handler: () => void): void {
     this.again.addEventListener('click', () => {
+      if (!this.takesTaps) return;
       this.events.emit('buttonClicked');
       handler();
     });
@@ -56,6 +59,9 @@ export class ResultCard {
     this.detail.textContent = status.goals.map(goalLine).join(' · ');
     this.starRow.hidden = !won;
     this.root.hidden = false;
+    this.timers.after(Math.max(RESULT_CARD.fadeIn, RESULT_CARD.popIn), () => {
+      this.takesTaps = true;
+    });
     if (won) this.landStars(status.stars);
     this.root.animate([{ opacity: 0 }, { opacity: 1 }], { duration: RESULT_CARD.fadeIn * 1000 });
     this.card.animate([{ scale: 0.8 }, { scale: 1 }], {
@@ -66,6 +72,7 @@ export class ResultCard {
 
   hide(): void {
     this.timers.cancelAll();
+    this.takesTaps = false;
     this.root.hidden = true;
   }
 
