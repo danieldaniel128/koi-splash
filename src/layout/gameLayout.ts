@@ -38,6 +38,9 @@ export interface LayoutConfig {
   /** Bounds for a cell's size, so a tablet doesn't get giant koi and a small phone tiny ones. */
   readonly minCell: number;
   readonly maxCell: number;
+  /** The instruction pill shown while a booster is armed: its height, and the gap between it and the board under it. */
+  readonly pillHeight: number;
+  readonly pillGap: number;
 }
 
 /** The phone's own unsafe edges (notch, home bar), in screen px (CSS env(safe-area-inset-*)). */
@@ -56,13 +59,16 @@ export interface GameLayout {
   /** The open ground above the pond and its shore, from the top of the screen (behind the HUD too): the backdrop. */
   readonly scene: Rect;
   readonly bar: Rect;
+  /** The instruction pill over the board, as wide as the HUD. */
+  readonly pill: Rect;
 }
 
 /**
  * Lays the game out for a screen: the stage is the design size scaled to fit, then grown to cover the whole screen
  * (tall phones get more height, tablets more width, never letterboxing). Top to bottom: the HUD, the pond centred
  * with the board in it and its shore around it, the specials bar. The cell is as big as the space allows, within
- * minCell..maxCell. The HUD and the bar are as wide as the pond with its shore, so they line up on any screen.
+ * minCell..maxCell. The HUD, the bar and the pill over the board are as wide as the pond with its shore, so they
+ * line up on any screen.
  */
 export function layoutGame(
   screen: { width: number; height: number },
@@ -84,6 +90,12 @@ export function layoutGame(
     pond,
     scene: { x: 0, y: 0, width: stage.width, height: pond.y - config.shoreWidth },
     bar: { x: panelX, y: bottom - config.barHeight, width: panelWidth, height: config.barHeight },
+    pill: {
+      x: panelX,
+      y: board.y - config.pillGap - config.pillHeight,
+      width: panelWidth,
+      height: config.pillHeight,
+    },
   };
 }
 

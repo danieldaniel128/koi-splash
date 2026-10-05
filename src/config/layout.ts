@@ -27,4 +27,6 @@ export const LAYOUT = {
   pondAlign: 1, // all the room left over goes to the garden above the pond
   minCell: 36,
   maxCell: 60,
+  pillHeight: 40,
+  pillGap: 12,
 } as const satisfies LayoutConfig;

@@ -322,8 +322,7 @@ function createBoosterControl(
   const { events } = views;
   const { ui, layout } = views.screen;
   const { board } = layout;
-  const pillRect = { x: layout.hud.x, y: board.y - 52, width: layout.hud.width, height: 40 };
-  const pill = new InstructionPill(ui, pillRect);
+  const pill = new InstructionPill(ui, layout.pill);
   const menuBoard = {
     cellCentre: (cell: Cell) => ({
       x: board.x + (cell.col + 0.5) * board.cell,
