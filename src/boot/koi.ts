@@ -34,9 +34,11 @@ export function bakeKoi(bake: KoiBake): KoiTextures {
   return new KoiTextures(KOI_SET, bake);
 }
 
-/** The special koi, baked when first made. */
+/** Every special koi of every colour, with the petal menu's pictures of them, baked once. */
 export function bakeSpecialKoi(bake: KoiBake): SpecialTextures {
-  return new SpecialTextures(KOI_SET, bake, KOI_COLORS);
+  const specials = new SpecialTextures(KOI_SET, bake, KOI_COLORS);
+  specials.bakeAll();
+  return specials;
 }
 
 /** The goals' icons, painted by the same painters as the board: the lotus, and an inked koi of each colour. */

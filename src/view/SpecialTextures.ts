@@ -23,10 +23,12 @@ export interface SpecialColors {
   readonly band: string;
 }
 
+/** Every kind of special koi. */
+const SPECIAL_TYPES = ['line', 'whirl', 'rainbow'] as const satisfies readonly Special['type'][];
+
 /**
- * The special koi's textures, from the board's own koi painter (see art/specialKoi). Baked the first time a special
- * of a kind appears and kept, so boot pays nothing for specials a game may never make; O(frames) canvas paints per
- * new kind of special.
+ * The special koi's textures, from the board's own koi painter (see art/specialKoi). The game bakes them all while
+ * it loads (bakeAll), so a special's first appearance never stalls play; each is kept once baked.
  */
 export class SpecialTextures {
   /** A white glow and a white sparkle (tinted per sprite), and the rainbow's prism glow. */
@@ -45,6 +47,17 @@ export class SpecialTextures {
     this.glow = Texture.from(paintGlow('#ffffff', Math.ceil(px)));
     this.sparkle = Texture.from(paintSparkle(Math.ceil(px * 0.5)));
     this.prism = Texture.from(paintPrismGlow(Math.ceil(px * 1.6)));
+  }
+
+  /**
+   * Bakes every special of every colour now, with its petal preview, so nothing is painted during play.
+   * O(colours x specials x frames) canvas paints.
+   */
+  bakeAll(): void {
+    for (const kind of this.varieties.keys()) {
+      for (const type of SPECIAL_TYPES) this.preview(type, kind); // bakes its poses (and a whirlpool's eddy) too
+      this.sheen(kind);
+    }
   }
 
   /** A special koi's poses: a striped or rainbow koi's tail beat, or a whirlpool's koi curled into its eye. */
