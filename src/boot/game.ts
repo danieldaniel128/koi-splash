@@ -294,7 +294,7 @@ function createBoosterControl(scene: GameScene, views: BoosterViews): BoosterCon
       y: board.y + (cell.row + 0.5) * board.cell,
     }),
     stageWidth: layout.stage.width,
-    preview: (cell: Cell, type: Special['type']) => views.boardView.previewAt(cell, type),
+    preview: (cell: Cell, special: Special) => views.boardView.previewAt(cell, special),
   };
   const control = new BoosterControl({
     game: scene,

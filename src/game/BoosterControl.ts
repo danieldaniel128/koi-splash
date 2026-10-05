@@ -35,9 +35,13 @@ export interface BoosterMarks {
 
 /** The special the player picks for a koi: petals open round it; null when they tap away (or it's closed). */
 export interface SpecialPicker {
-  pick(at: Cell): Promise<Special['type'] | null>;
+  /** `line` is the way a striped koi made here would sweep, already tossed, so its petal can show it. */
+  pick(at: Cell, line: LineAlong): Promise<Special['type'] | null>;
   close(): void;
 }
+
+/** The way a striped koi's line sweeps: along its row or its column. */
+type LineAlong = Extract<Special, { type: 'line' }>['along'];
 
 /** What the player hears as they use the boosters. */
 export interface BoosterSounds {
@@ -240,7 +244,9 @@ export class BoosterControl {
     this.step.transition('choosing');
     this.deps.marks.lift(cell);
     this.deps.sounds.petals();
-    const choice = await this.deps.picker.pick(cell);
+    // as in the prototype a striped koi's line is a toss, made before the petals open so the striped one shows it
+    const along: LineAlong = this.deps.random() < 0.5 ? 'row' : 'col';
+    const choice = await this.deps.picker.pick(cell, along);
     if (!this.step.is('choosing')) return; // cancelled while the petals were open
     if (!choice) {
       this.step.transition('armed'); // tapped away: still armed, pick another koi
@@ -248,7 +254,6 @@ export class BoosterControl {
       this.deps.sounds.cancel();
       return;
     }
-    const along = this.deps.random() < 0.5 ? 'row' : 'col'; // as in the prototype, a striped koi's line is a toss
     const special: Special = choice === 'line' ? { type: 'line', along } : { type: choice };
     await this.use({ type: 'special', at: cell, special });
   }

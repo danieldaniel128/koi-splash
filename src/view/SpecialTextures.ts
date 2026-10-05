@@ -29,8 +29,13 @@ export interface SpecialColors {
 /** Where a koi body spans across its canvas, left to right (px). */
 type BodySpan = ReturnType<typeof bodySpan>;
 
-/** Every kind of special koi. */
-const SPECIAL_TYPES = ['line', 'whirl', 'rainbow'] as const satisfies readonly Special['type'][];
+/** Every special koi the petal menu shows: a striped koi either way, so its petal can show the line it will get. */
+const PREVIEWED: readonly Special[] = [
+  { type: 'whirl' },
+  { type: 'line', along: 'col' },
+  { type: 'line', along: 'row' },
+  { type: 'rainbow' },
+];
 
 /**
  * The special koi's textures, from the board's own koi painter (see art/specialKoi). They're baked in the background
@@ -81,7 +86,7 @@ export class SpecialTextures {
         // the whirlpool's first: curling its koi (and its shadow and waterline) reads them back, best before the
         // other two are painted
         this.marks(specialOf('whirl'), kind);
-        for (const type of ['whirl', 'line', 'rainbow'] as const) this.picture(type, kind);
+        for (const special of PREVIEWED) this.picture(special, kind);
       }),
       () => {
         this.drawPictures();
@@ -158,13 +163,14 @@ export class SpecialTextures {
 
   /**
    * A picture of a koi of this kind as a special, as an image URL for the UI (the special booster's petals): the
-   * striped or rainbow koi as it swims, a whirlpool's eddy with its koi curled in the eye. Cached.
+   * striped koi facing along its line, the rainbow koi as it swims, a whirlpool's eddy with its koi curled in the eye.
+   * Cached.
    */
-  preview(type: Special['type'], kind: Kind): string {
-    const key = `${type}:${kind}`;
+  preview(special: Special, kind: Kind): string {
+    const key = previewKey(special, kind);
     const known = this.previews.get(key);
     if (known) return known;
-    const url = this.picture(type, kind).toDataURL(); // wanted before the warm-up got to it: this one on its own
+    const url = this.picture(special, kind).toDataURL(); // wanted before the warm-up got to it: this one on its own
     this.pictures.delete(key);
     this.previews.set(key, url);
     return url;
@@ -199,10 +205,10 @@ export class SpecialTextures {
   /** Puts the petal menu's pictures not made yet side by side on one sheet, for readPictures to read back. */
   private drawPictures(): void {
     const missing = [...this.varieties.keys()]
-      .flatMap((kind) => SPECIAL_TYPES.map((type) => ({ type, kind })))
-      .filter(({ type, kind }) => !this.previews.has(`${type}:${kind}`));
+      .flatMap((kind) => PREVIEWED.map((special) => ({ special, kind })))
+      .filter(({ special, kind }) => !this.previews.has(previewKey(special, kind)));
     this.sheet = drawSideBySide(
-      missing.map(({ type, kind }) => [`${type}:${kind}`, this.picture(type, kind)]),
+      missing.map(({ special, kind }) => [previewKey(special, kind), this.picture(special, kind)]),
     );
     this.pictures.clear(); // on the sheet now
   }
@@ -222,19 +228,27 @@ export class SpecialTextures {
    * What a preview shows: a whirlpool's koi on its eddy, or the special's first pose, painted on its own while its
    * tail beat isn't baked yet (much less for the GPU to draw before the picture can be read back). Kept until read.
    */
-  private picture(type: Special['type'], kind: Kind): HTMLCanvasElement {
-    const key = `${type}:${kind}`;
+  private picture(special: Special, kind: Kind): HTMLCanvasElement {
+    const key = previewKey(special, kind);
     const known = this.pictures.get(key);
     if (known) return known;
-    const baked = this.cache.get(key)?.[0];
-    const picture =
-      type === 'whirl'
-        ? onEddy(canvasOf(this.eddy(kind)), canvasOf(this.whirlKoi(kind)))
-        : baked
-          ? canvasOf(baked)
-          : bakePose(this.variety(kind), this.bake, 0, this.dressing(type, kind));
+    const picture = special.type === 'whirl' ? this.whirlPicture(kind) : this.swimmingPicture(special, kind);
     this.pictures.set(key, picture);
     return picture;
+  }
+
+  /** A whirlpool's koi on its eddy. */
+  private whirlPicture(kind: Kind): HTMLCanvasElement {
+    return onEddy(canvasOf(this.eddy(kind)), canvasOf(this.whirlKoi(kind)));
+  }
+
+  /** A striped or rainbow koi in its first pose; a striped koi facing along its line (a row's swims across). */
+  private swimmingPicture(special: Special & { type: 'line' | 'rainbow' }, kind: Kind): HTMLCanvasElement {
+    const baked = this.cache.get(`${special.type}:${kind}`)?.[0];
+    const koi = baked
+      ? canvasOf(baked)
+      : bakePose(this.variety(kind), this.bake, 0, this.dressing(special.type, kind));
+    return special.type === 'line' && special.along === 'row' ? quarterTurned(koi) : koi;
   }
 
   /** A whirlpool's koi, curled into its eye. */
@@ -257,6 +271,11 @@ export class SpecialTextures {
     this.cache.set(key, made);
     return made;
   }
+}
+
+/** A special's picture's key: its type (and a striped koi's line) and its kind. */
+function previewKey(special: Special, kind: Kind): string {
+  return `${special.type === 'line' ? `line-${special.along}` : special.type}:${kind}`;
 }
 
 /** A special of this type, for its textures (a striped koi's bands look the same either way). */
@@ -328,5 +347,18 @@ function onEddy(eddy: HTMLCanvasElement, koi: HTMLCanvasElement): HTMLCanvasElem
   const ctx = context(canvas);
   ctx.drawImage(eddy, 0, 0);
   ctx.drawImage(koi, (eddy.width - koi.width) / 2, (eddy.height - koi.height) / 2);
+  return canvas;
+}
+
+/** A picture turned a quarter clockwise: a head-up koi then faces right. */
+function quarterTurned(picture: HTMLCanvasElement): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = picture.height;
+  canvas.height = picture.width;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('special preview: 2D canvas not available');
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(picture, -picture.width / 2, -picture.height / 2);
   return canvas;
 }

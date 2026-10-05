@@ -80,9 +80,9 @@ export class BoardView extends Container implements BoardDisplay {
   }
 
   /** A picture of the koi in a cell as a special (the special booster's petals). */
-  previewAt(cell: Cell, type: Special['type']): string {
+  previewAt(cell: Cell, special: Special): string {
     const koi = this.koiAt(cell);
-    return this.specials.preview(type, koi?.kind ?? 0);
+    return this.specials.preview(special, koi?.kind ?? 0);
   }
 
   /** The cell a koi rests in (nearest to where it is now), or null when it's off the board. */
