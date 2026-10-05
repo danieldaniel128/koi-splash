@@ -108,7 +108,14 @@ export class BoosterControl {
       readonly random: () => number;
     },
   ) {
-    this.step = new StateMachine<Step, Arming>('idle', STEPS, this.arming);
+    // however the choosing ends (a petal, a tap away, a cancel, another booster), the petals close with it
+    this.step = new StateMachine<Step, Arming>('idle', STEPS, this.arming, {
+      choosing: {
+        onExit: () => {
+          this.deps.picker.close();
+        },
+      },
+    });
     this.reset();
   }
 
@@ -226,11 +233,9 @@ export class BoosterControl {
   }
 
   private disarm(): void {
-    const choosing = this.step.is('choosing');
     this.arming.type = null;
     this.arming.picked = null;
     this.step.transition('idle');
-    if (choosing) this.deps.picker.close();
     this.deps.buttons.setArmed(null);
     this.deps.pill.hide();
     this.deps.marks.show(null);

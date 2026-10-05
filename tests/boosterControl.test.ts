@@ -53,7 +53,10 @@ function setup(
               };
             })
           : Promise.resolve(options.choice),
-      close: () => closePicker?.(),
+      close: () => {
+        log.push('petals:close');
+        closePicker?.();
+      },
     },
     sounds: {
       arm: () => undefined,
@@ -129,12 +132,26 @@ describe('BoosterControl', () => {
   });
 
   it('cancelling while the petals are open closes them and spends nothing', async () => {
-    const { control, used, settle } = setup();
+    const { control, used, log, settle } = setup();
     control.press('special');
     control.tap({ col: 3, row: 3 });
     control.press('special'); // its button again
     await settle();
+    expect(log).toContain('petals:close');
     expect(used).toEqual([]);
     expect(control.armed).toBe(false);
+  });
+
+  it('another booster pressed while the petals are open closes them and takes over', async () => {
+    const { control, used, log, settle } = setup();
+    control.press('special');
+    control.tap({ col: 3, row: 3 });
+    control.press('feed');
+    await settle();
+    expect(log).toContain('petals:close');
+    expect(log.at(-1)).not.toBe('sound:cancel'); // the closed petals don't put the feed away
+    control.tap({ col: 2, row: 2 });
+    await settle();
+    expect(used).toEqual([{ type: 'feed', at: { col: 2, row: 2 }, lines: 3 }]);
   });
 });
