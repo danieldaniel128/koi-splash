@@ -266,7 +266,8 @@ stones, a drop now and then, crickets from either side and a far wind chime, eac
 scheduled a little ahead on the audio clock, so they keep time when a frame is late.
 
 A first touch starts the sound, and it sleeps while the tab is hidden. The speaker at the end of the booster bar
-opens a small menu with a switch per channel, and each choice is kept between visits.
+opens a small menu with a switch per channel, and each choice is kept between visits. An iPhone in silent mode mutes
+web audio, so there the game plays silently until the ring switch is turned back on.
 
 ### How to add…
 
