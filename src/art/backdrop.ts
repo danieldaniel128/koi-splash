@@ -35,6 +35,8 @@ export interface BackdropLook {
   readonly mist: string;
   /** The pagoda, the branch and the trunk are one ink colour; the lit windows and the lantern are warm. */
   readonly ink: string;
+  /** The color of the shadows things cast on the ground. */
+  readonly shadow: string;
   readonly window: string;
   readonly leaves: string;
   readonly leavesLight: string;
@@ -76,6 +78,8 @@ export function planBackdrop(frame: BackdropFrame): BackdropPlan {
 const FULL_SKY = 170;
 /** The bottom of the scene fades out over this many px, so the bank shows through and the two meet softly. */
 const FADE = 28;
+/** How dark the shadow under something standing on the ground is at its middle. */
+const GROUND_SHADOW = 0.55;
 /** The pagoda's height at scale 1, from its footing to the tip of its spire (px). */
 const PAGODA_HEIGHT = 72;
 /** The pagoda keeps this far below the top of its sky (px), and is left out rather than shrunk below this scale. */
@@ -208,17 +212,24 @@ function paintGround(
 }
 
 /** A soft dark oval on the ground under something standing on it. */
-function groundShadow(ctx: CanvasRenderingContext2D, x: number, y: number, width: number): void {
+function groundShadow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  color: string,
+): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(1, 0.28);
+  ctx.globalAlpha = GROUND_SHADOW;
   fillRadial(
     ctx,
     [0, 0],
     [0, width],
     [
-      [0, 'rgba(2, 8, 18, 0.55)'],
-      [1, 'rgba(2, 8, 18, 0)'],
+      [0, color],
+      [1, transparent(color)],
     ],
   );
   ctx.restore();
@@ -236,7 +247,7 @@ function paintMapleTree(
   theme: BackdropLook,
   random: () => number,
 ): void {
-  groundShadow(ctx, x, base, height * 0.45);
+  groundShadow(ctx, x, base, height * 0.45, theme.shadow);
   const fork: readonly [number, number] = [x + height * 0.06, base - height * 0.45];
   const tips: readonly (readonly [number, number])[] = [
     [x - height * 0.32, base - height * 0.7],
@@ -632,7 +643,7 @@ function paintStoneLantern(
   base: number,
   theme: BackdropLook,
 ): void {
-  groundShadow(ctx, x, base, 46);
+  groundShadow(ctx, x, base, 46, theme.shadow);
   ctx.save();
   ctx.translate(x, base);
   ctx.scale(1.6, 1.6);

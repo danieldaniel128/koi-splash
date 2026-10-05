@@ -363,7 +363,7 @@ function waterLook({ board, moonAt }: PondLayout): UniformDefs {
     uDepth: { value: [WATER.shallowWidth, WATER.deepFrom], type: 'vec2<f32>' },
     uLip: { value: [WATER.lipShade, WATER.lipWidth], type: 'vec2<f32>' },
     uRefraction: { value: WATER.refraction, type: 'f32' },
-    uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
+    uLightDir: { value: [...THEME.scene.light.dir], type: 'vec2<f32>' },
     uBoard: { value: [board.x, board.y, board.width, board.height], type: 'vec4<f32>' },
     uGlow: { value: color(WATER.glow), type: 'vec3<f32>' },
     uGlowLook: {
@@ -395,7 +395,7 @@ function surfaceLook(board: SimArea, koiMask: SimArea): UniformDefs {
     },
     uKoiShift: { value: WATER.koiRefraction, type: 'f32' },
     uInk: { value: color(WATER.ink), type: 'vec3<f32>' },
-    uLightDir: { value: [...WATER.lightDir], type: 'vec2<f32>' },
+    uLightDir: { value: [...THEME.scene.light.dir], type: 'vec2<f32>' },
     uRim: { value: [...WATER.rimGate, WATER.rimOverKoi], type: 'vec3<f32>' },
     uFoam: { value: [WATER.foamWidth, WATER.foamStrength, WATER.foamBreath], type: 'vec3<f32>' },
     uGold: { value: color(WATER.gold), type: 'vec3<f32>' },

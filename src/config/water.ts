@@ -72,8 +72,6 @@ export const WATER = {
   lipWidth: 6,
   /** How far the waves shift the water body (px per unit of slope). */
   refraction: 10,
-  /** Direction the moonlight comes from (toward the upper right), for the relief and the shadows. */
-  lightDir: [0.6, -0.8],
 
   // --- light on the bottom: soft, wide bands (moonlight focused by the surface), glowing in the shallows
   glow: '#7fd6dc',
@@ -149,11 +147,13 @@ export const WATER = {
   koiTint: 0.07,
   /** Extra room (px) around the board where the koi filter draws, for koi that sway or lift past their cell. */
   koiReach: 14,
-  /** Soft shadow on the bottom: offset away from the moon (px), strength, blur (px), colour. */
-  shadowOffset: [-4, 7],
+  /**
+   * Soft shadow on the bottom, cast away from the moon (THEME.scene.light, which also gives its color): how far (px),
+   * its strength and its blur (px).
+   */
+  shadowDistance: 8,
   shadowAlpha: 0.26,
   shadowBlur: 5,
-  shadowColor: '#020a16',
   /** A koi lifted while swapping casts its shadow further: offset grows by this per unit of lift (scale - 1). */
   shadowLiftReach: 6,
 } as const;

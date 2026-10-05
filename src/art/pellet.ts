@@ -2,9 +2,9 @@ import { blank, context, fillRadial } from './canvas';
 
 /**
  * A fish-food pellet (after the prototype's), `size` px across: a soft warm glow, a brown bead and a highlight on the
- * moon side. Painted once and used as a texture.
+ * moon's side (`toMoon`, a unit vector). Painted once and used as a texture.
  */
-export function paintPellet(size: number): HTMLCanvasElement {
+export function paintPellet(size: number, toMoon: readonly [number, number]): HTMLCanvasElement {
   const canvas = blank(size);
   const ctx = context(canvas);
   const r = size / 2;
@@ -24,7 +24,7 @@ export function paintPellet(size: number): HTMLCanvasElement {
   ctx.fill();
   ctx.fillStyle = '#ffe2a8';
   ctx.beginPath();
-  ctx.arc(-r * 0.2, -r * 0.2, r * 0.26, 0, Math.PI * 2);
+  ctx.arc(toMoon[0] * r * 0.28, toMoon[1] * r * 0.28, r * 0.26, 0, Math.PI * 2);
   ctx.fill();
   return canvas;
 }

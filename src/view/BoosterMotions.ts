@@ -5,6 +5,7 @@ import { paintPellet } from '../art/pellet';
 import { easeInOutCubic, smoothstep } from '../core/easing';
 import { BOOSTER_MOTION } from '../config/specials';
 import { WATER } from '../config/water';
+import { THEME } from '../theme/theme';
 import type { Moved } from '../model/boosters';
 import type { Cell, Kind, Piece } from '../model/types';
 import type { BoardView } from './BoardView';
@@ -64,7 +65,8 @@ export class BoosterMotions extends Container {
     this.events = deps.events;
     this.hitStop = deps.hitStop;
     this.centre = deps.centre;
-    this.pellet = Texture.from(paintPellet(Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet)));
+    const size = Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet);
+    this.pellet = Texture.from(paintPellet(size, THEME.scene.light.dir));
   }
 
   /** Two koi leap out of the water and land in each other's cells, crossing in the air. */

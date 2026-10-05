@@ -1,6 +1,7 @@
 import { Container, Point, Sprite } from 'pixi.js';
 import type { Texture } from 'pixi.js';
 import { WATER } from '../config/water';
+import { THEME } from '../theme/theme';
 import type { Koi } from './Koi';
 import type { KoiTextures } from './KoiTextures';
 
@@ -36,7 +37,7 @@ export class KoiWaterline {
   /** Starts casting a koi's marks into the water. */
   add(koi: Koi): void {
     const shadow = centred(this.textures.shadow(koi.kind));
-    shadow.tint = WATER.shadowColor;
+    shadow.tint = THEME.scene.light.shadow;
     const contactPoses = this.textures.contact(koi.kind);
     const contact = new Sprite(contactPoses[0]);
     contact.anchor.set(0.5);
@@ -78,9 +79,9 @@ export class KoiWaterline {
 
   /** Same turn, scale and fade as its koi, offset away from the moon: further for a koi lifted toward the surface. */
   private followShadow(koi: Koi, shadow: Sprite, lift: number): void {
-    const [offsetX, offsetY] = WATER.shadowOffset;
-    const reach = 1 + (lift - 1) * WATER.shadowLiftReach;
-    shadow.position.set(koi.x + offsetX * reach, koi.y + offsetY * reach);
+    const [towardX, towardY] = THEME.scene.light.dir;
+    const reach = WATER.shadowDistance * (1 + (lift - 1) * WATER.shadowLiftReach);
+    shadow.position.set(koi.x - towardX * reach, koi.y - towardY * reach);
     shadow.scale.copyFrom(koi.scale); // same pixel density as the koi texture, the extra canvas is blur room
     shadow.rotation = koi.rotation;
     shadow.alpha = koi.alpha * WATER.shadowAlpha;
