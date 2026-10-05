@@ -325,19 +325,15 @@ function createBoosterControl(
 /**
  * The sound, on three channels: the effects (the prototype's synth playing what each game event sounds like), the
  * music and the ambience (made as they play, or recorded loops when the config names files). A menu at the end of
- * the booster bar switches each channel (kept between visits). Browsers only allow sound after a touch, so the first
- * touch (or key) starts it; it sleeps while the page is hidden. Returns the menu, for the Escape key.
+ * the booster bar switches each channel (kept between visits). Browsers only allow sound after the player's gesture,
+ * so the first tap, click or key starts it; it sleeps while the page is hidden. Returns the menu, for the Escape key.
  */
 function startSound(app: Application, events: GameEventBus, screen: Screen): SoundSettings<Bus> {
   const settings = byBus((bus) => storedSetting(`${AUDIO.storageKey}.${bus}`));
   const mixer = new Mixer(byBus((bus) => settings[bus].load()));
   new SoundBoard(events, new Synth(mixer, 'sfx'));
   const soundtrack = new Soundtrack(events, [musicTrack(mixer), ambienceTrack(mixer)], mixer);
-  for (const gesture of ['pointerdown', 'keydown'] as const) {
-    window.addEventListener(gesture, () => {
-      mixer.unlock();
-    });
-  }
+  mixer.listenForUnlock(window);
   document.addEventListener('visibilitychange', () => {
     mixer.setAwake(!document.hidden);
   });
