@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js';
 import { bakeProp } from '../../art/pondProps';
 import type { PondProp } from '../../config/pond';
+import type { PropLook } from '../../art/pondProps';
 
 /**
  * Most stones and pads the water shaders take: the pond's own props first, then the lily pads on the board (see
@@ -11,10 +12,10 @@ export const MAX_PROPS = 16;
 /** The stones around the pond, painted once at startup (see art/pondProps) and drawn over the water. */
 export class PondProps extends Container {
   /** O(props) canvas paints and uploads, once. */
-  constructor(props: readonly PondProp[], resolution: number) {
+  constructor(props: readonly PondProp[], resolution: number, look: PropLook) {
     super();
     for (const prop of props) {
-      const texture = Texture.from(bakeProp(prop, resolution));
+      const texture = Texture.from(bakeProp(prop, resolution, look));
       const sprite = new Sprite(texture);
       sprite.anchor.set(0.5);
       sprite.scale.set(1 / resolution);

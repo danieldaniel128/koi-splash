@@ -35,6 +35,7 @@ import { SwipeInput } from '../view/SwipeInput';
 import type { BoardGestures } from '../view/SwipeTracker';
 import type { PondWater } from '../view/water/PondWater';
 import { createBoardView } from './koi';
+import { propLook } from './pond';
 import type { GameScreen } from './screen';
 
 /**
@@ -377,7 +378,7 @@ function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resol
       toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,
-    resolution,
+    { resolution, look: propLook() },
   );
   pads.position.set(board.x, board.y);
   return pads;

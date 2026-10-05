@@ -55,6 +55,9 @@ export const POND = {
   /** Width (px) of the dark wet band on the bank along the water (the bank's colours are in the theme). */
   wetBand: 16,
 
+  /** The shadow every stone and pad casts away from the moon (THEME.scene.light): how far (px) and how dark. */
+  propShadow: { distance: 6, alpha: 0.5 },
+
   /**
    * Where the moon's reflection sits on the water, under the koi (from the pond's corner): there is little open
    * water round the board, so it shows there, softened (WATER.moonUnderBoard).

@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
+import type { PropLook } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
 import type { PadDisplay } from '../game/GameScene';
 import type { Cell, Pad, PadEvent } from '../model/types';
@@ -42,11 +43,12 @@ export class PadView extends Container implements PadDisplay {
   constructor(
     private readonly layout: PadViewLayout,
     private readonly water: PadWater,
-    resolution: number,
+    paint: { readonly resolution: number; readonly look: PropLook },
   ) {
     super();
+    const { resolution, look } = paint;
     this.looks = Array.from({ length: BOARD_PADS.looks }, (_, k) =>
-      bakePadLook(layout.cellSize * BOARD_PADS.radius, k, resolution),
+      bakePadLook(layout.cellSize * BOARD_PADS.radius, k, resolution, look),
     );
     this.scaleOf = 1 / resolution;
   }
@@ -220,14 +222,14 @@ interface PadLook {
  * Look `k` of a lily pad of this radius: its own seed turns the leaf's notch and the lotus, while the shadow and the
  * moonlit rim stay where the moon puts them. O(stages) canvas paints, once at startup.
  */
-function bakePadLook(radius: number, k: number, resolution: number): PadLook {
+function bakePadLook(radius: number, k: number, resolution: number, look: PropLook): PadLook {
   const { stages, lotusSeed, emptySeed } = BOARD_PADS;
   return {
     stages: Array.from({ length: stages }, (_, i) =>
-      Texture.from(bakeLotusPad(radius, i / (stages - 1), lotusSeed + k, resolution)),
+      Texture.from(bakeLotusPad(radius, i / (stages - 1), lotusSeed + k, resolution, look)),
     ),
     empty: Texture.from(
-      bakeProp({ kind: 'pad', radius: [radius, radius], seed: emptySeed + k }, resolution),
+      bakeProp({ kind: 'pad', radius: [radius, radius], seed: emptySeed + k }, resolution, look),
     ),
   };
 }

@@ -18,14 +18,20 @@ export type PropPaint = Pick<PondProp, 'kind' | 'radius' | 'seed'>;
 /** Paints a piece centered on the canvas origin, in its own px. */
 export type Painter = (ctx: CanvasRenderingContext2D) => void;
 
-type Pt = readonly [number, number];
+/**
+ * How the stones and pads are lit and inked, from the scene: the way toward the moon and the color of the shadows it
+ * casts, how far from a prop its shadow falls and how dark (px, 0..1), and the pads' ink outline (px), as bold as
+ * the koi's so the board reads as one style.
+ */
+export interface PropLook {
+  readonly light: { readonly dir: readonly [number, number]; readonly shadow: string };
+  readonly shadow: { readonly distance: number; readonly alpha: number };
+  readonly padOutline: number;
+}
 
 /** Room around the body for the shadow and the blur. */
 const MARGIN = 10;
 const TAU = Math.PI * 2;
-/** The shadow falls away from the moon (down and to the left). */
-const SHADOW_OFFSET: Pt = [-3, 5];
-const SHADOW = 'rgba(2, 8, 18, 0.5)';
 /** How soft the shadow is (px): the same on every screen. */
 const SHADOW_BLUR = 1.5;
 
@@ -48,16 +54,16 @@ const PAD = {
   vein: 'rgba(190, 235, 190, 0.35)',
   ink: '#0b2618',
 };
-/** The pads' ink outline (px): as bold as the koi's cartoon outline, so the board reads as one style. */
-const PAD_OUTLINE = 1.9;
+/** How far the pad's lit rim shows on its moon side (px). */
+const PAD_RIM = 1.5;
 const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)', heart: '#f4cf4f' } as const;
 
 /** Paints one prop into a fresh canvas, centred; the canvas is padded for the shadow. */
-export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement {
+export function bakeProp(prop: PropPaint, resolution: number, look: PropLook): HTMLCanvasElement {
   const random = seeded(prop.seed); // the same seed always paints the same prop
   return bakePiece(prop.radius, resolution, (ctx) => {
-    if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
-    else paintPad(ctx, prop.radius[0], random);
+    if (prop.kind === 'stone') paintStone(ctx, prop.radius, random, look);
+    else paintPad(ctx, prop.radius[0], random, look);
   });
 }
 
@@ -91,6 +97,7 @@ export function paintStone(
   ctx: CanvasRenderingContext2D,
   [rx, ry]: readonly [number, number],
   random: () => number,
+  look: PropLook,
 ): void {
   const depth = ry * STONE_DEPTH;
   const face = slab(rx, ry - depth / 2, random);
@@ -104,7 +111,7 @@ export function paintStone(
       ctx.restore();
     }
   };
-  paintShadow(ctx, () => {
+  paintShadow(ctx, look, () => {
     ctx.beginPath();
     ctx.ellipse(0, depth * 0.3, rx, ry - depth * 0.2, 0, 0, TAU);
   });
@@ -154,7 +161,7 @@ function paintFace(
 
 // ---------------------------------------------------------------------------- lily pads and the lotus
 
-function paintPad(ctx: CanvasRenderingContext2D, radius: number, random: () => number): void {
+function paintPad(ctx: CanvasRenderingContext2D, radius: number, random: () => number, look: PropLook): void {
   const notch = random() * TAU;
   const leaf = (): void => {
     ctx.beginPath();
@@ -162,7 +169,7 @@ function paintPad(ctx: CanvasRenderingContext2D, radius: number, random: () => n
     ctx.arc(0, 0, radius, notch + 0.2, notch - 0.2 + TAU);
     ctx.closePath();
   };
-  paintShadow(ctx, leaf);
+  paintShadow(ctx, look, leaf);
   leaf();
   ctx.fillStyle = PAD.rim;
   ctx.fill();
@@ -171,16 +178,17 @@ function paintPad(ctx: CanvasRenderingContext2D, radius: number, random: () => n
   const body = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
   body.addColorStop(0, PAD.centre);
   body.addColorStop(1, PAD.edge);
-  ctx.translate(-1.2, 1.2);
+  const [towardX, towardY] = look.light.dir;
+  ctx.translate(-towardX * PAD_RIM, -towardY * PAD_RIM); // the lighter rim shows on the moon's side
   leaf();
   ctx.fillStyle = body;
   ctx.fill();
-  ctx.translate(1.2, -1.2);
+  ctx.translate(towardX * PAD_RIM, towardY * PAD_RIM);
   veins(ctx, radius, notch);
   ctx.restore();
   leaf();
   ctx.strokeStyle = PAD.ink;
-  ctx.lineWidth = PAD_OUTLINE;
+  ctx.lineWidth = look.padOutline;
   ctx.stroke();
 }
 
@@ -205,12 +213,13 @@ export function bakeLotusPad(
   openness: number,
   seed: number,
   resolution: number,
+  look: PropLook,
 ): HTMLCanvasElement {
   const pad = seeded(seed); // the pad's own seed, as bakeProp paints it
   const lotus = seeded(seed + 1);
   return bakePiece([radius, radius], resolution, (ctx) => {
-    paintPad(ctx, radius, pad);
-    paintOpeningLotus(ctx, radius * 0.66, openness, lotus() * TAU);
+    paintPad(ctx, radius, pad, look);
+    paintOpeningLotus(ctx, radius * 0.66, { openness, turn: lotus() * TAU }, look);
   });
 }
 
@@ -218,11 +227,11 @@ export function bakeLotusPad(
 function paintOpeningLotus(
   ctx: CanvasRenderingContext2D,
   size: number,
-  openness: number,
-  turn: number,
+  { openness, turn }: { openness: number; turn: number },
+  look: PropLook,
 ): void {
   const open = Math.min(Math.max(openness, 0), 1);
-  paintShadow(ctx, () => {
+  paintShadow(ctx, look, () => {
     ctx.beginPath();
     ctx.arc(0, 0, size * (0.6 + 0.3 * open), 0, TAU);
   });
@@ -258,16 +267,22 @@ function petal(ctx: CanvasRenderingContext2D, angle: number, length: number, wid
 // ---------------------------------------------------------------------------- shared
 
 /** A soft shadow of whatever `shape` traces, cast away from the moon. */
-function paintShadow(ctx: CanvasRenderingContext2D, shape: () => void): void {
-  drawShadowOnly(
-    ctx,
-    () => {
-      shape();
-      ctx.fillStyle = '#000';
-      ctx.fill();
-    },
-    { blur: SHADOW_BLUR, color: SHADOW, offset: SHADOW_OFFSET },
-  );
+function paintShadow(ctx: CanvasRenderingContext2D, look: PropLook, shape: () => void): void {
+  const [towardX, towardY] = look.light.dir;
+  const { distance, alpha } = look.shadow;
+  const fill = (): void => {
+    shape();
+    ctx.fillStyle = '#000';
+    ctx.fill();
+  };
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  drawShadowOnly(ctx, fill, {
+    blur: SHADOW_BLUR,
+    color: look.light.shadow,
+    offset: [-towardX * distance, -towardY * distance],
+  });
+  ctx.restore();
 }
 
 /**

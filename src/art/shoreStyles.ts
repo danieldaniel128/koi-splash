@@ -1,14 +1,17 @@
 import type { ShoreStyle } from '../config/pond';
 import { paintStone } from './pondProps';
+import type { PropLook } from './pondProps';
 
 /**
  * Paints one piece of the pond's border (a stone, a plank, a bush...) centred on the canvas origin, upright, within
- * its half size (px). The same piece is never asked for twice, so it can use `random` to look unique.
+ * its half size (px), lit as `look` says. The same piece is never asked for twice, so it can use `random` to look
+ * unique.
  */
 export type ShorePainter = (
   ctx: CanvasRenderingContext2D,
   radius: readonly [number, number],
   random: () => number,
+  look: PropLook,
 ) => void;
 
 /**
