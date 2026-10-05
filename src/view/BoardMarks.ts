@@ -128,12 +128,22 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
       .circle(x, y, this.cellSize * (0.5 + 0.03 * beat))
       .stroke({ width: 3, color: look.gold, alpha: 0.7 + 0.3 * beat });
     for (const offset of [0, Math.PI]) {
-      const start = this.time * 2.4 + offset;
-      const radius = this.cellSize * 0.6;
-      this.ring
-        .moveTo(x + Math.cos(start) * radius, y + Math.sin(start) * radius) // each arc its own stroke, not joined on
-        .arc(x, y, radius, start, start + 1.6)
-        .stroke({ width: 2, color: look.pink, alpha: 0.8 });
+      // each arc is its own open polyline: a path arc can join back to an earlier point on some mobile GPUs
+      this.ring.poly(arcPoints({ x, y }, this.cellSize * 0.6, this.time * 2.4 + offset), false);
+      this.ring.stroke({ width: 2, color: look.pink, alpha: 0.8 });
     }
   }
+}
+
+const ARC_LENGTH = 1.6;
+const ARC_SEGMENTS = 12;
+
+/** The points of one arc round a center, `ARC_LENGTH` radians long from `start`, flattened for poly(). */
+function arcPoints(center: { x: number; y: number }, radius: number, start: number): number[] {
+  const points: number[] = [];
+  for (let k = 0; k <= ARC_SEGMENTS; k++) {
+    const angle = start + (ARC_LENGTH * k) / ARC_SEGMENTS;
+    points.push(center.x + Math.cos(angle) * radius, center.y + Math.sin(angle) * radius);
+  }
+  return points;
 }
