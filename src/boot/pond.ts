@@ -32,10 +32,10 @@ export function createPond(renderer: Renderer, { layout }: GameScreen, shoreFiel
 }
 
 /**
- * The garden around the pond (see art/backdrop), baked once at exactly the screen's pixels per stage px: above the
- * pond on a tall phone, beside it on a wide screen.
+ * The garden around the pond (see art/backdrop), baked once at exactly the screen's pixels per stage px (up to the
+ * GPU's largest texture): above the pond on a tall phone, beside it on a wide screen.
  */
-export function createGarden({ layout, resolution }: GameScreen): Sprite {
+export function createGarden({ layout, resolution, maxTextureSize }: GameScreen): Sprite {
   const { stage, hud, pond, scene } = layout;
   const shore = LAYOUT.shoreWidth;
   return createBackdrop(
@@ -47,7 +47,7 @@ export function createGarden({ layout, resolution }: GameScreen): Sprite {
       pond: { left: pond.x - shore, right: pond.x + pond.width + shore },
     },
     THEME.scene.backdrop,
-    resolution.screen,
+    { resolution: resolution.screen, maxSize: maxTextureSize },
     POND.shore.seed,
   );
 }

@@ -1,4 +1,6 @@
+import { WebGLRenderer } from 'pixi.js';
 import type { Application } from 'pixi.js';
+import { MAX_TEXTURE_SIZE } from '../art/atlas';
 import { BOARD } from '../config/board';
 import { KOI_LOOK } from '../config/koi';
 import { LAYOUT } from '../config/layout';
@@ -24,6 +26,8 @@ export interface GameScreen {
   readonly shore: readonly Outline[];
   readonly ui: UiLayer;
   readonly resolution: PaintResolution;
+  /** The largest texture this GPU takes (px): only a painting bigger than that is painted any softer. */
+  readonly maxTextureSize: number;
 }
 
 /** Pixels per stage px to paint at. */
@@ -48,7 +52,15 @@ export function measureScreen(app: Application, host: HTMLElement): GameScreen {
     shore,
     ui: new UiLayer(host, layout.stage),
     resolution: paintResolution(app.renderer.resolution, layout.stage.scale),
+    maxTextureSize: maxTextureSize(app),
   };
+}
+
+/** The largest texture this GPU takes (px); one every WebGL device takes when it can't be asked. */
+function maxTextureSize(app: Application): number {
+  const { renderer } = app;
+  if (!(renderer instanceof WebGLRenderer)) return MAX_TEXTURE_SIZE;
+  return renderer.gl.getParameter(renderer.gl.MAX_TEXTURE_SIZE) as number;
 }
 
 /**

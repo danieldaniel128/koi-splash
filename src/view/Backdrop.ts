@@ -3,22 +3,20 @@ import { paintBackdrop, planBackdrop } from '../art/backdrop';
 import type { BackdropFrame, BackdropLook } from '../art/backdrop';
 import { seeded } from '../core/Random';
 
-/** Every WebGL device takes a texture this wide. */
-const MAX_SIZE = 2048;
-
 /**
  * The scene around the pond, painted once into one texture at the screen's real pixel density (as wide as the stage,
- * down to the horizon, or the whole stage on a wide screen) and drawn as a single sprite over the bank.
- * O(stage area) paint, once.
+ * down to the horizon, or the whole stage on a wide screen) and drawn as a single sprite over the bank. Only a
+ * screen bigger than the GPU's largest texture (`maxSize` px) gets it a little softer. O(stage area) paint, once.
  */
 export function createBackdrop(
   frame: BackdropFrame,
   look: BackdropLook,
-  resolution: number,
+  pixels: { readonly resolution: number; readonly maxSize: number },
   seed: number,
 ): Sprite {
   const { height } = planBackdrop(frame);
-  const scale = Math.min(resolution, MAX_SIZE / frame.width, MAX_SIZE / Math.max(height, 1));
+  const { resolution, maxSize } = pixels;
+  const scale = Math.min(resolution, maxSize / frame.width, maxSize / Math.max(height, 1));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.ceil(frame.width * scale));
   canvas.height = Math.max(1, Math.ceil(height * scale));

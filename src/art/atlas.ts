@@ -24,15 +24,19 @@ export interface Atlas {
 
 /** Empty pixels around every slot, so texture filtering never pulls in a neighbour's edge. */
 const PADDING = 2;
-/** Every WebGL device takes a texture this big. */
-const MAX_SIZE = 2048;
+/** Every WebGL device takes a texture this big (px). */
+export const MAX_TEXTURE_SIZE = 2048;
 
 /**
  * Paints many small pieces into one canvas: one texture upload and, since every sprite then shares the texture,
  * one draw call for all of them. If they don't fit at `resolution`, it steps the resolution down until they do.
  * O(pieces) paints, once.
  */
-export function bakeAtlas(pieces: readonly AtlasPiece[], resolution: number, maxSize = MAX_SIZE): Atlas {
+export function bakeAtlas(
+  pieces: readonly AtlasPiece[],
+  resolution: number,
+  maxSize = MAX_TEXTURE_SIZE,
+): Atlas {
   let scale = resolution;
   let packed = packShelves(sizesAt(pieces, scale), maxSize);
   while (packed.height > maxSize) {
