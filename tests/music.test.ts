@@ -14,13 +14,15 @@ import { createGameEvents } from '../src/game/events';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
 
-/** A voice on a clock the test moves, counting what it was asked to play. */
-function clockedVoice(): Voice & { time: number | null; tones: number } {
+/** A voice on a clock the test moves, counting what it was asked to play and when (its delays). */
+function clockedVoice(): Voice & { time: number | null; tones: number; delays: number[] } {
   const voice = {
     time: 0 as number | null,
     tones: 0,
-    tone: () => {
+    delays: [] as number[],
+    tone: (_freq: number, _dur: number, _vol: number, opts?: { delay?: number }) => {
       voice.tones++;
+      voice.delays.push(opts?.delay ?? 0);
     },
     noise: () => undefined,
     pluck: () => undefined,
@@ -106,6 +108,35 @@ describe('GardenMusic', () => {
     voice.time = 10 + (60 / MUSIC.tempo) * 4;
     music.update();
     expect(voice.tones).toBeGreaterThan(first);
+  });
+
+  it('plays no bar twice when the voice comes back from a pause (a hidden tab, a quick off and on)', () => {
+    const voice = clockedVoice();
+    const music = new GardenMusic(voice, () => 0.5);
+    voice.time = 10;
+    music.update();
+    const first = voice.tones;
+    voice.time = null;
+    music.update();
+    voice.time = 10.05; // the bar scheduled before the pause is still to come
+    music.update();
+    expect(voice.tones).toBe(first);
+  });
+
+  it('never schedules a bar in the past, when frames stalled or the clock ran on while it was silent', () => {
+    for (const pause of [false, true]) {
+      const voice = clockedVoice();
+      const music = new GardenMusic(voice, () => 0.5);
+      voice.time = 10;
+      music.update();
+      if (pause) {
+        voice.time = null;
+        music.update();
+      }
+      voice.time = 10 + (60 / MUSIC.tempo) * 4 + 0.5; // half a second past the next bar line
+      music.update();
+      expect(Math.min(...voice.delays)).toBeGreaterThanOrEqual(0);
+    }
   });
 });
 
