@@ -183,11 +183,14 @@ makes a match). The scene applies it and settles the board like after a swap, wi
 ### Tech art
 
 The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
-into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks
+into 8-bit channels so it runs on any phone GPU (read back at high precision; `waterCodec` mirrors the packing and
+tests it). The koi disturb it: a moving koi leaves a wake, a resting one flicks
 its tail, a swap shoves the water apart, and matched koi dive with a ring in the water while the koi above swim down
 into the gaps, under the lily pads. The shore and the pads soak the waves up. It's drawn in an ink and moonlight toon
 look: the bank is painted once per screen size, and three passes read the waves each frame (the water under the koi,
-a filter that bends the koi under the waves, and a surface pass with shore foam and gold glints). The koi have a dark
+a filter that bends the koi under the waves, and a surface pass with shore foam and gold glints). A leaping koi
+leaves the water's filter while it's in the air. One moon lights the whole scene (`THEME.scene.light`): the water's
+relief, the koi's, stones' and pads' shadows and the highlights all follow it. The koi have a dark
 cartoon outline, and a broken foam line at their waterline that follows them and breaks around the fins (drawn each
 frame from a mask of the koi, `KoiContact`).
 
@@ -213,8 +216,9 @@ The special koi come from the prototype, rebuilt in layers. Their art is painted
 a striped koi gets bands of its colour and white and a rainbow koi gets its scales recoloured with the spectrum (the
 'color' blend keeps their light and shade), under the same outline as every other koi. A whirlpool is a painted eddy
 with the koi curled into its eye. At rest each has its own look (`SpecialLooks`, one class per special): a striped
-koi faces along its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (a colour-matrix
-filter) over a prism glow with orbiting sparkles, and a whirlpool's eddy turns. When they fire, `planRound` works
+koi faces along its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (one hue filter
+shared by every rainbow koi, at the screen's resolution) over a prism glow with orbiting sparkles, and a whirlpool's
+eddy turns (its curled koi casts a curled shadow and waterline). When they fire, `planRound` works
 out from the model's data when every koi goes and how (dive, spiral into the special that was made, drain into a
 whirlpool, zapped by a prism beam), the animator plays that plan, `SpecialFx` draws the light (beam, vortex, prism
 arcs, a flash at birth), and every effect also moves the water. The timings and sizes are in `TIMING.specials` and
