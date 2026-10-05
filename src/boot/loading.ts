@@ -130,6 +130,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     fireflies: scenery.fireflies,
     boardView,
     impact,
+    hitStop: game.hitStop,
   });
 }
 
