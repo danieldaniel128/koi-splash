@@ -91,7 +91,7 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
       boardView,
       specials: made.specials,
       pond,
-      cell: board.cell,
+      board,
       events,
       hitStop,
     }),
@@ -240,11 +240,12 @@ function createBoosterViews(on: {
   boardView: BoardView;
   specials: SpecialTextures;
   pond: PondWater;
-  cell: number;
+  board: GameLayout['board'];
   events: GameEventBus;
   hitStop: HitStop;
 }): { motions: BoosterMotions; marks: BoardMarks } {
-  const { boardView, cell, events } = on;
+  const { boardView, events, board } = on;
+  const { cell } = board;
   const motions = new BoosterMotions({
     view: boardView,
     water: on.pond,
@@ -252,6 +253,7 @@ function createBoosterViews(on: {
     sparkle: on.specials.sparkle,
     events,
     hitStop: on.hitStop,
+    centre: { x: board.width / 2, y: board.height / 2 },
   });
   const marks = new BoardMarks(boardView, cell);
   for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);

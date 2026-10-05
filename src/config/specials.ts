@@ -76,6 +76,8 @@ export const BOOSTER_MOTION = {
     hitStop: 0.06,
   },
   feed: {
+    /** A swim's bow puts its curve's control point at most this many cells to the side (the path bulges half that). */
+    maxBow: 1.2,
     pellets: 9,
     pellet: 0.26,
     throw: 0.5,

@@ -41,6 +41,7 @@ export class BoosterMotions extends Container {
   private readonly sparkle: Texture;
   private readonly events: GameEventBus;
   private readonly hitStop: HitStop;
+  private readonly centre: PointData;
 
   constructor(deps: {
     readonly view: BoardView;
@@ -52,6 +53,8 @@ export class BoosterMotions extends Container {
     readonly events: GameEventBus;
     /** Holds the animations' clock as the leaping koi cross. */
     readonly hitStop: HitStop;
+    /** The board's middle (board space): the feed's paths bow toward it. */
+    readonly centre: PointData;
   }) {
     super();
     this.view = deps.view;
@@ -60,6 +63,7 @@ export class BoosterMotions extends Container {
     this.sparkle = deps.sparkle;
     this.events = deps.events;
     this.hitStop = deps.hitStop;
+    this.centre = deps.centre;
     this.pellet = Texture.from(paintPellet(Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet)));
   }
 
@@ -187,12 +191,7 @@ export class BoosterMotions extends Container {
     const to = this.view.cellToPoint(move.to);
     const cells = Math.hypot(move.to.col - move.from.col, move.to.row - move.from.row);
     const duration = Math.min(look.swimMax, look.swim0 + cells * look.swimPer);
-    const side = move.piece.id % 2 === 0 ? 1 : -1;
-    const offset = look.bend * Math.min(cells, 3) * side; // the bow, as a share of the path
-    const control = {
-      x: (from.x + to.x) / 2 - (to.y - from.y) * offset,
-      y: (from.y + to.y) / 2 + (to.x - from.x) * offset,
-    };
+    const control = this.bowInward(from, to, look.bend * Math.min(cells, 3)); // the bow, as a share of the path
     const k = { t: 0 };
     await gsap.to(k, {
       t: 1,
@@ -210,6 +209,20 @@ export class BoosterMotions extends Container {
     if (!food) return;
     this.faceToward(koi, food);
     this.events.emit('koiFed');
+  }
+
+  /**
+   * The control point of a path bowed `share` of its length sideways, at most BOOSTER_MOTION.feed.maxBow cells, on the
+   * side of the board's middle: a koi swimming near the edge never bows out over the bank.
+   */
+  private bowInward(from: PointData, to: PointData, share: number): PointData {
+    const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+    const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
+    const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const centre = this.centre;
+    const inward = (centre.x - mid.x) * normal.x + (centre.y - mid.y) * normal.y >= 0 ? 1 : -1;
+    const reach = Math.min(share * length, BOOSTER_MOTION.feed.maxBow * this.cell) * inward;
+    return { x: mid.x + normal.x * reach, y: mid.y + normal.y * reach };
   }
 
   /** A handful of pellets thrown in a high lob, landing scattered round the food, floating a while, then gone. */
