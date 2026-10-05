@@ -18,7 +18,7 @@ import {
 import type { SpecialColors } from '../config/koi';
 import { SPECIAL_LOOK } from '../config/specials';
 import type { PieceColor, Special } from '../model/types';
-import { bakeContact, bakePose, bakePoses, bakeShadow, stillPose, tailWag } from './KoiTextures';
+import { bakeContact, bakePose, bakeShadow, stillPose, tailWag } from './KoiTextures';
 import type { KoiBake } from './KoiTextures';
 import type { KoiMarks } from './KoiWaterline';
 
@@ -45,6 +45,8 @@ export class SpecialTextures {
   readonly sparkle: Texture;
   readonly rainbowGlow: Texture;
   private readonly cache = new Map<string, Texture[]>();
+  /** Striped and rainbow tail beats the warm-up is part way through. */
+  private readonly partBeats = new Map<string, Texture[]>();
   private readonly curledMarks = new Map<PieceColor, KoiMarks>();
   private readonly previews = new Map<string, string>();
   /** Where each colour's koi body spans across its canvas: what a striped koi's bands fit. */
@@ -65,8 +67,8 @@ export class SpecialTextures {
   }
 
   /**
-   * Everything still to bake, as small jobs in the order to run them, one colour at a time (O(frames) canvas paints
-   * each at most). Reading a canvas back waits for the GPU to finish everything drawn before it, so every job that
+   * Everything still to bake, as small jobs in the order to run them: one colour, or one pose of a tail beat, at a
+   * time (O(frames) canvas paints each at most). Reading a canvas back waits for the GPU to finish everything drawn before it, so every job that
    * reads one (a striped koi's fit, a whirlpool's curl, the petal menu's pictures) comes before the big paints, the
    * striped and rainbow koi's tail beats, and each reads what was painted a few frames before: the pictures are
    * painted with the whirlpools, put on one sheet, then read back in one go.
@@ -90,17 +92,17 @@ export class SpecialTextures {
       () => {
         this.readPictures();
       },
-      ...forEachColor((color) => this.poses(specialOf('striped'), color)),
+      ...this.poseJobs('striped'),
       ...forEachColor((color) => this.sheen(color)),
-      ...forEachColor((color) => this.poses(specialOf('rainbow'), color)),
+      ...this.poseJobs('rainbow'),
     ];
   }
 
   /** A special koi's poses: a striped or rainbow koi's tail beat, or a whirlpool's koi curled into its eye. */
   poses(special: Special, color: PieceColor): readonly Texture[] {
+    if (special.type !== 'whirlpool') return this.tailBeat(special.type, color);
     return this.cached(`${special.type}:${color}`, () => {
       const id = this.variety(color);
-      if (special.type !== 'whirlpool') return bakePoses(id, this.bake, this.dressing(special.type, color));
       const straight = bakeInkedKoi(getVariety(id), stillPose(this.bake), this.bake.ink);
       return [Texture.from(curl(straight, straight.width * SPECIAL_LOOK.whirlpool.curl))];
     });
@@ -260,6 +262,36 @@ export class SpecialTextures {
     const id = this.varieties[color];
     if (!id) throw new RangeError(`no koi variety for color ${color}`);
     return id;
+  }
+
+  /** A job per pose of every colour's striped or rainbow tail beat. */
+  private poseJobs(type: 'striped' | 'rainbow'): (() => void)[] {
+    return [...this.varieties.keys()].flatMap((color) =>
+      Array.from({ length: this.bake.frames }, () => () => {
+        this.bakeNextPose(type, color);
+      }),
+    );
+  }
+
+  /** A striped or rainbow koi's whole tail beat, with whatever poses the warm-up hasn't got to yet baked now. */
+  private tailBeat(type: 'striped' | 'rainbow', color: PieceColor): Texture[] {
+    const key = `${type}:${color}`;
+    for (let known = this.cache.get(key); !known; known = this.cache.get(key)) this.bakeNextPose(type, color);
+    return this.cache.get(key) ?? [];
+  }
+
+  /** Bakes the next pose of a striped or rainbow koi's tail beat; the beat is kept once it has all its poses. */
+  private bakeNextPose(type: 'striped' | 'rainbow', color: PieceColor): void {
+    const key = `${type}:${color}`;
+    if (this.cache.has(key)) return;
+    const baked = this.partBeats.get(key) ?? [];
+    const pose = bakePose(this.variety(color), this.bake, baked.length, this.dressing(type, color));
+    baked.push(Texture.from(pose));
+    if (baked.length < this.bake.frames) this.partBeats.set(key, baked);
+    else {
+      this.partBeats.delete(key);
+      this.cache.set(key, baked);
+    }
   }
 
   private cached(key: string, bake: () => Texture[]): Texture[] {
