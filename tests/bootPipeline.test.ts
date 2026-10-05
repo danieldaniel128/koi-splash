@@ -39,14 +39,14 @@ describe('BootPipeline', () => {
     expect(made).toEqual({ pond: { width: 300 }, koi: 30, stage: '300:30' });
   });
 
-  it('reports the share done by weight, from 0 to 1, and pauses for the browser before every step', async () => {
+  it('reports the share done by weight, from 0 to 1, and pauses for the browser between the steps', async () => {
     const pipeline = new BootPipeline()
       .step('fonts', 1, () => undefined)
       .step('koi', 3, () => undefined)
       .step('pond', 4, () => undefined);
     const { progress, pauses } = await runQuietly(pipeline);
     expect(progress).toEqual([0, 0.125, 0.5, 1]);
-    expect(pauses).toBe(3);
+    expect(pauses).toBe(2);
   });
 
   it('stops at a failing step and rejects with its name, the error as the cause', async () => {

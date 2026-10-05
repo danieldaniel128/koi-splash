@@ -16,9 +16,9 @@ export function afterNextPaint(): Promise<void> {
 /**
  * Loading, as an ordered list of named steps, each weighted by about how long it takes (only the ratios matter).
  * `step` adds one at the end: its work gets what the steps before it made, by name, and what it returns is kept
- * under its own name, so adding an asset is one more step. `run` does the work in order. Before each step it hands
- * the main thread back to the browser so the loading screen can paint, and after each it reports the share done
- * (0..1). A step that fails stops the run, and the run rejects with an error that names the step.
+ * under its own name, so adding an asset is one more step. `run` does the work in order. After each step it reports
+ * the share done (0..1), and between steps it hands the main thread back to the browser so the loading screen can
+ * paint it. A step that fails stops the run, and the run rejects with an error that names the step.
  */
 export class BootPipeline<TMade extends object = object> {
   constructor(private readonly steps: readonly BootStep[] = []) {}
@@ -40,8 +40,8 @@ export class BootPipeline<TMade extends object = object> {
     const made: Record<string, unknown> = {};
     let done = 0;
     onProgress(0);
-    for (const step of this.steps) {
-      await pause();
+    for (const [i, step] of this.steps.entries()) {
+      if (i > 0) await pause();
       made[step.name] = await runStep(step, made);
       done += step.weight;
       onProgress(total > 0 ? done / total : 1);
