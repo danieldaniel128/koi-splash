@@ -34,7 +34,7 @@ export interface ClearPlan {
 /** When each special fires this round (s from the round's start). */
 export interface BlastPlan {
   readonly fired: Fired;
-  readonly at: number;
+  readonly delay: number;
 }
 
 export interface RoundPlan {
@@ -71,7 +71,7 @@ export function planRound(round: CascadeRound, timing: SpecialTiming): RoundPlan
     const caught = clears.get(fired.piece.id)?.delay ?? 0;
     const start = caught > 0 ? caught + timing.chain : 0;
     const reach = round.cleared.filter((cleared) => cleared.blast === index);
-    blasts.push({ fired, at: start });
+    blasts.push({ fired, delay: start });
     clears.set(fired.piece.id, { delay: start, lasts: firing(fired, reach.length, timing), how: 'fire' });
     for (const cleared of reach) {
       clears.set(cleared.piece.id, reachedBy(fired, start, cleared.at, cleared.order ?? 0, timing));
@@ -92,7 +92,7 @@ export function blastLands(round: CascadeRound, plan: RoundPlan, blast: number):
     if (cleared.blast !== blast) continue;
     lands = Math.min(lands, plan.clears.get(cleared.piece.id)?.delay ?? Infinity);
   }
-  return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.at ?? 0);
+  return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.delay ?? 0);
 }
 
 /** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a rainbow arc. */

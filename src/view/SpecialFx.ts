@@ -98,20 +98,20 @@ export class SpecialFx extends Container {
   }
 
   /** A beam of the koi's colour races along its row or column, and the water ripples as the sweep passes. */
-  private fireStriped({ fired, at }: BlastPlan): void {
+  private fireStriped({ fired, delay }: BlastPlan): void {
     const look = SPECIAL_FX.striped;
     const beam = this.additive(this.beamTexture, this.textures.tintsOf(fired.piece.color).glow);
     beam.position.copyFrom(this.board.cellToPoint(fired.at));
     beam.rotation =
       fired.piece.special?.type === 'striped' && fired.piece.special.along === 'col' ? Math.PI / 2 : 0;
     beam.alpha = 0;
-    gsap.delayedCall(at, () => {
+    gsap.delayedCall(delay, () => {
       this.events.emit('stripedFired');
     });
     const grow = { k: 0 };
     gsap.to(grow, {
       k: 1,
-      delay: at,
+      delay,
       duration: look.life,
       ease: 'none',
       onUpdate: () => {
@@ -126,14 +126,14 @@ export class SpecialFx extends Container {
     });
     for (const cell of fired.reach) {
       const steps = Math.abs(cell.col - fired.at.col) + Math.abs(cell.row - fired.at.row);
-      gsap.delayedCall(at + steps * TIMING.specials.sweep, () => {
+      gsap.delayedCall(delay + steps * TIMING.specials.sweep, () => {
         this.splash(cell, look.push, look.pushRadius);
       });
     }
   }
 
   /** The whirlpool's eddy grows and spins up, pulling at the water, then pops with a big ring and a hit-stop. */
-  private fireWhirlpool({ fired, at }: BlastPlan): void {
+  private fireWhirlpool({ fired, delay }: BlastPlan): void {
     const look = SPECIAL_FX.whirlpool;
     const { whirlpoolSpin, whirlpoolPull, whirlpoolCornerDelay } = TIMING.specials;
     const stay = whirlpoolSpin + whirlpoolCornerDelay + whirlpoolPull;
@@ -145,7 +145,7 @@ export class SpecialFx extends Container {
     const time = { t: 0 };
     gsap.to(time, {
       t: stay + look.fade,
-      delay: at,
+      delay,
       duration: stay + look.fade,
       ease: 'none',
       onStart: () => {
@@ -163,23 +163,23 @@ export class SpecialFx extends Container {
         eddy.destroy();
       },
     });
-    gsap.delayedCall(at + stay, () => {
+    gsap.delayedCall(delay + stay, () => {
       this.splash(fired.at, look.pop, look.popRadius);
       this.events.emit('whirlpoolPopped');
     });
   }
 
   /** Rainbow arcs arc from the rainbow koi to every koi it takes, nearest first, each in a colour of the spectrum. */
-  private fireRainbow({ fired, at }: BlastPlan): void {
+  private fireRainbow({ fired, delay }: BlastPlan): void {
     const { rainbowRise, rainbowStep } = TIMING.specials;
-    gsap.delayedCall(at, () => {
+    gsap.delayedCall(delay, () => {
       this.events.emit('rainbowRose');
     });
-    gsap.delayedCall(at + rainbowRise, () => {
+    gsap.delayedCall(delay + rainbowRise, () => {
       this.events.emit('rainbowFired');
     });
     fired.reach.forEach((cell, n) => {
-      this.playRainbowArc(fired, cell, n, at + rainbowRise + n * rainbowStep);
+      this.playRainbowArc(fired, cell, n, delay + rainbowRise + n * rainbowStep);
     });
   }
 

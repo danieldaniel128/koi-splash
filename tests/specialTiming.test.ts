@@ -83,7 +83,7 @@ describe('planRound', () => {
       TIMING,
     );
     const whirlpoolFires = 4 * 0.03 + 0.1;
-    expect(plan.blasts[1]?.at).toBeCloseTo(whirlpoolFires);
+    expect(plan.blasts[1]?.delay).toBeCloseTo(whirlpoolFires);
     expect(plan.clears.get(drained.id)).toMatchObject({ how: 'drain', toward: { col: 4, row: 1 } });
     expect(plan.clears.get(drained.id)?.delay).toBeCloseTo(whirlpoolFires + 0.32 + 0.03); // a corner
     expect(plan.end).toBeCloseTo(whirlpoolFires + 0.32 + 0.03 + 0.34);
