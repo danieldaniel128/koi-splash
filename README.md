@@ -85,22 +85,49 @@ the code against my standards.
 Working this way let me try many ideas fast and spend my time on direction, feel and polish. There are no third-party
 images or sounds: everything you see and hear is generated in code.
 
-## Next steps
+## If I had more time
 
-With more time, I'd add:
+**Special combos.** Swiping two specials together should fire one bigger combo instead of two separate blasts:
 
-- A first-time goal card that shows what the level asks for, and a hint that points at a move when the player sits
-  idle.
-- The prototype's two-special combos (cross, giant current, rainbow wave, maelstrom). Today swapping two specials
-  fires both, each on its own.
-- More levels, with saved progress and the best stars of each.
-- Laying the game out again when the phone turns or the window resizes. Today the layout is made once, for the
-  screen the game starts on, and a resize only rescales it.
-- Retuning the level. A simulation shows a player who goes for the goals wins about 97% of boards within the 15
-  moves (median 6), which is too easy.
-- Colour-blind-friendly koi: a shape or pattern per colour, so the colour isn't the only way to tell them apart.
-- A swirl animation for the reshuffle. Today the new board just appears under its banner.
-- The heartbeat speeding up over the last moves. Today it keeps one tempo.
+- striped + striped: a cross, a full row and column through the swap;
+- striped + whirlpool: a giant current, three rows and three columns;
+- whirlpool + whirlpool: a maelstrom that swallows a 5x5 area;
+- rainbow + striped or rainbow + whirlpool: every koi of that color turns into that special, then they all fire in a
+  wave;
+- rainbow + rainbow: the whole pond clears.
+
+**New specials.**
+
+- A 2x2 match makes a leaping koi: it jumps out of the water and lands on a target, like the planes in Homescapes. It
+  would aim at a bud or the goal koi the player still needs.
+
+**A victory sequence.** When the player reaches three stars before the last move, the remaining moves turn into a
+finale: leftover specials fire on their own, combos chain across the pond, and each move left becomes bonus points
+with a splash.
+
+**More levels.**
+
+- Ponds in new shapes, like a heart or a crescent, drawn as text in the level config the way the current pond is.
+- A difficulty curve across them: fewer moves, harder goals, more lily pads.
+- Saved progress and the best stars on each level.
+- Retuning the current level. A simulation shows a player who goes for the goals wins about 97% of boards within
+  the 15 moves (median 6), which is too easy for a first level that comes before harder ones.
+
+**Seasons.** A theme per season, using the theme and art system that is already swappable. Winter would bring:
+
+- an icy pond with frost on the stones;
+- frozen koi that need a match beside them to thaw before they can move;
+- ice blocks to break.
+
+The garden, the music and the ambience change with each season.
+
+**Smaller things.**
+
+- A first-time goal card and a hint when the player sits idle.
+- Laying the game out again when the phone turns (today it rescales).
+- Color-blind-friendly koi, with a pattern per color.
+- A swirl animation for the reshuffle.
+- The heartbeat speeding up over the last moves.
 
 ## How it's built
 
