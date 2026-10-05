@@ -183,11 +183,20 @@ export class BoardAnimator implements TurnAnimator {
     // the koi above start swimming down while the last ones are still going
     const swimDelay =
       step.cleared.length > 0 ? Math.max(0, plan.end - TIMING.dive * (1 - TIMING.swimStartAt)) : 0;
+    // a newborn special waits in its cell until its shape has spiralled into it, then falls
+    const newborn = new Set(step.created.map((made) => made.piece.id));
+    const fallDelay = (id: number): number =>
+      newborn.has(id) ? Math.max(swimDelay, TIMING.specials.merge) : swimDelay;
     await Promise.all([
       ...step.created.map((made) => this.birth(made)),
       ...step.cleared.map((cleared) => this.leave(cleared, plan.clears.get(cleared.piece.id))),
       ...step.falls.map((fall) =>
-        this.swim(this.view.spriteOf(fall.piece.id), fall.to, fall.to.row - fall.from.row, swimDelay),
+        this.swim(
+          this.view.spriteOf(fall.piece.id),
+          fall.to,
+          fall.to.row - fall.from.row,
+          fallDelay(fall.piece.id),
+        ),
       ),
       ...step.spawns.map((spawn) => this.rise(spawn, swimDelay)),
     ]);

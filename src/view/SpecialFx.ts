@@ -70,11 +70,21 @@ export class SpecialFx extends Container {
       .call(() => {
         this.splash(at, look.push, look.pushRadius);
       })
-      .fromTo(flash, { alpha: 1 }, { alpha: 0, duration: look.life, ease: 'power2.out' }, 0)
+      .fromTo(
+        flash,
+        { alpha: 1 },
+        { alpha: 0, duration: look.life, ease: 'power2.out', immediateRender: false },
+        0,
+      )
       .fromTo(
         flash,
         { width: this.cell * 0.4, height: this.cell * 0.4 },
-        { width: this.cell * look.flash, height: this.cell * look.flash, duration: look.life },
+        {
+          width: this.cell * look.flash,
+          height: this.cell * look.flash,
+          duration: look.life,
+          immediateRender: false,
+        },
         0,
       );
   }
