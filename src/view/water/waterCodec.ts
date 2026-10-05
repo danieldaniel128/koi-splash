@@ -4,7 +4,7 @@ import { WATER } from '../../config/water';
  * How the water simulation stores its state: each texel holds the surface height and its vertical speed, each in
  * -WATER.stateRange..WATER.stateRange packed into two 8-bit channels (a high byte and the remainder at full 8-bit
  * resolution), so the simulation runs on any phone GPU. The shaders pack and unpack the same way (packWater and
- * unpackWater in common.glsl); this mirror keeps the two in step, and gives the colour of flat water.
+ * unpackWater in common.glsl); this mirror keeps the two in step, and gives the color of flat water.
  */
 
 /** A value as its two channels (0..1 each), as sim.frag writes it; past the range it is capped at its ends. */

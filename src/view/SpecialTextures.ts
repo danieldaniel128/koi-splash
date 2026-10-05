@@ -121,7 +121,7 @@ export class SpecialTextures {
       curl(canvas, Math.ceil(koiPx) * SPECIAL_LOOK.whirl.curl);
     const { size, resolution, contactResolution } = this.bake;
     const still = bakeKoi(getVariety(id), stillPose(this.bake));
-    const contact = bakeContact(id, this.bake, 0); // padded round the koi: curled round the same centre
+    const contact = bakeContact(id, this.bake, 0); // padded round the koi: curled round the same center
     const marks = {
       shadow: bakeShadow(curled(still, size * resolution), this.bake),
       contacts: [Texture.from(curled(contact, size * contactResolution))],

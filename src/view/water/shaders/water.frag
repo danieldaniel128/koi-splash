@@ -37,7 +37,7 @@ uniform float uTroughShade;
 // rim on strong fronts: slope where it starts and where it's full, strength
 uniform vec3 uRim;
 uniform vec3 uMoon;
-// moon reflection centre (x, y) and radius, stage px, and how much of it shows under the board
+// moon reflection center (x, y) and radius, stage px, and how much of it shows under the board
 uniform vec3 uMoonAt;
 uniform float uMoonUnderBoard;
 

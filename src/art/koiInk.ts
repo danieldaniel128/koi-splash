@@ -85,7 +85,7 @@ export interface KoiContactShape {
  * as a mask for the water: where the foam hugs the koi. Alpha is the cover; the green channel says where the foam
  * shows: it fades from the head (1) to the tail (0), so the foam is strongest where the koi's back breaks the
  * surface, and drops to 0 over the fins so the line breaks around them instead of covering them. Red and blue are
- * left at full for the game to scale per koi. Head up, centred like bakeKoi, on a canvas padded by
+ * left at full for the game to scale per koi. Head up, centered like bakeKoi, on a canvas padded by
  * contactPadding so the mask fades out before its edge.
  */
 export function bakeKoiContact(
@@ -172,7 +172,7 @@ function sinkTail(canvas: HTMLCanvasElement, color: string, amount: number): voi
 
 /**
  * A fade down a head-up koi's square (`size` px, from `top`) over the stretch where its body goes under the water
- * (BODY_UNDER): from the first colour above it to the second below.
+ * (BODY_UNDER): from the first color above it to the second below.
  */
 function bodyUnderFade(
   ctx: CanvasRenderingContext2D,

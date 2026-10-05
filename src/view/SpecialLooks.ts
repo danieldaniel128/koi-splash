@@ -13,7 +13,7 @@ interface Look {
 }
 
 /**
- * What the looks draw with: the layers under the koi (glows, eddies) and over them (sheen, sparkles), and the colour
+ * What the looks draw with: the layers under the koi (glows, eddies) and over them (sheen, sparkles), and the color
  * flow every rainbow koi shares.
  */
 interface Layers {
@@ -60,7 +60,7 @@ export class SpecialLooks {
 }
 
 /**
- * The colours flowing over every rainbow koi: one hue-turning filter they all share (one program, one set of
+ * The colors flowing over every rainbow koi: one hue-turning filter they all share (one program, one set of
  * uniforms, turned once a frame), drawn at the screen's resolution like the koi. Made with the first rainbow koi and
  * destroyed with the last.
  */
@@ -83,7 +83,7 @@ class RainbowHue {
     this.filter = null;
   }
 
-  /** The colours flow on with the clock (s). */
+  /** The colors flow on with the clock (s). */
   turn(time: number): void {
     this.filter?.hue((time * SPECIAL_LOOK.rainbow.flow * 180) / Math.PI, false);
   }
@@ -136,7 +136,7 @@ class StripedLook implements Look {
   }
 }
 
-/** A rainbow koi: its colours flow (RainbowHue), over a spinning prism glow, with sparkles orbiting it. */
+/** A rainbow koi: its colors flow (RainbowHue), over a spinning prism glow, with sparkles orbiting it. */
 class RainbowLook implements Look {
   private readonly glow: Sprite;
   private readonly sparkles: Sprite[];

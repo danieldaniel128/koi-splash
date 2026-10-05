@@ -126,11 +126,11 @@ export function inEveryPose(bodies: readonly HTMLCanvasElement[]): HTMLCanvasEle
 /** Where the sheen sweeps, as shares of the koi's square: from past the tail root up to just over the snout. */
 const SHEEN_SWEEP = [0.78, 0.02] as const;
 
-/** A sheen frame's light bar on a `width` x `height` head-up koi body: where it crosses the body's centre line. */
+/** A sheen frame's light bar on a `width` x `height` head-up koi body: where it crosses the body's center line. */
 export interface SheenBar {
-  /** The row (px) where the bar's middle crosses the centre line. */
-  readonly centre: number;
-  /** The gradient's two ends (px), across the bar: a slanted bar, centred on the body. */
+  /** The row (px) where the bar's middle crosses the center line. */
+  readonly center: number;
+  /** The gradient's two ends (px), across the bar: a slanted bar, centered on the body. */
   readonly from: readonly [number, number];
   readonly to: readonly [number, number];
 }
@@ -138,12 +138,12 @@ export interface SheenBar {
 /** The light bar of sheen frame `frame` of `frames`, tail (low) to head (high), so every frame crosses the body. */
 export function sheenBar(frame: number, frames: number, width: number, height: number): SheenBar {
   const [tail, head] = SHEEN_SWEEP;
-  const centre = height * (tail + (head - tail) * (frame / Math.max(1, frames - 1)));
+  const center = height * (tail + (head - tail) * (frame / Math.max(1, frames - 1)));
   const across: readonly [number, number] = [width * 0.1, height * 0.09];
   return {
-    centre,
-    from: [width / 2 - across[0], centre - across[1]],
-    to: [width / 2 + across[0], centre + across[1]],
+    center,
+    from: [width / 2 - across[0], center - across[1]],
+    to: [width / 2 + across[0], center + across[1]],
   };
 }
 
