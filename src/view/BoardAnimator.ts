@@ -28,7 +28,7 @@ export interface AnimatorDeps {
   /** The points that pop up over the matches. */
   readonly popups: MatchEffects;
   /** The specials' effects and the ways koi leave around them. */
-  readonly specials: { readonly fx: SpecialFx; readonly motions: SpecialMotions };
+  readonly specialEffects: { readonly fx: SpecialFx; readonly motions: SpecialMotions };
   /** The boosters' motions, and where the feed's pellets are thrown from (board space). */
   readonly boosters: { readonly motions: BoosterMotions; readonly feedFrom: () => PointData };
   /** Where the animator says what happened (a koi diving, a special born), timed to the motion. */
@@ -61,7 +61,7 @@ export class BoardAnimator implements TurnAnimator {
   private readonly cellSize: number;
   private readonly water: WaterSurface;
   private readonly fx: MatchEffects;
-  private readonly specials: AnimatorDeps['specials'];
+  private readonly specialEffects: AnimatorDeps['specialEffects'];
   private readonly boosters: AnimatorDeps['boosters'];
   private readonly events: GameEventBus;
   /** How a koi leaves, by the way its plan says it goes. */
@@ -72,7 +72,7 @@ export class BoardAnimator implements TurnAnimator {
     this.cellSize = deps.cellSize;
     this.water = deps.water;
     this.fx = deps.popups;
-    this.specials = deps.specials;
+    this.specialEffects = deps.specialEffects;
     this.boosters = deps.boosters;
     this.events = deps.events;
     this.exits = this.exitMotions();
@@ -89,7 +89,7 @@ export class BoardAnimator implements TurnAnimator {
         change.made.map(({ piece, at }) =>
           motions.powerUp(piece, at, () => {
             this.view.makeSpecial(piece);
-            this.specials.fx.birth(at, piece.color, 0);
+            this.specialEffects.fx.birth(at, piece.color, 0);
             if (piece.special) this.events.emit('specialBorn', { type: piece.special.type });
           }),
         ),
@@ -179,7 +179,7 @@ export class BoardAnimator implements TurnAnimator {
     const plan = planRound(round, TIMING.specials);
     this.score(round, plan, { points, roundIndex });
     this.splashMatches(round, roundIndex);
-    for (const blast of plan.blasts) this.specials.fx.fire(blast);
+    for (const blast of plan.blasts) this.specialEffects.fx.fire(blast);
     // the koi above start swimming down while the last ones are still going
     const swimDelay =
       round.cleared.length > 0 ? Math.max(0, plan.end - TIMING.dive * (1 - TIMING.swimStartAt)) : 0;
@@ -205,7 +205,7 @@ export class BoardAnimator implements TurnAnimator {
   /** A special is born once its shape has spiralled into it: it takes its look, with a flash and a ring. */
   private async birth(made: Created): Promise<void> {
     const merge = made.from.length > 0 ? TIMING.specials.merge : 0;
-    this.specials.fx.birth(made.at, made.piece.color, merge);
+    this.specialEffects.fx.birth(made.at, made.piece.color, merge);
     await wait(merge);
     this.view.makeSpecial(made.piece);
     if (made.piece.special) this.events.emit('specialBorn', { type: made.piece.special.type });
@@ -240,7 +240,7 @@ export class BoardAnimator implements TurnAnimator {
   }
 
   private exitMotions(): Record<ClearPlan['how'], ExitMotion> {
-    const { motions } = this.specials;
+    const { motions } = this.specialEffects;
     const toward = (plan: ClearPlan): PointData | null =>
       plan.toward ? this.view.cellToPoint(plan.toward) : null;
     return {

@@ -29,7 +29,7 @@ export class BoardView extends Container implements BoardDisplay {
 
   constructor(
     private readonly textures: KoiTextures,
-    private readonly specials: SpecialTextures,
+    private readonly specialTextures: SpecialTextures,
     private readonly layout: BoardViewLayout,
     private readonly random: () => number = Math.random,
   ) {
@@ -37,7 +37,7 @@ export class BoardView extends Container implements BoardDisplay {
     // the whole board area takes pointer input, including the gaps between koi
     this.hitArea = new Rectangle(0, 0, layout.cols * layout.cellSize, layout.rows * layout.cellSize);
     this.waterline = new KoiWaterline(textures);
-    this.looks = new SpecialLooks(specials);
+    this.looks = new SpecialLooks(specialTextures);
     this.addChild(this.waterline.shadows, this.looks.under, this.koiLayer, this.looks.over);
   }
 
@@ -82,7 +82,7 @@ export class BoardView extends Container implements BoardDisplay {
   /** A picture of the koi in a cell as a special (the special booster's petals). */
   previewAt(cell: Cell, special: Special): string {
     const koi = this.koiAt(cell);
-    return this.specials.preview(special, koi?.color ?? 0);
+    return this.specialTextures.preview(special, koi?.color ?? 0);
   }
 
   /** The cell a koi rests in (nearest to where it is now), or null when it's off the board. */
@@ -110,7 +110,7 @@ export class BoardView extends Container implements BoardDisplay {
   makeSpecial(piece: Piece): void {
     if (!piece.special) return;
     const koi = this.spriteOf(piece.id);
-    koi.setPoses(this.specials.poses(piece.special, piece.color));
+    koi.setPoses(this.specialTextures.poses(piece.special, piece.color));
     this.dress(koi, piece.special);
   }
 
@@ -167,7 +167,7 @@ export class BoardView extends Container implements BoardDisplay {
   /** Creates a piece's koi (a special one in its look), which the animations move, and sets it in the water. */
   private createKoi(piece: Piece): Koi {
     const { id, color, special } = piece;
-    const poses = special ? this.specials.poses(special, color) : this.textures.swim(color);
+    const poses = special ? this.specialTextures.poses(special, color) : this.textures.swim(color);
     const koi = new Koi(color, poses, this.layout.koiSize, this.random);
     this.pieces.set(id, koi);
     this.koiLayer.addChild(koi);
@@ -179,7 +179,7 @@ export class BoardView extends Container implements BoardDisplay {
   /** A special koi's look, and what it casts into the water when its shape changed (a whirlpool's curled koi). */
   private dress(koi: Koi, special: Special): void {
     this.looks.add(koi, special);
-    const marks = this.specials.marks(special, koi.color);
+    const marks = this.specialTextures.marks(special, koi.color);
     if (marks) this.waterline.reshape(koi, marks);
   }
 

@@ -44,7 +44,7 @@ import type { GameScreen } from './screen';
  */
 export interface GameMaterials {
   readonly koi: KoiTextures;
-  readonly specials: SpecialTextures;
+  readonly specialTextures: SpecialTextures;
   readonly pond: PondWater;
   readonly hud: Hud;
   readonly screenFlow: ScreenFlow;
@@ -59,7 +59,7 @@ export interface GameParts {
   readonly hud: Hud;
   readonly pads: PadView;
   readonly screenFlow: ScreenFlow;
-  readonly specials: { fx: SpecialFx; motions: SpecialMotions };
+  readonly specialEffects: { fx: SpecialFx; motions: SpecialMotions };
   readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
   readonly events: GameEventBus;
   /** The one hit-stop: whatever holds the animations' clock still for a moment shares it. */
@@ -83,7 +83,7 @@ export interface StartedGame {
 export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTMLCanvasElement): StartedGame {
   const { board } = screen.layout;
   const { pond, hud, events } = made;
-  const boardView = createBoardView(made.koi, made.specials, screen.spec, board);
+  const boardView = createBoardView(made.koi, made.specialTextures, screen.spec, board);
   const hitStop = new HitStop();
   const parts: GameParts = {
     boardView,
@@ -92,10 +92,10 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
     hud,
     pads: createPads(pond, hud, board, screen.resolution.art),
     screenFlow: made.screenFlow,
-    specials: createSpecialEffects({ boardView, textures: made.specials, pond, board, events }),
+    specialEffects: createSpecialEffects({ boardView, textures: made.specialTextures, pond, board, events }),
     boosters: createBoosterViews({
       boardView,
-      specials: made.specials,
+      specialTextures: made.specialTextures,
       pond,
       board,
       events,
@@ -233,13 +233,13 @@ function createAnimator(parts: GameParts, screen: GameScreen, bar: BoosterBar): 
     const at = screen.ui.centreOf(bar.buttonOf('feed') ?? screen.ui.root);
     return { x: at.x - board.x, y: at.y - board.y };
   };
-  const { boardView, pond, popups, specials, boosters, events } = parts;
+  const { boardView, pond, popups, specialEffects, boosters, events } = parts;
   return new BoardAnimator({
     view: boardView,
     cellSize: board.cellSize,
     water: pond,
     popups,
-    specials,
+    specialEffects,
     boosters: { motions: boosters.motions, feedFrom },
     events,
   });
@@ -251,7 +251,7 @@ function createAnimator(parts: GameParts, screen: GameScreen, bar: BoosterBar): 
  */
 function createBoosterViews(on: {
   boardView: BoardView;
-  specials: SpecialTextures;
+  specialTextures: SpecialTextures;
   pond: PondWater;
   board: GameLayout['board'];
   events: GameEventBus;
@@ -263,7 +263,7 @@ function createBoosterViews(on: {
     view: boardView,
     water: on.pond,
     cellSize,
-    sparkle: on.specials.sparkle,
+    sparkle: on.specialTextures.sparkle,
     events,
     hitStop: on.hitStop,
     centre: { x: board.width / 2, y: board.height / 2 },

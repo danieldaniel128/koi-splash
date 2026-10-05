@@ -60,7 +60,7 @@ export async function loadGame(
   onProgress: (done: number) => void,
 ): Promise<LoadedGame> {
   const bake = koiBake(screen.layout.board.koiSize, screen.resolution.art);
-  const specials = createSpecialKoi(bake);
+  const specialTextures = createSpecialKoi(bake);
   const { koi } = await new BootPipeline()
     .step('fonts', 1, loadFonts)
     .step('goalIcons', 6, () => goalIcons(screen.resolution.art))
@@ -70,21 +70,21 @@ export async function loadGame(
     .step('garden', 1, () => createGarden(screen))
     .step('scenery', 1, () => createScenery(screen))
     .step('game', 2, (made) => {
-      assembleGame(app, screen, { ...made, specials }, wiring);
+      assembleGame(app, screen, { ...made, specialTextures: specialTextures }, wiring);
     })
     // the GPU draws the koi's canvases as they're first uploaded, here
     .step('firstFrame', 15, () => {
       app.ticker.update();
     })
     .run(onProgress);
-  return { warmUp: [...koi.inBetweenJobs(), ...specials.warmUpJobs()] };
+  return { warmUp: [...koi.inBetweenJobs(), ...specialTextures.warmUpJobs()] };
 }
 
 /** The art and the pond the game is put together from. */
 interface Loaded {
   readonly goalIcons: GoalIcons;
   readonly koi: KoiTextures;
-  readonly specials: SpecialTextures;
+  readonly specialTextures: SpecialTextures;
   readonly pond: PondWater;
   readonly garden: Sprite;
   readonly scenery: Scenery;
@@ -101,7 +101,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const hud = new Hud(ui, layout.hud, { goalIcons: made.goalIcons, stars: LEVEL.stars });
   const materials = {
     koi: made.koi,
-    specials: made.specials,
+    specialTextures: made.specialTextures,
     pond,
     hud,
     screenFlow: wiring.screenFlow,
@@ -112,7 +112,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const menu = addSoundMenu(screen, sound, events); // after the booster bar it ends, for the keyboard too
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);
-  const celebration = createCelebration(layout.stage, made.specials.sparkle);
+  const celebration = createCelebration(layout.stage, made.specialTextures.sparkle);
   const around = { garden: made.garden, scenery: scenery.layer, celebration: celebration.layer };
   const stage = buildStage(game, around);
   app.stage.addChild(stage.root);
