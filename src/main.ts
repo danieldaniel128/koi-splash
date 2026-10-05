@@ -103,7 +103,7 @@ async function boot(host: HTMLElement): Promise<void> {
   const effects = createSpecialEffects({ boardView, textures: specials, pond, board, events });
   const boosters = createBoosterViews(app, { boardView, specials, pond, cell: board.cell, events });
   const parts = { boardView, pond, popups, hud, pads, result, specials: effects, boosters, events };
-  startGame(parts, { ui, layout });
+  startGame(parts, { ui, layout }, app.canvas);
 
   const stage = buildStage(app, parts, { layout, shore });
   app.stage.addChild(stage);
@@ -168,7 +168,7 @@ function keepFitted(
 }
 
 /** The game: the scene (presenter) wired to every display it drives, and the swipe input that feeds it. */
-function startGame(parts: GameParts, screen: Screen): void {
+function startGame(parts: GameParts, screen: Screen, canvas: HTMLCanvasElement): void {
   const { boardView, hud, pads, result } = parts;
   const bar = new BoosterBar(screen.ui, screen.layout.bar, BOOSTERS);
   const level = { ...LEVEL, ...SCORE };
@@ -196,7 +196,7 @@ function startGame(parts: GameParts, screen: Screen): void {
     scene.restart();
     control.reset();
   });
-  new SwipeInput(boardView, screen.layout.board.cell * INPUT.swipeThreshold, {
+  new SwipeInput(boardView, canvas, screen.layout.board.cell * INPUT.swipeThreshold, {
     swipe: (from, to) => {
       if (!control.armed) scene.handleSwipe(from, to); // while a booster is armed, the board takes its taps
     },
