@@ -10,6 +10,7 @@ earns up to three stars.
 
 **Run it:** `npm ci`, then `npm run dev` and open http://localhost:5173 (also reachable from a phone on the same
 Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` makes the web build in `dist/`.
+`npm run bake:art` bakes the art atlases again after a painter changes (see [Asset pipeline](#asset-pipeline)).
 
 ## Stack & assets
 
@@ -21,10 +22,11 @@ Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` 
   - `gsap` 3: GSAP's standard "no charge" license.
   - `@fontsource/nunito` 5, the Nunito font, bundled so the text looks the same on every phone: SIL Open Font
     License 1.1.
-- **Visual assets:** all drawn in code, none from outside. The koi, lily pads, lotuses, stones and the garden are
-  painted on canvases while the game loads (`src/art/`), and the water, the bank and the foam are shaders
-  (`src/view/water/shaders/`). The booster icons are small inline SVGs (`src/ui/icons.ts`). The only image file is
-  the page's icon.
+- **Visual assets:** all made by us, no third-party images. The koi, lily pads, lotuses and effects are painted by our
+  own code painters (`src/art/`) at build time and shipped as texture atlases (`public/art/`, see
+  [Asset pipeline](#asset-pipeline)). The garden and the stones round the pond are painted while the game loads, for
+  the screen it's on, and the water, the bank and the foam are shaders (`src/view/water/shaders/`). The booster icons
+  are small inline SVGs (`src/ui/icons.ts`).
 - **Audio assets:** none. Every sound is synthesized live with Web Audio (`src/audio/`): the effects, the music and
   the night ambience. There are no sound files.
 - **Requirements:** a browser with WebGL 2 (an up-to-date Chrome, Safari or Firefox; without it the game says so).
@@ -44,9 +46,10 @@ Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` 
   Unity, so a turn is just `await`ed animations, and one clock I can slow for hit-stop.
 - **Web Audio, no sound files.** Every sound is synthesized live, so it stays in key with the music, never needs
   loading, and adds nothing to the download.
-- **Art painted in code and shaders, no image files.** Everything is drawn on canvases while the game loads and baked
-  once, at the screen's real pixel density. It stays sharp on any phone, can be restyled from config and the theme,
-  and keeps the download tiny.
+- **Art painted in code, shipped as atlases.** The art is authored as code painters, so it can be restyled from config
+  and the theme and tried at once (`?paint=1`). A build step bakes it into texture atlases at 1x, 2x and 3x, and the
+  game loads the one its screen needs like any other asset, so a phone downloads ready pictures instead of painting
+  them while it loads, and an artist can swap any atlas for hand-made art.
 - **HTML and CSS for the UI, over the canvas.** Text stays crisp, the UI is accessible (real buttons, focus, screen
   readers) and themed with the same tokens as the game.
 - **Vitest, ESLint, Prettier, husky.** Tests for the rules and the systems, lint rules that keep each layer to its own
@@ -151,7 +154,7 @@ the pond, the game, the stage, the sound, the frame loop), so there are no singl
 
 The game boots behind a loading screen. Its markup is in `index.html`, and the theme's tokens are written into the
 page at build time, so it shows, themed, from the first paint. `src/boot/loading.ts` lists the loading as named
-steps, each weighted by about how long it takes: the font, the goals' icons, the koi, the shore's distance field,
+steps, each weighted by about how long it takes: the font, the art atlases, the goals' icons, the koi, the shore's distance field,
 the water, the garden, the stones, the game itself, the koi's in-between tail poses and the special koi, and one frame
 drawn unseen so every shader is compiled before the first real one. `BootPipeline` (`src/core`) runs them in order,
 lets the page paint between them and moves the bar. The last bakes are lists of small jobs (one pose or one color
@@ -253,8 +256,9 @@ relief, the koi's, stones' and pads' shadows and the highlights all follow it. T
 cartoon outline, and a broken foam line at their waterline that follows them and breaks around the fins (drawn each
 frame from a mask of the koi, `KoiContact`).
 
-Every texture is painted in code, so nothing is a fixed asset: sizes and colours come from config, and a texture is
-baked once for the screen it will be shown on, at its real pixel density. The pond takes the board's shape.
+Every texture is painted in code: sizes and colours come from config. The koi, pads and effects are baked into atlases
+at build time (see [Asset pipeline](#asset-pipeline)); what depends on the screen's layout is painted once for the
+screen it will be shown on, at its real pixel density. The pond takes the board's shape.
 `traceShore` walks the edge of the cells (round notches, bays and islands of bank), pushes it out by the margins and
 rounds every corner. That outline is baked once into a distance field (`bakeDistanceField`), so every water shader
 knows how far it is from the shore of any shape with a single texture read. The border is a ring of pieces along the
@@ -282,6 +286,42 @@ out from the model's data when every koi goes and how (dive, spiral into the spe
 whirlpool, zapped by a rainbow arc), the animator plays that plan, `SpecialFx` draws the light (beam, eddy, rainbow arcs
 arcs, a flash at birth), and every effect also moves the water. The timings and sizes are in `TIMING.specials` and
 `SPECIAL_FX`.
+
+### Asset pipeline
+
+The art is authored in code and shipped as ordinary image assets, the way a production game reuses art instead of
+drawing it at runtime.
+
+- **Authored with painters.** Each picture has a painter in `src/art/` (the koi, the special koi, the pads and
+  lotuses, the glows, sparkles, beam, eddies and pellet). Sizes and colours come from config and the theme.
+- **Baked to atlases at build time.** `npm run bake:art` (`tools/bakeArt.mts`) starts Vite and a headless Chrome,
+  opens the bake page (`tools/bake/`), and for each tier (1x, 2x, 3x pixels per stage px) paints every picture with
+  the same code the game uses, packs them on 2048 px sheets (`packSheets`, shelf-packed, more sheets when they don't
+  fit) and writes each sheet as a PNG and a Pixi spritesheet JSON to `public/art/@<n>x/`, with `sheets.json` listing
+  them. The art is painted for a cell of `ART_ATLAS.cellSize` (`src/config/art.ts`); a bigger board scales the sprites
+  up and picks a higher tier, so it's as sharp as painting for that board would be. The atlases are committed: they
+  are the shipped assets.
+- **Frame names** say what a picture is, then its frame, two digits so they sort: `koi/<variety>/swim/07`,
+  `koi/<variety>/shadow`, `koi/<variety>/contact/03`, `special/striped/<variety>/05`,
+  `special/rainbow/<variety>/05`, `special/striped/<variety>/sheen/02`, `special/whirlpool/<variety>/koi` (and
+  `/shadow`, `/contact`), `fx/glow`, `fx/sparkle`, `fx/rainbow-glow`, `fx/beam`, `fx/firefly`, `fx/pellet`,
+  `fx/eddy/<variety>`, `pad/<look>/bloom/02`, `pad/<look>/leaf`, `ui/goal/lotus`, `ui/goal/koi/<variety>`. The variety
+  is the koi's id in `KOI_SET` (`m3-red`, `dream-jade`...).
+- **Loaded with Pixi `Assets`.** The boot step `art` (`src/boot/art.ts`) works out the tier from the screen's bake
+  resolution (rounded up, at most 3), loads that tier's sheets with progress on the loading bar, and hands their
+  frames to an `ArtBook` (`src/view/ArtBook.ts`). Every texture is asked of the book by name with its painter next to
+  it, so a frame missing from the atlases is painted instead. `?paint=1` skips the atlases and paints everything for
+  the board on screen, to try a painter's change without baking; if the atlases fail to load, the game paints too.
+- **Replacing an atlas with hand-made art.** Draw over a sheet PNG in `public/art/@<n>x/` (keep each frame inside its
+  rectangle in the sheet's JSON), or pack new art at the same frame names with any tool that writes Pixi or
+  TexturePacker JSON, and list the sheets in `sheets.json`. Do it for each tier, and don't run the bake again, which
+  would paint over it.
+- **Re-baking** after changing a painter, its config or `ART_ATLAS`: `npm run bake:art`, check it with and without
+  `?paint=1`, and commit `public/art/`.
+- **What stays runtime, and why.** The garden (`src/art/backdrop.ts`) is sized to the screen and drawn around its
+  layout, and the stones round the pond are cut to fit each stretch of this board's shore, so both are painted once
+  for the screen the game starts on. The shore's distance field is computed from that same shore, and the water, the
+  bank and the foam are shaders that run every frame, so none of them is a picture to bake.
 
 ### Game feel
 
@@ -340,14 +380,25 @@ web audio, so there the game plays silently until the ring switch is turned back
 
 The goal: smooth 60 fps on a mid-range phone, and no stutter once the loading bar is gone.
 
+- **Art baked at build time into texture atlases.**
+  - The art is authored by code painters, and `npm run bake:art` bakes it once into atlases at 1x, 2x and 3x
+    (`public/art/`). The game loads the tier its screen needs with Pixi's `Assets`, so the phone downloads ready
+    pictures instead of painting about 500 of them while it loads.
+  - Loading time, from opening the page to the loading screen gone (production build, Chrome, median of 5):
+    a 390 x 844 phone at 3x with the CPU slowed 4x went from 13.3 s painting to 2.5 s with atlases, and a
+    1366 x 768 laptop from 5.8 s to 1.2 s. The atlases add 4.3 MB of PNG at 3x, 2.2 MB at 2x and 0.9 MB at 1x
+    (one tier per visit), so on a slow mobile network the download takes back part of that time.
+  - Sprites on one atlas share a texture, so Pixi batches them into few draw calls.
+  - An artist can replace any atlas with hand-made art (see [Asset pipeline](#asset-pipeline)).
 - **Everything heavy happens behind the loading bar.**
   - The boot pipeline (`src/core/BootPipeline.ts`, steps in `src/boot/loading.ts`) runs named, weighted steps. Each
     one is a list of small jobs, and the page gets to paint every 50 ms, so the bar keeps moving.
-  - The steps bake all the koi poses, every special koi, the lily pad stages, the garden and the shore.
-  - A last step sends every baked texture to the GPU and builds the effect shaders. The first frames of play don't
-    upload or compile anything.
-- **Baked once, shared everywhere (flyweight).**
-  - The art is painted on canvases once, at the screen's real pixel density (one bake resolution worked out at boot).
+  - The steps load the atlases and paint what depends on the screen: the garden, the shore's distance field and the
+    stones round it.
+  - A last step sends every texture to the GPU and builds the effect shaders. The first frames of play don't upload
+    or compile anything.
+- **Made once, shared everywhere (flyweight).**
+  - The art is loaded once, at the atlas tier that matches the screen's real pixel density (worked out at boot).
   - Every sprite shares those textures: 60 koi on the board use one set of poses per color. Nothing is rebuilt on
     replay.
   - The audio does the same: one noise buffer and one set of channels shared by every sound.
@@ -357,7 +408,7 @@ The goal: smooth 60 fps on a mid-range phone, and no stutter once the loading ba
   - The bank under the water is a shader pass cached as a texture (`cacheAsTexture`), drawn once rather than every
     frame.
   - Koi, pads and effects are sprites on shared textures, so Pixi batches them.
-  - The art is baked canvases, not shapes redrawn each frame.
+  - The art is baked pictures, not shapes redrawn each frame.
   - A full frame is about 13 draw calls.
 - **Object pools.** Effects that come and go many times a second come from a generic `Pool<T>` (`src/core/Pool.ts`)
   instead of being created and destroyed: the score popups, the points that fly to the score, and the win sparkles.
@@ -371,9 +422,9 @@ The goal: smooth 60 fps on a mid-range phone, and no stutter once the loading ba
   - The frame rate is capped at 60, so 120 Hz phones don't draw the same water twice as often.
   - GSAP runs on the same clock as Pixi, so animation and rendering never drift apart.
 - **A lean download.**
-  - No image or sound files.
+  - No sound files, and one atlas tier per visit: the one the screen needs.
   - The koi painter keeps only the five koi the game uses.
-  - Pixi and GSAP ship as their own cached chunks (about 270 kB gzipped in total).
+  - Pixi and GSAP ship as their own cached chunks (about 280 kB gzipped in total).
 
 ### How to add…
 
