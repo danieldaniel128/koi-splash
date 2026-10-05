@@ -15,7 +15,7 @@
  * pattern, and the tail wag never changes the pattern, only the pose.
  */
 
-import { blank, context } from './canvas';
+import { blank, context, traceSmoothClosed } from './canvas';
 
 // ============================================================================
 // Types: the declarative look of a variety
@@ -383,7 +383,7 @@ function makeBody(look: KoiLook, size: number, wag: number): Body {
     const ring: Vec[] = [];
     for (let i = 0; i <= OUTLINE_STEPS; i++) ring.push(point(stepT(i), k));
     for (let i = OUTLINE_STEPS; i >= 0; i--) ring.push(point(stepT(i), -k));
-    smoothClosed(ctx, ring, !append);
+    traceSmoothClosed(ctx, ring, !append);
   };
 
   return {
@@ -743,7 +743,7 @@ function paintDorsalFin(ctx: Ctx, fins: FinLook, body: Body): void {
   for (let i = 0; i <= N; i++) { const t = lerp(0.34, 0.74, i / N); pts.push(body.point(t, 0.09 * Math.sin((Math.PI * i) / N))); }
   for (let i = N; i >= 0; i--) { const t = lerp(0.34, 0.74, i / N); pts.push(body.point(t, -0.09 * Math.sin((Math.PI * i) / N))); }
   ctx.fillStyle = rgba(fins.base ?? fins.color, 0.25);
-  smoothClosed(ctx, pts);
+  traceSmoothClosed(ctx, pts);
   ctx.fill();
   ctx.strokeStyle = rgba(shade(fins.base ?? fins.color, -0.3), 0.18);
   ctx.lineWidth = Math.max(0.5, 0.008 * body.L);
@@ -806,21 +806,7 @@ function paintEyes(ctx: Ctx, look: KoiLook, body: Body): void {
 
 /** Trace a skin-space shape (closed, smooth) into the current path. */
 function traceSkinShape(ctx: Ctx, body: Body, shape: SkinShape): void {
-  smoothClosed(ctx, shape.map(p => body.point(p.t, p.s)), false);
-}
-
-/** Closed curve through the midpoints of a polygon (smooth, no overshoot). */
-function smoothClosed(ctx: Ctx, pts: Vec[], begin = true): void {
-  if (begin) ctx.beginPath();
-  const n = pts.length;
-  const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-  const start = mid(pts[n - 1]!, pts[0]!);
-  ctx.moveTo(start.x, start.y);
-  for (let i = 0; i < n; i++) {
-    const m = mid(pts[i]!, pts[(i + 1) % n]!);
-    ctx.quadraticCurveTo(pts[i]!.x, pts[i]!.y, m.x, m.y);
-  }
-  ctx.closePath();
+  traceSmoothClosed(ctx, shape.map(p => body.point(p.t, p.s)), false);
 }
 
 /**

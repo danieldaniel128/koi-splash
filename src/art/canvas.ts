@@ -55,6 +55,41 @@ export function wash(
   ctx.restore();
 }
 
+/** Sets a context up to paint a piece centered on (x, y) px, at `scale` px per unit, with round joins and caps. */
+export function centerOn(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number): void {
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+}
+
+/** A point on a canvas. */
+export interface CanvasPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Traces a smooth closed curve through the midpoints of a polygon's sides, each corner its control point (rounded,
+ * no overshoot). Starts a new path unless `begin` is false (to add to a compound path).
+ */
+export function traceSmoothClosed(
+  ctx: CanvasPath & Pick<CanvasDrawPath, 'beginPath'>,
+  points: readonly CanvasPoint[],
+  begin = true,
+): void {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return;
+  const mid = (a: CanvasPoint, b: CanvasPoint): [number, number] => [(a.x + b.x) / 2, (a.y + b.y) / 2];
+  if (begin) ctx.beginPath();
+  ctx.moveTo(...mid(last, first));
+  points.forEach((point, i) => {
+    ctx.quadraticCurveTo(point.x, point.y, ...mid(point, points[(i + 1) % points.length] ?? first));
+  });
+  ctx.closePath();
+}
+
 /** A gradient's stops: where (0..1) and the color there. */
 export type ColorStops = readonly (readonly [number, string])[];
 

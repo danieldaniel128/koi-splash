@@ -1,4 +1,4 @@
-import { blank, context } from './canvas';
+import { blank, centerOn, context } from './canvas';
 import { pieceSize } from './pondProps';
 
 /** A rectangle in the atlas, in canvas pixels. */
@@ -53,10 +53,7 @@ export function bakeAtlas(
     ctx.beginPath();
     ctx.rect(slot.x, slot.y, slot.width, slot.height);
     ctx.clip(); // a piece's shadow never spills into its neighbour
-    ctx.translate(slot.x + slot.width / 2, slot.y + slot.height / 2);
-    ctx.scale(scale, scale);
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    centerOn(ctx, slot.x + slot.width / 2, slot.y + slot.height / 2, scale);
     piece.paint(ctx);
     ctx.restore();
   });

@@ -1,7 +1,8 @@
 import type { PropKind } from '../config/pond';
 import { seeded } from '../core/Random';
 import { drawShadowOnly } from './blur';
-import { blank, context } from './canvas';
+import { blank, centerOn, context, traceSmoothClosed } from './canvas';
+import type { CanvasPoint } from './canvas';
 
 /**
  * pondProps.ts - the things around and on the pond, painted once on a canvas like the koi: stones, and lily pads
@@ -76,10 +77,7 @@ export function bakePiece(
   const { width, height } = pieceSize(radius);
   const canvas = blank(width * resolution, height * resolution);
   const ctx = context(canvas);
-  ctx.scale(resolution, resolution);
-  ctx.translate(width / 2, height / 2);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
+  centerOn(ctx, (width * resolution) / 2, (height * resolution) / 2, resolution);
   paint(ctx);
   return canvas;
 }
@@ -99,7 +97,7 @@ export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random
     for (let step = 0; step <= 6; step++) {
       ctx.save();
       ctx.translate(0, lift + (depth * step) / 6);
-      trace(ctx, face);
+      traceSmoothClosed(ctx, face);
       paint();
       ctx.restore();
     }
@@ -128,12 +126,12 @@ export function paintStone(ctx: Ctx, [rx, ry]: readonly [number, number], random
 }
 
 /** The stone's top face: cream, shading away from the light, with a soft shine near the top edge. */
-function paintFace(ctx: Ctx, face: readonly Pt[], rx: number, ry: number): void {
+function paintFace(ctx: Ctx, face: readonly CanvasPoint[], rx: number, ry: number): void {
   const fill = ctx.createLinearGradient(rx * 0.3, -ry, -rx * 0.4, ry);
   fill.addColorStop(0, STONE.top);
   fill.addColorStop(0.55, STONE.top);
   fill.addColorStop(1, STONE.topShade);
-  trace(ctx, face);
+  traceSmoothClosed(ctx, face);
   ctx.fillStyle = fill;
   ctx.fill();
   ctx.strokeStyle = 'rgba(36, 31, 38, 0.35)'; // a soft line where the top face turns into the side
@@ -201,13 +199,12 @@ export function bakeLotusPad(
   seed: number,
   resolution: number,
 ): HTMLCanvasElement {
-  const canvas = bakeProp({ kind: 'pad', radius: [radius, radius], seed }, resolution);
-  const ctx = context(canvas);
-  ctx.setTransform(resolution, 0, 0, resolution, canvas.width / 2, canvas.height / 2);
-  ctx.lineJoin = 'round';
-  const rng = seeded(seed + 1);
-  paintOpeningLotus(ctx, radius * 0.66, openness, rng() * TAU);
-  return canvas;
+  const pad = seeded(seed); // the pad's own seed, as bakeProp paints it
+  const lotus = seeded(seed + 1);
+  return bakePiece([radius, radius], resolution, (ctx) => {
+    paintPad(ctx, radius, pad);
+    paintOpeningLotus(ctx, radius * 0.66, openness, lotus() * TAU);
+  });
 }
 
 /** Petals grow longer and wider and the heart shows as the lotus opens; a closed bud is a tight pink cup. */
@@ -265,7 +262,7 @@ function paintShadow(ctx: Ctx, shape: () => void): void {
  * A slab's outline: a rounded rectangle (a superellipse) with gently lumpy sides, seeded. Squarer than a pebble, so a
  * row of them packs like a stone border.
  */
-function slab(rx: number, ry: number, random: () => number): Pt[] {
+function slab(rx: number, ry: number, random: () => number): CanvasPoint[] {
   const lumps = 2 + Math.floor(random() * 3);
   const phase = random() * TAU;
   const square = 2 / (2.6 + random() * 1.2); // 2 / exponent: lower is squarer
@@ -274,23 +271,9 @@ function slab(rx: number, ry: number, random: () => number): Pt[] {
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
     const swell = 1 + 0.05 * Math.sin(angle * lumps + phase) + 0.025 * (random() - 0.5);
-    return [
-      Math.sign(cos) * Math.abs(cos) ** square * rx * swell,
-      Math.sign(sin) * Math.abs(sin) ** square * ry * swell,
-    ] as const;
+    return {
+      x: Math.sign(cos) * Math.abs(cos) ** square * rx * swell,
+      y: Math.sign(sin) * Math.abs(sin) ** square * ry * swell,
+    };
   });
-}
-
-/** Traces a smooth closed curve through the midpoints of the outline's sides. */
-function trace(ctx: Ctx, points: readonly Pt[]): void {
-  const mid = (a: Pt, b: Pt): Pt => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const last = points[points.length - 1] ?? [0, 0];
-  const first = points[0] ?? [0, 0];
-  ctx.beginPath();
-  ctx.moveTo(...mid(last, first));
-  points.forEach((point, i) => {
-    const next = points[(i + 1) % points.length] ?? first;
-    ctx.quadraticCurveTo(point[0], point[1], ...mid(point, next));
-  });
-  ctx.closePath();
 }
