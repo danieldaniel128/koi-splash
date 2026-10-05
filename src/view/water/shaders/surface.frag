@@ -88,7 +88,6 @@ void main() {
     float gold = goldLeaf(p) * open * uGoldLook.x;
 
     float white = clamp(max(rim, foam), 0.0, 1.0);
-    float alpha = max(white, gold);
-    vec3 color = (uInk * white + uGold * gold * (1.0 - white)) / max(alpha, 1e-4);
-    finalColor = vec4(color * alpha, alpha); // premultiplied alpha, as Pixi blends it
+    // the foam over the gold, both premultiplied (as Pixi blends them): where they overlap neither is over-bright
+    finalColor = vec4(uInk * white + uGold * gold * (1.0 - white), white + gold * (1.0 - white));
 }
