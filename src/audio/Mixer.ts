@@ -30,9 +30,9 @@ interface Channel {
 
 /**
  * The mixer: the audio context, a channel per bus (level, then a duck), the master volume and a gentle compressor
- * that keeps a big cascade from clipping. The context is made on the player's first gesture (browsers only allow
- * sound after one), sleeps while the page is hidden, and a missing Web Audio just means silence. A channel that's off
- * gives no output, so nothing is even scheduled on it.
+ * that evens out a big cascade. The context is made on the player's first gesture (browsers only allow sound after
+ * one), sleeps while the page is hidden, and a missing Web Audio just means silence. A channel that's off gives no
+ * output, so nothing is even scheduled on it.
  */
 export class Mixer {
   private ctx: AudioContext | null = null;
@@ -129,6 +129,7 @@ export class Mixer {
     if (this.ctx || typeof AudioContext === 'undefined') return;
     try {
       const ctx = new AudioContext();
+      // a gentle squeeze on the loudest moments, not a hard limiter, so the mix keeps its swells
       const compressor = ctx.createDynamicsCompressor();
       compressor.threshold.value = -16;
       compressor.ratio.value = 4;
