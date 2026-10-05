@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { Random } from '../src/core/Random';
 import { Board } from '../src/model/Board';
-import { createBoard, findMatches, findMove, resetBoard, swapMakesMatch, trySwap } from '../src/model/rules';
+import {
+  createBoard,
+  findMatches,
+  findMove,
+  hasAnyMove,
+  resetBoard,
+  swapMakesMatch,
+  trySwap,
+} from '../src/model/rules';
 import type { BoardSpec } from '../src/model/rules';
 import { parseShape } from '../src/model/shape';
 
@@ -106,6 +114,24 @@ describe('swapMakesMatch', () => {
     const before = kindsOf(board);
     swapMakesMatch(board, { col: 2, row: 0 }, { col: 3, row: 0 });
     expect(kindsOf(board)).toEqual(before);
+  });
+});
+
+describe('hasAnyMove', () => {
+  it('counts a special as a move only when a koi beside it can be swapped with it', () => {
+    // a special between a pad and the bank, with a koi under it on the second board
+    const special = (board: Board): void => {
+      board.setBlocked({ col: 0, row: 0 }, true);
+      board.set({ col: 1, row: 0 }, { ...board.createPiece(1), special: { type: 'whirl' } });
+    };
+    const boxedIn = new Board(3, 1, [{ col: 2, row: 0 }]);
+    special(boxedIn);
+    expect(hasAnyMove(boxedIn)).toBe(false);
+
+    const withKoi = new Board(3, 2, [{ col: 2, row: 0 }]);
+    special(withKoi);
+    withKoi.set({ col: 1, row: 1 }, withKoi.createPiece(2));
+    expect(hasAnyMove(withKoi)).toBe(true);
   });
 });
 

@@ -76,9 +76,14 @@ export function findMove(board: Board): [Cell, Cell] | null {
   return null;
 }
 
-/** True when the player can move: a swap makes a match, or a special is on the board (swapping it fires it). */
+/**
+ * True when the player can move: a swap makes a match, or a special has a koi beside it to swap with (swapping it
+ * fires it). A special boxed in by pads and bank is no move.
+ */
 export function hasAnyMove(board: Board): boolean {
-  for (const cell of board.cells()) if (board.get(cell)?.special) return true;
+  for (const cell of board.cells()) {
+    if (board.get(cell)?.special && neighbours(cell).some((next) => board.get(next))) return true;
+  }
   return findMove(board) !== null;
 }
 
@@ -210,6 +215,16 @@ function runsInLine(board: Board, cells: readonly Cell[], direction: Match['dire
     start = i;
   }
   return matches;
+}
+
+/** The four cells up, down, left and right of `cell` (some may be off the board). */
+function neighbours(cell: Cell): Cell[] {
+  return [
+    { col: cell.col, row: cell.row - 1 },
+    { col: cell.col, row: cell.row + 1 },
+    { col: cell.col - 1, row: cell.row },
+    { col: cell.col + 1, row: cell.row },
+  ];
 }
 
 /** True when the piece at `cell` is part of a horizontal or vertical run of 3+. */
