@@ -40,9 +40,16 @@ export function measureScreen(app: Application, host: HTMLElement): GameScreen {
     layout,
     shore,
     ui: new UiLayer(host, layout.stage),
-    resolution: {
-      screen: app.renderer.resolution * layout.stage.scale,
-      art: app.renderer.resolution * KOI_LOOK.bakeResolution,
-    },
+    resolution: paintResolution(app.renderer.resolution, layout.stage.scale),
   };
+}
+
+/**
+ * How finely to paint, worked out once for the screen the game starts on: the screen's own pixels per stage px (its
+ * device pixel ratio, as the renderer caps it, times the stage's scale), and a little more for the koi, the pads and
+ * the stones (see KOI_LOOK.bakeHeadroom).
+ */
+export function paintResolution(pixelRatio: number, stageScale: number): PaintResolution {
+  const screen = pixelRatio * stageScale;
+  return { screen, art: Math.min(screen * KOI_LOOK.bakeHeadroom, KOI_LOOK.maxBakeResolution) };
 }
