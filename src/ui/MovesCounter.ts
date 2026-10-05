@@ -1,3 +1,4 @@
+import { LEVEL } from '../config/level';
 import { HUD_MOTION } from '../config/ui';
 import { bump, el } from './UiLayer';
 
@@ -25,7 +26,7 @@ export class MovesCounter {
   private show(movesLeft: number): void {
     this.shown = movesLeft;
     this.value.textContent = `${movesLeft}`;
-    this.element.classList.toggle('moves--low', movesLeft <= HUD_MOTION.lowMoves);
-    this.element.classList.toggle('moves--last', movesLeft <= HUD_MOTION.lastMoves);
+    this.element.classList.toggle('moves--low', movesLeft <= LEVEL.movesWarning.low);
+    this.element.classList.toggle('moves--last', movesLeft <= LEVEL.movesWarning.last);
   }
 }

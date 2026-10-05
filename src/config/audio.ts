@@ -20,9 +20,6 @@ export const AUDIO = {
   diveGap: 0.055,
   countGap: 0.05,
   bell: [1, 2.76, 5.4, 8.93],
-  /** Moves left at which the move tick warms (and the music grows a heartbeat), then turns into a double knock. */
-  lowMoves: 5,
-  lastMoves: 3,
   /** How far ahead the music and ambience are scheduled on the audio clock (s): steady even when a frame is late. */
   lookahead: 0.25,
   /** Where the player's choices are kept between visits (one key per channel under it). */

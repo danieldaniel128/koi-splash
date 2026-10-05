@@ -23,11 +23,9 @@ export const HUD_MOTION = {
   /** The score counts up to a new value in this long, and swells while it does. */
   countUp: 0.35,
   scoreBump: 1.18,
-  /** The moves counter pops when a move is spent, warns at `lowMoves` left and pulses at `lastMoves`. */
+  /** The moves counter pops when a move is spent, warns when moves are low and pulses on the last few (LEVEL.movesWarning). */
   movesBump: 1.3,
   movesSettle: 0.3,
-  lowMoves: 5,
-  lastMoves: 3,
   /** The goal chip pops when its count ticks down, and a star pops as it's lost. */
   goalBump: 1.3,
   goalSettle: 0.4,

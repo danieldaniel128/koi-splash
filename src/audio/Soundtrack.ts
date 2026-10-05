@@ -1,4 +1,5 @@
-import { AUDIO, MUSIC } from '../config/audio';
+import { MUSIC } from '../config/audio';
+import { LEVEL } from '../config/level';
 import type { EventHandlers } from '../core/EventBus';
 import type { GameEventBus, GameEvents } from '../game/events';
 import type { Bus } from '../config/audio';
@@ -16,7 +17,7 @@ function moodsFrom(setMood: (mood: Mood) => void): EventHandlers<GameEvents> {
       setMood('calm');
     },
     moveSpent: ({ movesLeft }) => {
-      setMood(movesLeft <= AUDIO.lowMoves ? 'tense' : 'calm');
+      setMood(movesLeft <= LEVEL.movesWarning.low ? 'tense' : 'calm');
     },
     won: () => {
       setMood('won');
