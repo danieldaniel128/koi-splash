@@ -1,6 +1,6 @@
 import type { BackdropLook } from '../art/backdrop';
 
-/** The typeface bundled with the game (see main.ts), first in both font stacks. */
+/** The typeface bundled with the game (its two weights are imported in style.css), first in both font stacks. */
 const TYPEFACE = 'Nunito';
 
 /**

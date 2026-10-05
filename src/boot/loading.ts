@@ -4,6 +4,7 @@ import { LEVEL } from '../config/level';
 import { BootPipeline } from '../core/BootPipeline';
 import type { GameEventBus } from '../game/events';
 import type { ScreenFlow } from '../game/ScreenFlow';
+import { THEME } from '../theme/theme';
 import type { GoalIcons } from '../ui/GoalTray';
 import { Camera } from '../view/Camera';
 import { Haptics } from '../view/Haptics';
@@ -155,13 +156,14 @@ function createImpact(
 }
 
 /**
- * Waits for the bundled font's weights the game draws with: the Pixi labels are drawn once with whatever font is
- * ready, so it should be Nunito. A face that fails to load only costs the look: the labels fall back to the system
- * font and the game starts anyway.
+ * Waits for the bundled typeface in the weights the game draws with: the Pixi labels are drawn once with whatever
+ * font is ready, so it should be the theme's. A face that fails to load only costs the look: the labels fall back to
+ * the system font and the game starts anyway.
  */
 async function loadFonts(): Promise<void> {
+  const weights = Object.values(THEME.weight);
   try {
-    await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
+    await Promise.all(weights.map((weight) => document.fonts.load(`${weight} 16px ${THEME.typeface}`)));
   } catch (error) {
     console.warn('the game font did not load; the labels use a fallback', error);
   }
