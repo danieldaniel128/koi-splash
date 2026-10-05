@@ -94,7 +94,6 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const { pond, scenery } = made;
   const { events, sound } = wiring;
   const hud = new Hud(ui, layout.hud, { goalIcons: made.goalIcons, stars: LEVEL.stars });
-  const menu = addSoundMenu(screen, sound, events);
   const materials = {
     koi: made.koi,
     specials: made.specials,
@@ -104,6 +103,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     events,
   };
   const { parts: game, control } = createGame(screen, materials, app.canvas);
+  const menu = addSoundMenu(screen, sound, events); // after the booster bar it ends, for the keyboard too
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);
   const celebration = createCelebration(layout.stage, made.specials.sparkle);

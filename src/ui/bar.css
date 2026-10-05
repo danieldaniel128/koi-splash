@@ -175,13 +175,6 @@
 /* The sound button: a small glass orb at the end of the booster bar; the speaker dims when every channel is off. */
 .sound-button {
   --icon-size: 20px;
-  padding: 0;
-  border: 0;
-  color: var(--color-ink);
-  cursor: pointer;
-  pointer-events: auto;
-  touch-action: manipulation;
-  transition: transform var(--time-fast) var(--ease-spring);
 }
 
 .sound-button--muted {
@@ -193,30 +186,20 @@
   color: var(--color-gold);
 }
 
-.sound-button:active {
-  transform: scale(var(--scale-press));
-}
-
 /*
  * The sound menu: a glass panel over the button, a row per channel; it grows out of the button's corner. It is drawn
  * over the booster bar and opens clear of it, so a lifted booster never covers it or takes its taps.
  */
 .sound-menu {
+  --reveal-from: translateY(6px) scale(var(--scale-reveal));
   z-index: 3;
   display: flex;
   flex-direction: column;
   padding: var(--space-xs); /* the same token as SOUND_MENU.look.padding: the layout sizes the panel by it */
-  opacity: 0;
-  transform: translateY(6px) scale(var(--scale-reveal));
   transform-origin: 100% 100%;
-  transition:
-    opacity var(--time-fast) ease,
-    transform var(--time-normal) var(--ease-spring);
 }
 
-.sound-menu--open {
-  opacity: 1;
-  transform: none;
+.sound-menu.reveal--shown {
   pointer-events: auto;
 }
 
@@ -227,13 +210,9 @@
   align-items: center;
   gap: var(--space-sm);
   padding: 0 var(--space-sm);
-  border: 0;
   border-radius: var(--radius-sm);
-  background: none;
   color: var(--color-muted);
   font: var(--weight-bold) var(--text-md) var(--font-label);
-  cursor: pointer;
-  touch-action: manipulation;
   transition: color var(--time-fast) ease;
 }
 
