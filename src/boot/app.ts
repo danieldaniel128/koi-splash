@@ -1,14 +1,20 @@
 import { Application } from 'pixi.js';
 import type { Container } from 'pixi.js';
+import { GPU_LOSS } from '../config/ui';
 import { WATER } from '../config/water';
 import type { GameLayout } from '../layout/gameLayout';
 import { THEME } from '../theme/theme';
+import { BOOT_FAILURES, BootFailure } from '../ui/BootError';
 import type { UiLayer } from '../ui/UiLayer';
 import type { BoardView } from '../view/BoardView';
 import type { PondWater } from '../view/water/PondWater';
 
-/** The Pixi app, filling the game's element. Its clock stays stopped until the game is shown (app.start). */
+/**
+ * The Pixi app, filling the game's element. Its clock stays stopped until the game is shown (app.start). Throws a
+ * BootFailure the player can read when the browser has no WebGL 2, which the water needs.
+ */
 export async function createApp(host: HTMLElement): Promise<Application> {
+  if (!document.createElement('canvas').getContext('webgl2')) throw new BootFailure(BOOT_FAILURES.noWebGl2);
   const app = new Application();
   await app.init({
     autoStart: false,
@@ -57,6 +63,20 @@ export function keepFitted(
 export function restoreAfterContextLoss(app: Application, pond: PondWater): void {
   app.canvas.addEventListener('webglcontextrestored', () => {
     pond.restore();
+  });
+}
+
+/**
+ * Calls `giveUp` when a lost WebGL context hasn't come back after GPU_LOSS.giveUpAfter seconds. Pixi and the pond
+ * repaint a context that does come back (see restoreAfterContextLoss).
+ */
+export function watchContextLoss(canvas: HTMLCanvasElement, giveUp: () => void): void {
+  let timer: number | undefined;
+  canvas.addEventListener('webglcontextlost', () => {
+    timer = window.setTimeout(giveUp, GPU_LOSS.giveUpAfter * 1000);
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    window.clearTimeout(timer);
   });
 }
 

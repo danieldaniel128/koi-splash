@@ -82,6 +82,11 @@ export const RESULT_CARD = {
   starPop: 0.4,
 } as const;
 
+/** A lost graphics context that hasn't come back after this long (s) is given up on: the error screen shows. */
+export const GPU_LOSS = {
+  giveUpAfter: 5,
+} as const;
+
 /** Phones play upright: this media query is a phone (touch, short) held sideways. */
 export const PORTRAIT_LOCK = {
   sidewaysPhone: '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)',

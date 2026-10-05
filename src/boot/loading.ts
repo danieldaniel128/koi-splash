@@ -117,8 +117,13 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
 
 /**
  * Waits for the bundled font's weights the game draws with: the Pixi labels are drawn once with whatever font is
- * ready, so it must be Nunito (a missing one just falls back, it never throws).
+ * ready, so it should be Nunito. A face that fails to load only costs the look: the labels fall back to the system
+ * font and the game starts anyway.
  */
 async function loadFonts(): Promise<void> {
-  await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
+  try {
+    await Promise.all(['700 16px Nunito', '900 16px Nunito'].map((font) => document.fonts.load(font)));
+  } catch (error) {
+    console.warn('the game font did not load; the labels use a fallback', error);
+  }
 }
