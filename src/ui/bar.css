@@ -294,6 +294,7 @@
 }
 
 .sound-button[aria-expanded='true'] {
+  z-index: 3; /* over the scrim, so a second press closes the menu */
   color: var(--color-gold);
 }
 
@@ -303,6 +304,7 @@
 
 /* The sound menu: a glass panel over the button, a row per channel; it grows out of the button's corner. */
 .sound-menu {
+  z-index: 3;
   display: flex;
   flex-direction: column;
   padding: var(--space-xs); /* SOUND_MENU.look.padding: the layout sizes the panel by it */
@@ -354,4 +356,12 @@
 .sound-menu__name {
   flex: 1;
   text-align: left;
+}
+
+/* Under the open sound menu, over everything else (the bar, the pill, the board): a tap away lands here. */
+.sound-scrim {
+  z-index: 2;
+  inset: 0;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
 }

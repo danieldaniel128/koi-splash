@@ -22,11 +22,13 @@ export interface SoundSettingsOptions<Id extends string> {
 /**
  * The speaker button at the end of the booster bar and the small glass menu it opens above it: a switch per sound
  * channel (music, ambience, effects). The speaker shows a cross when every channel is off. The menu closes on a
- * second press, a tap anywhere else or Escape (the game's key handler calls close).
+ * second press, a tap anywhere else or Escape (the game's key handler calls close). While it's open, a clear scrim
+ * covers the rest of the UI and the board: a tap away lands on it and only closes the menu.
  */
 export class SoundSettings<Id extends string> {
   private readonly button = el('button', 'orb sound-button');
   private readonly menu = el('div', 'panel sound-menu');
+  private readonly scrim = el('div', 'sound-scrim');
   private readonly switches = new Map<Id, HTMLButtonElement>();
 
   constructor(
@@ -44,9 +46,13 @@ export class SoundSettings<Id extends string> {
       options.onPress();
       this.setOpen(!this.isOpen());
     });
-    this.listenForClose();
+    // closed on the click, not the press: the whole tap lands on the scrim, so none of it reaches what's under it
+    this.scrim.addEventListener('click', () => {
+      this.setOpen(false);
+    });
     this.setOpen(false);
     this.showSpeaker();
+    layer.root.append(this.scrim);
     layer.place(this.menu, rects.menu);
     layer.place(this.button, rects.button);
   }
@@ -66,6 +72,7 @@ export class SoundSettings<Id extends string> {
   private setOpen(open: boolean): void {
     this.menu.classList.toggle('sound-menu--open', open);
     this.menu.inert = !open;
+    this.scrim.hidden = !open;
     this.button.setAttribute('aria-expanded', `${open}`);
   }
 
@@ -95,12 +102,5 @@ export class SoundSettings<Id extends string> {
     setIcon(this.button, any ? SPEAKER_ON : SPEAKER_OFF);
     this.button.classList.toggle('sound-button--muted', !any);
     this.button.setAttribute('aria-label', any ? 'Sound settings' : 'Sound settings (all off)');
-  }
-
-  private listenForClose(): void {
-    document.addEventListener('pointerdown', (event) => {
-      const target = event.target as Node | null;
-      if (this.isOpen() && !this.menu.contains(target) && !this.button.contains(target)) this.setOpen(false);
-    });
   }
 }
