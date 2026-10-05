@@ -192,7 +192,9 @@ export class GameScene implements BoosterGame, SwapGame {
     const change = applyBooster(this.board, use);
     if (!change) return false;
     const swap = use.type === 'swap' ? [use.b, use.a] : []; // a special made by it forms where the first koi lands
-    const turn = this.count(settle(this.board, this.deps.spec, this.deps.rng, { pads: this.pads, swap }));
+    const turn = this.count(
+      settle(this.board, this.deps.spec, this.deps.rng, { pads: this.pads, preferredSpecialCells: swap }),
+    );
     await this.runTurn(async () => {
       await this.deps.animator.playBooster(use, change);
       await this.playCascade(turn);

@@ -117,7 +117,7 @@ export function trySwap(
 
   board.swap(a, b);
   const firing = triggers.map((t) => ({ ...t, at: sameCell(t.at, a) ? b : a })); // they moved with the swap
-  return { valid: true, ...settle(board, spec, rng, { pads, swap: [b, a], firing }) };
+  return { valid: true, ...settle(board, spec, rng, { pads, preferredSpecialCells: [b, a], firing }) };
 }
 
 /** A settled board: every round of its cascade, and whether the board was dealt again at the end. */
@@ -129,7 +129,7 @@ export interface SettleResult {
 /** What starts a cascade: the cells just swapped (a special appears there first), and specials set to fire. */
 export interface SettleStart {
   readonly pads?: PadField | undefined;
-  readonly swap?: readonly Cell[];
+  readonly preferredSpecialCells?: readonly Cell[];
   readonly firing?: readonly Trigger[];
 }
 
@@ -154,7 +154,12 @@ export function settle(
   ) {
     if (rounds.length >= MAX_CASCADE) throw new Error('cascade did not settle');
     // the first round puts its special where the player swapped; later rounds in the middle of the shape
-    const resolution = resolveRound(board, matches, rounds.length === 0 ? (start.swap ?? []) : [], firing);
+    const resolution = resolveRound(
+      board,
+      matches,
+      rounds.length === 0 ? (start.preferredSpecialCells ?? []) : [],
+      firing,
+    );
     firing = [];
     const struck = [
       ...resolution.cleared.map((c) => c.at),
