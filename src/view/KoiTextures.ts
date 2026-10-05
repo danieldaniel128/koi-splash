@@ -65,17 +65,18 @@ export class KoiTextures {
   }
 
   /**
-   * The tail beat's poses between the ones baked at load, one job per color, for the background (see runWhenIdle):
-   * each color's beat grows in place to all its poses, and every koi swimming with it picks them up on its next frame.
+   * The tail beat's poses between the ones baked with the koi, one job per pose, for the loading screen's last steps:
+   * once a color's are all baked its beat grows in place to all its poses, and every koi swimming with it picks them
+   * up on its next frame.
    */
   inBetweenJobs(): (() => void)[] {
-    return this.varietyIds.map((id, color) => () => {
-      const poses = this.poses[color];
-      if (!poses || poses.length >= this.bake.frames) return;
-      const all = Array.from({ length: this.bake.frames }, (_, i) =>
-        i % 2 === 0 ? poses[i / 2] : Texture.from(bakePose(id, this.bake, i)),
-      );
-      poses.splice(0, poses.length, ...all.filter((pose) => pose !== undefined));
+    const count = this.bake.frames / 2;
+    return this.varietyIds.flatMap((id, color) => {
+      const between: Texture[] = [];
+      return Array.from({ length: count }, (_, k) => () => {
+        between.push(Texture.from(bakePose(id, this.bake, k * 2 + 1)));
+        if (between.length === count) this.interleave(color, between);
+      });
     });
   }
 
@@ -98,17 +99,20 @@ export class KoiTextures {
     if (!shapes) throw new RangeError(`no koi contact for color ${color}`);
     return shapes;
   }
+
+  /** A color's beat, every other pose, with the poses between them put in their places. */
+  private interleave(color: PieceColor, between: readonly Texture[]): void {
+    const poses = this.poses[color];
+    if (!poses || poses.length >= this.bake.frames) return;
+    const all = poses.flatMap((pose, k) => [pose, between[k]]);
+    poses.splice(0, poses.length, ...all.filter((pose) => pose !== undefined));
+  }
 }
 
 /**
- * One full tail beat: pose i swings the tail by sin(2 PI i / frames), so the poses loop smoothly. `dress` gives a
- * special koi its look (see specialKoi).
+ * Pose `pose` of a tail beat, on its own canvas: pose i swings the tail by sin(2 PI i / frames), so the poses loop
+ * smoothly. `dress` gives a special koi its look (see specialKoi).
  */
-export function bakePoses(varietyId: string, bake: KoiBake, dress?: Dressing): Texture[] {
-  return Array.from({ length: bake.frames }, (_, i) => Texture.from(bakePose(varietyId, bake, i, dress)));
-}
-
-/** Pose `pose` of the tail beat, on its own canvas (see bakePoses). */
 export function bakePose(
   varietyId: string,
   bake: KoiBake,

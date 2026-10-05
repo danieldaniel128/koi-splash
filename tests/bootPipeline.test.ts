@@ -69,6 +69,32 @@ describe('BootPipeline', () => {
     expect(progress).toEqual([0, 1 / 3]);
   });
 
+  it('runs a step of small jobs in order, moving the share done after each job', async () => {
+    const ran: string[] = [];
+    const pipeline = new BootPipeline()
+      .step('koi', 2, () => ({ poses: ['a', 'b', 'c', 'd'] }))
+      .jobs('poses', 2, ({ koi }) => koi.poses.map((pose) => () => ran.push(pose)));
+    const { progress } = await runQuietly(pipeline);
+    expect(ran).toEqual(['a', 'b', 'c', 'd']);
+    expect(progress).toEqual([0, 0.5, 0.625, 0.75, 0.875, 1, 1]);
+  });
+
+  it('stops at a failing job and rejects with its step name, the error as the cause', async () => {
+    const failure = new Error('no canvas');
+    const pipeline = new BootPipeline().jobs('poses', 1, () => [
+      () => undefined,
+      () => {
+        throw failure;
+      },
+    ]);
+    const run = pipeline.run(
+      () => undefined,
+      () => Promise.resolve(),
+    );
+    await expect(run).rejects.toThrow('boot step "poses" failed');
+    await expect(run).rejects.toHaveProperty('cause', failure);
+  });
+
   it('refuses two steps with the same name, since what they make is kept by name', () => {
     const pipeline = new BootPipeline().step('koi', 1, () => 1);
     expect(() => pipeline.step('koi', 1, () => 2)).toThrow('boot step "koi" is listed twice');
