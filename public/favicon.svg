@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="pond" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#1d3862" />
+      <stop offset="1" stop-color="#0b1a33" />
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#pond)" />
+  <g transform="translate(32 33) rotate(35) scale(0.8) translate(-32 -33)" stroke="#050c1b" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M32 49 C28 53 24 57 21 61 C26 60 30 58 32 55 C34 58 38 60 43 61 C40 57 36 53 32 49 Z" fill="#f4b3a8" />
+    <path d="M24 23 C18 23 14 27 13 33 C18 31 21 30 24 29 Z" fill="#f4b3a8" />
+    <path d="M40 23 C46 23 50 27 51 33 C46 31 43 30 40 29 Z" fill="#f4b3a8" />
+    <path d="M32 6 C39 6 42 16 41 27 C40 37 36 45 32 51 C28 45 24 37 23 27 C22 16 25 6 32 6 Z" fill="#fbf5ea" />
+    <path d="M26.5 12 C29 7.5 35 7.5 37.5 12 C36 17 28 17 26.5 12 Z" fill="#e3443a" stroke="none" />
+    <path d="M33 22 C38 23 39 30 37 36 C34 38 29 35 29 30 C29 26 30 22 33 22 Z" fill="#e3443a" stroke="none" />
+  </g>
+</svg>

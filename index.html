@@ -6,7 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <title>Koi Splash</title>
+    <title>Koi Splash: a moonlit match-3</title>
+    <meta
+      name="description"
+      content="A calm match-3 on a koi pond by moonlight: swipe the koi into lines of three, bloom the lotuses and chase three stars."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -25,6 +30,11 @@
       >
         <span class="loading__fill"></span>
       </div>
+      <noscript>
+        <p class="label loading__note">
+          Koi Splash needs JavaScript to run. Please turn it on and reload the page.
+        </p>
+      </noscript>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
