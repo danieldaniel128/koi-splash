@@ -79,14 +79,15 @@ export class WaterSim {
 
   /**
    * Pushes the surface at a stage point: negative `push` presses it down (a fish diving, a splash), positive lifts
-   * it. Applied on the next step; past WATER.maxDrops in one step, extra drops are skipped. O(1).
+   * it. Applied on the next step. Past WATER.maxDrops in one step, it takes the place of the weakest push if it's
+   * stronger, so a splash is never crowded out by the koi's wakes. O(1), O(maxDrops) once the step is full.
    */
   drop(stageX: number, stageY: number, radius: number, push: number): void {
-    if (this.dropCount >= WATER.maxDrops) return;
+    const slot = this.dropCount < WATER.maxDrops ? this.dropCount++ : this.weakestDrop(push);
+    if (slot < 0) return;
     const cellX = ((stageX - this.area.x) / this.area.width) * this.cols;
     const cellY = ((stageY - this.area.y) / this.area.height) * this.rows;
-    this.drops.set([cellX, cellY, radius / WATER.cellSize, push], this.dropCount * 4);
-    this.dropCount++;
+    this.drops.set([cellX, cellY, radius / WATER.cellSize, push], slot * 4);
   }
 
   /**
@@ -103,6 +104,19 @@ export class WaterSim {
     }
   }
 
+  /** The slot of the weakest push this step, if `push` is stronger; else -1. */
+  private weakestDrop(push: number): number {
+    let weakest = -1;
+    let strength = Math.abs(push);
+    for (let i = 0; i < this.dropCount; i++) {
+      const other = Math.abs(this.drops[i * 4 + 3] ?? 0);
+      if (other < strength) {
+        strength = other;
+        weakest = i;
+      }
+    }
+    return weakest;
+  }
   private step(): void {
     this.stepInput.uState = this.front.source;
     // clear first: Pixi blends what it draws over the target, which would mix the packed bytes with the old ones
