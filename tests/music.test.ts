@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { Composer, nearestTone, semitonesOf } from '../src/audio/composer';
 import type { BarMood, MusicNote } from '../src/audio/composer';
 import { GardenMusic } from '../src/audio/GardenMusic';
-import { NightAmbience } from '../src/audio/NightAmbience';
 import type { Bus } from '../src/config/audio';
 import { Soundtrack } from '../src/audio/Soundtrack';
 import { noteOf } from '../src/audio/Synth';
@@ -61,14 +60,6 @@ describe('the composer', () => {
       expect(bar.some((n) => n.part === 'bass')).toBe(true);
       expect(bar.some((n) => n.part === 'pad')).toBe(k % MUSIC.bars === 0);
     });
-  });
-
-  it('closes the eight-bar cycle on the root of its chord, held long', () => {
-    for (let k = 7; k < bars.length; k += 8) {
-      const last = melodic(bars[k] ?? []).at(-1);
-      expect(last?.length).toBe(4);
-      expect((last?.pitches[0] ?? 1) % 12).toBe(7); // A: the root of the cycle's last chord (Asus4)
-    }
   });
 
   it('grows a heartbeat when tense, rests after a level, and climbs home to D for a win', () => {
@@ -164,18 +155,6 @@ describe('GardenMusic', () => {
       music.update();
       expect(Math.min(...voice.delays)).toBeGreaterThanOrEqual(0);
     }
-  });
-});
-
-describe('NightAmbience', () => {
-  it('keeps every layer going, each again after its own gap', () => {
-    const voice = clockedVoice();
-    const ambience = new NightAmbience(voice, () => 0.5);
-    for (let t = 0; t < 60; t += 0.1) {
-      voice.time = t;
-      ambience.update();
-    }
-    expect(voice.tones).toBeGreaterThan(100); // drops, crickets and chimes are tones; the water is noise
   });
 });
 

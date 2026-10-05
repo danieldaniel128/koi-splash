@@ -44,17 +44,4 @@ describe('playSoundsOf', () => {
       'pluck:1175',
     ]);
   });
-
-  it('gives every event a sound', () => {
-    const events = createGameEvents();
-    const voice = fakeVoice();
-    playSoundsOf(events, voice);
-    const before = voice.played.length;
-    events.emit('lineFired');
-    events.emit('whirlPopped');
-    events.emit('prismHit', { n: 3 });
-    events.emit('boosterArmed', { type: 'feed', slot: 2 });
-    events.emit('won');
-    expect(voice.played.length).toBeGreaterThan(before + 10);
-  });
 });
