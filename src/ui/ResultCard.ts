@@ -4,13 +4,13 @@ import type { ResultDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
 import type { GoalProgress, GoalType } from '../model/goals';
 import { STAR, setIcon } from './icons';
-import type { GameEventBus } from '../game/events';
 import { el } from './UiLayer';
 
 /**
  * The end-of-level card over the dimmed pond: won (with the stars earned landing one by one) or out of moves, the
- * score and the goal, and a button to play again. It dims the whole screen and its card scales with the stage (--ui-scale). Display only: whoever owns the
- * level decides what playing again means (onRestart).
+ * score and the goal, and a button to play again. It dims the whole screen and its card scales with the stage
+ * (--ui-scale). Display only: whoever owns the level decides what playing again means (onRestart), and what a star
+ * landing sounds like (onStarLanded).
  */
 export class ResultCard implements ResultDisplay {
   private readonly root: HTMLElement;
@@ -25,11 +25,9 @@ export class ResultCard implements ResultDisplay {
   private readonly timers = new Timers();
   /** Taps count once the card is fully up, so a last swipe on the board can't press Play again by accident. */
   private takesTaps = false;
+  private starLanded: ((k: number) => void) | null = null;
 
-  constructor(
-    host: HTMLElement,
-    private readonly events: GameEventBus,
-  ) {
+  constructor(host: HTMLElement) {
     for (const star of this.stars) setIcon(star, STAR);
     this.card = el(
       'div',
@@ -45,12 +43,16 @@ export class ResultCard implements ResultDisplay {
     host.appendChild(this.root);
   }
 
+  /** What Play again does, once the card takes taps. */
   onRestart(handler: () => void): void {
     this.again.addEventListener('click', () => {
-      if (!this.takesTaps) return;
-      this.events.emit('buttonClicked');
-      handler();
+      if (this.takesTaps) handler();
     });
+  }
+
+  /** Told as each earned star lands on the card (the kth, from 0). */
+  onStarLanded(handler: (k: number) => void): void {
+    this.starLanded = handler;
   }
 
   show(outcome: 'won' | 'lost', status: GameStatus): void {
@@ -89,7 +91,7 @@ export class ResultCard implements ResultDisplay {
       if (i >= earned) return;
       this.timers.after(RESULT_CARD.firstStar + i * RESULT_CARD.starStep, () => {
         star.classList.add('result__star--lit');
-        this.events.emit('starLanded', { k: i });
+        this.starLanded?.(i);
         star.animate([{ transform: 'scale(0.2)' }, { transform: 'scale(1.35)' }, { transform: 'scale(1)' }], {
           duration: RESULT_CARD.starPop * 1000,
           easing: 'ease-out',
