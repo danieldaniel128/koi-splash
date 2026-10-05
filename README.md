@@ -194,6 +194,41 @@ with a focus ring and a finger-wide tap area, and players who ask for less motio
 movement. The end card is a modal dialog that shows each goal the way the HUD does, and when the moves run out it
 says what to try next.
 
+### Levels, board shapes and sizes
+
+- **Any board shape.**
+  - A level draws its board as text, one string per row: `#` is water with a koi, `.` is the bank
+    (`LEVEL.shape` in `src/config/level.ts`, parsed by `src/model/shape.ts`). The current pond is a rounded cross.
+  - A heart, a ring with an island, or a plain 6 x 6 is a few lines of text.
+  - Everything follows the shape: gravity runs per stretch of water, the shore is traced from it, the stones line it,
+    and the water shaders read its distance field.
+- **Any board size, on any screen.**
+  - The layout (`src/layout/gameLayout.ts`) works out the biggest cell that fits the room between the HUD and the
+    booster bar on the screen the game starts on. The pond, the koi, the stones and the HUD all scale from that one
+    number.
+  - On a short phone or an upright tablet, the cell gives up a little size so the garden keeps its sky, but never
+    below `LAYOUT.minCell`.
+  - A bigger or smaller board just gets bigger or smaller cells. The spacing, the margins and the HUD sizes are all in
+    `src/config/layout.ts`.
+- **A level is plain data.**
+  - `LEVEL` holds:
+    - the moves and the low-moves warning;
+    - the shape;
+    - the goals (lotuses, a score, or so many koi of a color, in any mix);
+    - the star thresholds;
+    - the lily pads: buds, empty pads, hits to bloom, spacing.
+  - It's only strings, numbers and arrays, with no code in it, so the same object can come from a JSON file or a
+    level server instead of a TypeScript file.
+  - It's checked at startup: a goal the board can't meet, more lotuses than buds, a color that isn't in play or a bad
+    shape stops the game with a clear message instead of a broken level.
+- **Testing a level is quick.**
+  - Change the config and the dev server reloads.
+  - `?seed=42` in the address deals the same board every time, to replay a case.
+  - `tests/config.test.ts` deals the shipped level for 200 seeds, and checks:
+    - every board is playable;
+    - the goals can be met;
+    - the stars climb.
+
 ### The board
 
 A board can have holes, drawn in the level's shape (`src/model/shape.ts`). A koi can't swim over the bank, so a hole
