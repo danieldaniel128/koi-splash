@@ -7,7 +7,7 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
-import { blank, context, copyCanvas, freshContext, transparent } from './canvas';
+import { blank, context, copyCanvas, freshContext, transparent, wash } from './canvas';
 import { spineOffset } from './koiBank';
 import type { BakeOptions } from './koiBank';
 
@@ -105,9 +105,7 @@ export function rainbow(part: HTMLCanvasElement): void {
   SPECTRUM.forEach((colour, i) => {
     spectrum.addColorStop(i / (SPECTRUM.length - 1), colour);
   });
-  ctx.globalCompositeOperation = 'color';
-  ctx.fillStyle = spectrum;
-  ctx.fillRect(0, 0, part.width, part.height);
+  wash(ctx, spectrum, 'color');
   ctx.globalCompositeOperation = 'destination-in'; // the blend painted the empty corners too: cut back to the koi
   ctx.drawImage(original, 0, 0);
   ctx.restore();
@@ -164,9 +162,7 @@ export function sheenFrames(body: HTMLCanvasElement, frames: number): HTMLCanvas
     bar.addColorStop(0, 'rgba(255, 253, 242, 0)');
     bar.addColorStop(0.5, 'rgba(255, 253, 242, 0.85)');
     bar.addColorStop(1, 'rgba(255, 253, 242, 0)');
-    ctx.globalCompositeOperation = 'source-in';
-    ctx.fillStyle = bar;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    wash(ctx, bar, 'source-in');
     return canvas;
   });
 }
@@ -193,12 +189,10 @@ export function paintWhirlpool(size: number, colour: string): HTMLCanvasElement 
     arm(ctx, { start, reach: 0.97 * r, turn: 3.6, width: 0.34 * r }, colour, 0.6);
     arm(ctx, { start: start + 0.1, reach: 0.9 * r, turn: 3.6, width: 0.12 * r }, '#ffffff', 0.95);
   }
-  const rim = ctx.createRadialGradient(0, 0, r * 0.55, 0, 0, r);
+  const rim = ctx.createRadialGradient(r, r, r * 0.55, r, r, r); // in pixels, as wash reads it
   rim.addColorStop(0, '#000');
   rim.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.fillStyle = rim;
-  ctx.fillRect(-r, -r, size, size);
+  wash(ctx, rim, 'destination-in');
   return canvas;
 }
 
@@ -311,9 +305,7 @@ function shade(ctx: Ctx, part: HTMLCanvasElement): void {
   light.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
   light.addColorStop(0.4, 'rgba(255, 255, 255, 0)');
   light.addColorStop(1, 'rgba(0, 14, 34, 0.4)');
-  ctx.globalCompositeOperation = 'source-atop';
-  ctx.fillStyle = light;
-  ctx.fillRect(0, 0, part.width, part.height);
+  wash(ctx, light, 'source-atop');
 }
 
 /**
@@ -382,8 +374,6 @@ export function paintBeam(width: number, height: number): HTMLCanvasElement {
   along.addColorStop(0.18, '#000');
   along.addColorStop(0.82, '#000');
   along.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.fillStyle = along;
-  ctx.fillRect(0, 0, width, height);
+  wash(ctx, along, 'destination-in');
   return canvas;
 }

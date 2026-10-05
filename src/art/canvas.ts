@@ -37,6 +37,25 @@ export function freshContext(canvas: HTMLCanvasElement): CanvasRenderingContext2
 }
 
 /**
+ * Fills the whole canvas with `style` in plain pixels (whatever the context's transform), under the composite `mode`
+ * and at `alpha`, and leaves the context as it was: a tint, a recolor, a cut to a shape. A gradient is read in pixels.
+ */
+export function wash(
+  ctx: CanvasRenderingContext2D,
+  style: string | CanvasGradient,
+  mode: GlobalCompositeOperation = 'source-over',
+  alpha = 1,
+): void {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = mode;
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = style;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.restore();
+}
+
+/**
  * `color` ('#rrggbb', 'rgb(...)' or 'rgba(...)') at zero alpha: what a glow fades out to. A canvas gradient blends its
  * stops unpremultiplied, so fading to transparent black would darken the glow's edge into a ring.
  */

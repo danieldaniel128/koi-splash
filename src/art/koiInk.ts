@@ -1,5 +1,5 @@
 import { drawBlurred } from './blur';
-import { blank, context, freshContext } from './canvas';
+import { blank, context, freshContext, transparent, wash } from './canvas';
 import { bakeKoi } from './koiBank';
 import type { BakeOptions, KoiVariety } from './koiBank';
 
@@ -100,14 +100,9 @@ export function bakeKoiContact(
   const canvas = softSilhouette(body, '#ffffff', shape.gap * scale, shape.blur * scale);
   const ctx = context(canvas);
   // only recolour from here on: the cover (alpha) must stay as it is, or the waterline would move to trace the fins
-  ctx.globalCompositeOperation = 'source-atop';
-  const [from, to] = BODY_UNDER; // where the body goes under, so the foam fades with it
   const koi = body.height - pad * 2;
-  const fade = ctx.createLinearGradient(0, pad + koi * from, 0, pad + koi * to);
-  fade.addColorStop(0, '#ffffff');
-  fade.addColorStop(1, '#ff00ff');
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  wash(ctx, bodyUnderFade(ctx, pad, koi, ['#ffffff', '#ff00ff']), 'source-atop'); // the foam fades as it goes under
+  ctx.globalCompositeOperation = 'source-atop';
   ctx.drawImage(softSilhouette(fins, '#ff00ff', shape.finClear * scale, shape.blur * scale), 0, 0);
   return canvas;
 }
@@ -157,35 +152,37 @@ function solid(source: HTMLCanvasElement, color: string): HTMLCanvasElement {
   const canvas = blank(source.width);
   const ctx = context(canvas);
   for (let i = 0; i < SOLID_PASSES; i++) ctx.drawImage(source, 0, 0);
-  ctx.globalCompositeOperation = 'source-in';
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  wash(ctx, color, 'source-in');
   return canvas;
 }
 
 /** Tints everything already on a baked koi part toward `color` by `amount`, keeping its alpha. */
 function tint(canvas: HTMLCanvasElement, color: string, amount: number): void {
-  const ctx = freshContext(canvas);
-  ctx.globalCompositeOperation = 'source-atop';
-  ctx.globalAlpha = amount;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
+  wash(context(canvas), color, 'source-atop', amount);
 }
 
 /**
  * The rear of a baked koi body sinks under the surface: tinted toward the water colour, more toward the tail. In
- * plain pixels: in the scale the koi painter leaves behind, the fade would land below the canvas.
+ * plain pixels (wash): in the scale the koi painter leaves behind, the fade would land below the canvas.
  */
 function sinkTail(canvas: HTMLCanvasElement, color: string, amount: number): void {
-  const ctx = freshContext(canvas);
+  const ctx = context(canvas);
+  wash(ctx, bodyUnderFade(ctx, 0, canvas.height, [transparent(color), color]), 'source-atop', amount);
+}
+
+/**
+ * A fade down a head-up koi's square (`size` px, from `top`) over the stretch where its body goes under the water
+ * (BODY_UNDER): from the first colour above it to the second below.
+ */
+function bodyUnderFade(
+  ctx: CanvasRenderingContext2D,
+  top: number,
+  size: number,
+  [above, below]: readonly [string, string],
+): CanvasGradient {
   const [from, to] = BODY_UNDER;
-  const fade = ctx.createLinearGradient(0, canvas.height * from, 0, canvas.height * to);
-  fade.addColorStop(0, `${color}00`);
-  fade.addColorStop(1, color);
-  ctx.globalCompositeOperation = 'source-atop';
-  ctx.globalAlpha = amount;
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.restore();
+  const fade = ctx.createLinearGradient(0, top + size * from, 0, top + size * to);
+  fade.addColorStop(0, above);
+  fade.addColorStop(1, below);
+  return fade;
 }
