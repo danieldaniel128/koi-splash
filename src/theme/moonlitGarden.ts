@@ -48,6 +48,8 @@ export const MOONLIT_GARDEN = {
     combo3: '#d8c2ff',
     combo4: '#ffffff',
   },
+  /** The boosters' own colors: their icons on the bar, and the pink arcs round a picked koi on the board. */
+  booster: { pink: '#ffb3d1', cream: '#ffe6a6', amber: '#ffd27a', water: '#9fdcff' },
   font: {
     /**
      * Chunky rounded figures and titles, like the HUDs of casual mobile games: Nunito, bundled with the game (see

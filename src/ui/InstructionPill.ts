@@ -1,11 +1,8 @@
 import type { BoosterPill } from '../game/BoosterControl';
 import type { Rect } from '../layout/gameLayout';
+import { CROSS, setIcon } from './icons';
 import type { UiLayer } from './UiLayer';
 import { button, el, shake } from './UiLayer';
-
-/** A cross, for closing. */
-const CROSS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor"
-  stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>`;
 
 /**
  * The pill over the pond that says what to do while a booster is armed (after the prototype's), with an X that
@@ -18,7 +15,7 @@ export class InstructionPill implements BoosterPill {
 
   constructor(layer: UiLayer, rect: Rect) {
     const close = button('pill__close', 'Cancel booster');
-    close.innerHTML = CROSS; // a fixed string from this file
+    setIcon(close, CROSS);
     close.addEventListener('click', () => {
       this.closed?.();
     });

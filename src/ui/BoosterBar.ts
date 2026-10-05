@@ -58,7 +58,7 @@ export class BoosterBar implements BoosterButtons {
 
   private makeButton(slot: BoosterSlot): Button {
     const orb = el('span', 'orb booster__orb');
-    orb.innerHTML = BOOSTER_ICONS[slot.type]; // a fixed string from icons.ts
+    setIcon(orb, BOOSTER_ICONS[slot.type]);
     const check = el('span', 'booster__check');
     setIcon(check, CHECK);
     orb.append(check);

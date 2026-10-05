@@ -110,7 +110,7 @@ export const BOOSTER_MARKS = {
   pulseSpeed: 4.2,
   lift: 0.14,
   gold: THEME.color.gold,
-  pink: '#ffb3d1',
+  pink: THEME.booster.pink,
 } as const;
 
 /**
