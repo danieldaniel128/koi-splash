@@ -95,6 +95,18 @@ describe('BootPipeline', () => {
     await expect(run).rejects.toHaveProperty('cause', failure);
   });
 
+  it('moves the bar within a step that reports how far it is', async () => {
+    const pipeline = new BootPipeline()
+      .step('download', 2, (_made, progress) => {
+        progress(0.5);
+        progress(2); // a share past the end counts as done
+        return 'sheets';
+      })
+      .step('koi', 2, () => 'koi');
+    const { progress } = await runQuietly(pipeline);
+    expect(progress).toEqual([0, 0.25, 0.5, 0.5, 1]);
+  });
+
   it('refuses two steps with the same name, since what they make is kept by name', () => {
     const pipeline = new BootPipeline().step('koi', 1, () => 1);
     expect(() => pipeline.step('koi', 1, () => 2)).toThrow('boot step "koi" is listed twice');

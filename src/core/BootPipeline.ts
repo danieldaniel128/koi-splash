@@ -2,7 +2,7 @@
 interface BootStep {
   readonly name: string;
   readonly weight: number;
-  readonly run: (made: Record<string, unknown>) => unknown;
+  readonly run: (made: Record<string, unknown>, progress: StepProgress) => unknown;
   /** True when the step hands back small jobs to run one at a time (see jobs). */
   readonly inJobs?: boolean;
 }
@@ -12,6 +12,9 @@ interface BootStep {
  * pauses don't add up, short enough that the bar keeps moving.
  */
 const PAINT_EVERY_MS = 50;
+
+/** How far a step is through its own work (0..1), for a step that can tell (a download). */
+export type StepProgress = (part: number) => void;
 
 /** A small piece of loading work (see jobs). */
 export type BootJob = () => void;
@@ -27,7 +30,8 @@ export function afterNextPaint(): Promise<void> {
 /**
  * Loading, as an ordered list of named steps, each weighted by about how long it takes (only the ratios matter).
  * `step` adds one at the end: its work gets what the steps before it made, by name, and what it returns is kept
- * under its own name, so adding an asset is one more step. `run` does the work in order. After each step it reports
+ * under its own name, so adding an asset is one more step; a step that can tell how far it is (a download) reports
+ * that too. `run` does the work in order. After each step it reports
  * the share done (0..1), and between steps it hands the main thread back to the browser so the loading screen can
  * paint it. A step that fails stops the run, and the run rejects with an error that names the step.
  */
@@ -38,10 +42,11 @@ export class BootPipeline<TMade extends object = object> {
   step<TName extends string, TResult>(
     name: TName,
     weight: number,
-    work: (made: TMade) => TResult | Promise<TResult>,
+    work: (made: TMade, progress: StepProgress) => TResult | Promise<TResult>,
   ): BootPipeline<TMade & Record<TName, TResult>> {
     if (this.steps.some((step) => step.name === name)) throw new Error(`boot step "${name}" is listed twice`);
-    const run = (made: Record<string, unknown>): unknown => work(made as TMade);
+    const run = (made: Record<string, unknown>, progress: StepProgress): unknown =>
+      work(made as TMade, progress);
     return new BootPipeline([...this.steps, { name, weight, run }]);
   }
 
@@ -65,11 +70,11 @@ export class BootPipeline<TMade extends object = object> {
     onProgress(0);
     for (const [i, step] of this.steps.entries()) {
       if (i > 0) await pause();
-      const result = await runStep(step, made);
+      const share = (part: number): void => {
+        onProgress(total > 0 ? (done + step.weight * Math.min(Math.max(part, 0), 1)) / total : 1);
+      };
+      const result = await runStep(step, made, share);
       if (step.inJobs) {
-        const share = (part: number): void => {
-          onProgress(total > 0 ? (done + step.weight * part) / total : 1);
-        };
         await runJobs(step.name, result as readonly BootJob[], share, pause);
       } else made[step.name] = result;
       done += step.weight;
@@ -80,9 +85,13 @@ export class BootPipeline<TMade extends object = object> {
 }
 
 /** Runs one step; a failure is passed on with the step's name, the original error as its cause. */
-async function runStep(step: BootStep, made: Record<string, unknown>): Promise<unknown> {
+async function runStep(
+  step: BootStep,
+  made: Record<string, unknown>,
+  progress: StepProgress,
+): Promise<unknown> {
   try {
-    return await step.run(made);
+    return await step.run(made, progress);
   } catch (cause) {
     throw new Error(`boot step "${step.name}" failed`, { cause });
   }
