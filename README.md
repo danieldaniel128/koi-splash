@@ -55,12 +55,20 @@ AI also built a throwaway prototype before this repo, and helped me write this R
 
 ## Next steps
 
-- The same preset approach as the UI theme for the effects.
-- The prototype's combos (two specials swapped together: cross, giant current, rainbow wave, maelstrom). Swapping
-  two specials already fires both.
-- Earning more boosters (a level gives one of each for now).
-- A performance check on a real mid-range phone (the water and the koi bake are the costly parts).
-- A WebGL1 fallback: the shaders are GLSL ES 3, so the game needs WebGL2 now.
+With more time, I'd add:
+
+- A first-time goal card that shows what the level asks for, and a hint that points at a move when the player sits
+  idle.
+- The prototype's two-special combos (cross, giant current, rainbow wave, maelstrom). Today swapping two specials
+  fires both, each on its own.
+- More levels, with saved progress and the best stars of each.
+- Laying the game out again when the phone turns or the window resizes. Today the layout is made once, for the
+  screen the game starts on, and a resize only rescales it.
+- Retuning the level. A simulation shows a player who goes for the goals wins about 97% of boards within the 15
+  moves (median 6), which is too easy.
+- Colour-blind-friendly koi: a shape or pattern per colour, so the colour isn't the only way to tell them apart.
+- A swirl animation for the reshuffle. Today the new board just appears under its banner.
+- The heartbeat speeding up over the last moves. Today it keeps one tempo.
 
 ## How it's built
 
