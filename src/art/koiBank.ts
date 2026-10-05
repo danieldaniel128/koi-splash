@@ -15,6 +15,7 @@
  * pattern, and the tail wag never changes the pattern, only the pose.
  */
 
+import { drawShadowOnly } from './blur';
 import { blank, context, traceSmoothClosed } from './canvas';
 
 // ============================================================================
@@ -807,9 +808,10 @@ function traceSkinShape(ctx: CanvasRenderingContext2D, body: Body, shape: SkinSh
 }
 
 /**
- * Fill a path with a blurred edge. Canvas 2D only blurs shadows portably, so
- * the path is drawn far off-canvas and only its shadow lands back in place.
- * `blur` is in canvas units; `offset` (optional) is in canvas units of screen space.
+ * Fill a path with a blurred edge (drawShadowOnly: only a shadow is blurred the
+ * same in every browser). `blur` is the shadow blur's width in canvas units
+ * (twice the standard deviation); `offset` (optional) is in canvas units of
+ * screen space.
  */
 function fillSoft(ctx: CanvasRenderingContext2D, path: () => void, color: string, blur: number, offset?: Vec, rule: CanvasFillRule = 'nonzero'): void {
   if (blur <= 0.01 && !offset) {
@@ -818,20 +820,12 @@ function fillSoft(ctx: CanvasRenderingContext2D, path: () => void, color: string
     ctx.fill(rule);
     return;
   }
-  const m = ctx.getTransform();
-  const pxPerUnit = Math.hypot(m.a, m.b);
-  const FAR = 20000; // device pixels
-  const inv = m.inverse();
-  ctx.save();
-  ctx.translate(inv.a * FAR, inv.b * FAR); // user-space vector that moves FAR device pixels right
-  ctx.shadowColor = color;
-  ctx.shadowBlur = blur * pxPerUnit;
-  ctx.shadowOffsetX = -FAR + (offset ? offset.x * pxPerUnit : 0);
-  ctx.shadowOffsetY = offset ? offset.y * pxPerUnit : 0;
-  ctx.fillStyle = '#000';
-  path();
-  ctx.fill(rule);
-  ctx.restore();
+  const fill = (): void => {
+    ctx.fillStyle = '#000';
+    path();
+    ctx.fill(rule);
+  };
+  drawShadowOnly(ctx, fill, { blur: blur / 2, color, ...(offset ? { offset: [offset.x, offset.y] } : {}) });
 }
 
 /** Darken the inside of the silhouette edge (call while clipped to the body). */
