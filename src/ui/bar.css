@@ -125,12 +125,12 @@
   color: var(--color-ice);
 }
 
-/* The special booster's petals round the picked koi, over a soft dim; a tap on the dim closes them. */
+/* The special booster's petals round the picked koi, over a soft dim centered on it; a tap on the dim closes them. */
 .petals {
   inset: 0;
   pointer-events: auto;
   background: radial-gradient(
-    circle at 50% 50%,
+    circle at var(--dim-at, 50% 50%),
     color-mix(in srgb, var(--color-night) 25%, transparent),
     color-mix(in srgb, var(--color-night) 45%, transparent)
   );
@@ -141,15 +141,12 @@
   position: absolute;
   display: grid;
   place-items: center;
-  padding: 0;
-  border: 0;
   border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
   background: var(--color-glassRound);
   box-shadow:
     inset 0 0 0 var(--line-normal) color-mix(in srgb, var(--color-ice) 80%, transparent),
     inset 0 -10px 14px color-mix(in srgb, var(--color-glowPink) 25%, transparent),
     0 6px 16px color-mix(in srgb, var(--color-shade) 45%, transparent);
-  cursor: pointer;
 }
 
 .petal__koi {

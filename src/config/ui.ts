@@ -74,7 +74,8 @@ export const BOOSTERS = [
 /**
  * The special booster's petals (after the prototype): one per special, left to right, on an arc `reach` cells out and
  * `spread` rad apart, fanned down for a koi in the top `topRows` rows; each `petal` cells across, blooming over
- * `open` s, `stagger` s apart, and kept `edge` px inside the screen.
+ * `open` s, `stagger` s apart, and kept `edge` px inside the screen. The dim behind them fades in and out over `fade`
+ * s, and closing, the petals shrink to `closeScale`.
  */
 export const SPECIAL_MENU = {
   choices: [
@@ -89,6 +90,8 @@ export const SPECIAL_MENU = {
   stagger: 0.06,
   topRows: 3,
   edge: 44,
+  fade: 0.2,
+  closeScale: 0.6,
 } as const satisfies { choices: readonly PetalChoice[] } & Record<string, unknown>;
 
 /** The end-of-level card fades in and pops (s). */
