@@ -15,12 +15,14 @@ import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
 import type { ResultCard } from '../ui/ResultCard';
 import type { KoiTextures } from '../view/KoiTextures';
+import type { PadView } from '../view/PadView';
 import type { SpecialTextures } from '../view/SpecialTextures';
 import { bakeShoreField } from '../view/water/PondWater';
 import type { PondWater } from '../view/water/PondWater';
 import { keepFitted, restoreAfterContextLoss } from './app';
 import { addFrameLoop } from './frameLoop';
 import { createGame } from './game';
+import { gpuWarmUpJobs, spriteTextures } from './gpuWarmUp';
 import { bakeKoi, createSpecialKoi, goalIcons, koiBake } from './koi';
 import { createGarden, createPond, createScenery } from './pond';
 import type { Scenery } from './pond';
@@ -43,10 +45,11 @@ export interface GameWiring {
 /**
  * Loads the game behind the loading screen, step by step, and reports the share done: the font, the goals' icons,
  * the koi, the shore's distance field, the water, the garden, the stones round the pond, then the game built from
- * them, and one frame played unseen so the GPU compiles every shader and takes every texture before the player's
- * first frame. Before that frame, the koi's in-between tail poses and the special koi (their tail beats, sheen,
- * whirlpool curls and the petal menu's pictures) are baked in small jobs, so nothing is baked while the game is
- * played and the bar keeps moving. Each step is weighted by about how long it takes (measured in Chrome at phone
+ * them, and one frame played unseen so the GPU compiles the scene's shaders before the player's first frame. Before
+ * that frame, the koi's in-between tail poses and the special koi (their tail beats, sheen, whirlpool curls and the
+ * petal menu's pictures) are baked in small jobs, then every texture baked goes to the GPU, one job each, with the
+ * rainbow koi's shader (see gpuWarmUpJobs), so nothing is baked or uploaded while the game is played and the bar
+ * keeps moving. Each step is weighted by about how long it takes (measured in Chrome at phone
  * size; only the ratios matter). Everything is made once: nothing is rebuilt for another game.
  */
 export async function loadGame(
@@ -65,13 +68,20 @@ export async function loadGame(
     .step('pond', 1, ({ shoreField }) => createPond(app.renderer, screen, shoreField))
     .step('garden', 1, () => createGarden(screen))
     .step('scenery', 1, () => createScenery(screen))
-    .step('game', 2, (made) => {
-      assembleGame(app, screen, { ...made, specialTextures: specialTextures }, wiring);
-    })
+    .step('game', 2, (made) =>
+      assembleGame(app, screen, { ...made, specialTextures: specialTextures }, wiring),
+    )
     .jobs('inBetweenPoses', 10, ({ koi }) => koi.inBetweenJobs())
     .jobs('specialKoi', 80, () => specialTextures.warmUpJobs())
-    // the GPU draws the koi's canvases as they're first uploaded, here
-    .step('firstFrame', 15, () => {
+    .jobs('gpuWarmUp', 15, ({ koi, game }) =>
+      gpuWarmUpJobs(app.renderer, [
+        ...koi.allTextures(),
+        ...specialTextures.allTextures(),
+        ...game.pads.allTextures(),
+        ...spriteTextures(app.stage),
+      ]),
+    )
+    .step('firstFrame', 5, () => {
       app.ticker.update();
     })
     .run(onProgress);
@@ -87,11 +97,16 @@ interface Loaded {
   readonly scenery: Scenery;
 }
 
+/** What the game hands on once put together: the lily pads, for their textures to go to the GPU early. */
+interface Assembled {
+  readonly pads: PadView;
+}
+
 /**
  * The game, put together: the HUD and the sound menu, the board and everything played on it (Escape closes the top
  * one open of the sound menu and the boosters), the stage fitted to the screen, and the work every frame does.
  */
-function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring: GameWiring): void {
+function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring: GameWiring): Assembled {
   const { layout, ui } = screen;
   const { pond, scenery } = made;
   const { events, sound } = wiring;
@@ -129,6 +144,7 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
     impact,
     hitStop: game.hitStop,
   });
+  return { pads };
 }
 
 /** Over everything on the canvas: the sparkles a win bursts into, and the white flash of a big moment. */
