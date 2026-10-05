@@ -53,6 +53,22 @@ export function recordRound(goal: Goal, round: RoundOutcome, bonus: number): num
   return round.points + recordRound(goal, { points: met * bonus, padEvents: [], cleared: [] }, bonus);
 }
 
+/**
+ * Throws when a level's goals can't all be reached on its board: more lotuses to bloom than buds, or koi of a colour
+ * that isn't in play. Checked at startup, so a slip in the config fails there, not as a level nobody can win. O(goals).
+ */
+export function checkGoals(
+  defs: readonly GoalDef[],
+  board: { readonly buds: number; readonly kinds: number },
+): void {
+  for (const def of defs) {
+    if (def.type === 'lotus' && def.count > board.buds)
+      throw new RangeError(`goals: ${def.count} lotuses to bloom, but only ${board.buds} buds on the board`);
+    if (def.type === 'koi' && !(Number.isInteger(def.kind) && def.kind >= 0 && def.kind < board.kinds))
+      throw new RangeError(`goals: koi colour ${def.kind} is not in play (0 to ${board.kinds - 1})`);
+  }
+}
+
 /** All of a level's goals as one: won when every one of them is. */
 export function createGoals(defs: readonly GoalDef[]): Goal {
   return new AllGoals(defs.map((def) => createGoal(def)));

@@ -2,7 +2,7 @@ import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
-import { createGoals, goalsMet, recordRound } from '../model/goals';
+import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
 import type { Goal, GoalDef } from '../model/goals';
 import { PadField } from '../model/pads';
 import type { Pad, PadEvent, PadSpec } from '../model/pads';
@@ -98,6 +98,7 @@ export class GameScene {
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
+    checkGoals(deps.level.goals, { buds: deps.level.pads.buds, kinds: deps.spec.kinds });
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);

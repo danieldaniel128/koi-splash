@@ -30,7 +30,7 @@ export const LEVEL = {
    */
   stars: { scores: [1500, 2800, 4000] },
   pads: {
-    /** One bud per lotus in the goal (keep these two equal for a lotus goal). */
+    /** One bud per lotus in the goal (fewer buds than lotuses to bloom fails at startup). */
     buds: 3,
     emptyPads: 2,
     /** Matches touching a bud before it blooms, and touching an empty pad before it drifts away. */
