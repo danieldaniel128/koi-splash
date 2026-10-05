@@ -103,6 +103,15 @@ export class GameScene {
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
     this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoals(deps.level.goals) };
     this.turn = new StateMachine<TurnState, LevelState>('idle', TURN_TRANSITIONS, this.level, {
+      // the board shows it takes a move only while it's still (between turns, with the level on)
+      idle: {
+        onEnter: () => {
+          deps.view.setPlayable(true);
+        },
+        onExit: () => {
+          deps.view.setPlayable(false);
+        },
+      },
       won: {
         onEnter: () => {
           deps.result.show('won', this.status());
@@ -117,6 +126,7 @@ export class GameScene {
       },
     });
     deps.view.render(this.board);
+    deps.view.setPlayable(true);
     deps.pads.reset(this.pads.pads);
     deps.status.update(this.status());
   }
