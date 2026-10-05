@@ -39,8 +39,9 @@ export const KOI_LOOK = {
   bakeHeadroom: 1.25,
   maxBakeResolution: 4,
   /**
-   * Poses in one baked tail beat, enough that the slow beat at rest moves smoothly, and how many contact shapes the
-   * beat gets (they are soft, so fewer do).
+   * Poses in one baked tail beat (even), enough that the slow beat at rest moves smoothly: half are baked while the
+   * game loads, the ones between them in the background. And how many contact shapes the beat gets (they are soft,
+   * so fewer do).
    */
   swimFrames: 24,
   contactFrames: 12,

@@ -48,18 +48,38 @@ export class KoiTextures {
   private readonly contacts: Texture[][];
 
   /**
-   * O(kinds x frames) canvas paints: the inked poses, their blurred contact masks (half as many) and one shadow per
-   * kind, then GPU uploads. Done once while the game loads, with the GPU's drawing of the canvases on top, when
-   * they're first uploaded.
+   * O(kinds x frames) canvas paints: every other pose of the tail beat (a whole beat on its own, the poses between
+   * come later: see inBetweenJobs), their blurred contact masks and one shadow per kind, then GPU uploads. Done once
+   * while the game loads, with the GPU's drawing of the canvases on top, when they're first uploaded.
    */
-  constructor(varietyIds: readonly string[], bake: KoiBake) {
+  constructor(
+    private readonly varietyIds: readonly string[],
+    private readonly bake: KoiBake,
+  ) {
     this.contactScale = bake.resolution / bake.contactResolution;
-    this.poses = varietyIds.map((id) => bakePoses(id, bake));
+    this.poses = varietyIds.map((id) =>
+      Array.from({ length: bake.frames / 2 }, (_, i) => Texture.from(bakePose(id, bake, i * 2))),
+    );
     this.contacts = varietyIds.map((id) => bakeContacts(id, bake));
     this.shadows = varietyIds.map((id) => bakeShadow(bakeKoi(getVariety(id), stillPose(bake)), bake));
   }
 
-  /** One tail beat of poses for a kind, in order. */
+  /**
+   * The tail beat's poses between the ones baked at load, one job per kind, for the background (see runWhenIdle):
+   * each kind's beat grows in place to all its poses, and every koi swimming with it picks them up on its next frame.
+   */
+  inBetweenJobs(): (() => void)[] {
+    return this.varietyIds.map((id, kind) => () => {
+      const poses = this.poses[kind];
+      if (!poses || poses.length >= this.bake.frames) return;
+      const all = Array.from({ length: this.bake.frames }, (_, i) =>
+        i % 2 === 0 ? poses[i / 2] : Texture.from(bakePose(id, this.bake, i)),
+      );
+      poses.splice(0, poses.length, ...all.filter((pose) => pose !== undefined));
+    });
+  }
+
+  /** One tail beat of poses for a kind, in order (every other one until the in-between poses are baked). */
   swim(kind: Kind): readonly Texture[] {
     const poses = this.poses[kind];
     if (!poses) throw new RangeError(`no koi textures for kind ${kind}`);

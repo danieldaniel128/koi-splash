@@ -61,7 +61,7 @@ export async function loadGame(
 ): Promise<LoadedGame> {
   const bake = koiBake(screen.layout.board.piece, screen.resolution.art);
   const specials = createSpecialKoi(bake);
-  await new BootPipeline()
+  const { koi } = await new BootPipeline()
     .step('fonts', 1, loadFonts)
     .step('goalIcons', 6, () => goalIcons(screen.resolution.art))
     .step('koi', 19, () => bakeKoi(bake))
@@ -77,7 +77,7 @@ export async function loadGame(
       app.ticker.update();
     })
     .run(onProgress);
-  return { warmUp: specials.warmUpJobs() };
+  return { warmUp: [...koi.inBetweenJobs(), ...specials.warmUpJobs()] };
 }
 
 /** The art and the pond the game is put together from. */
@@ -113,10 +113,12 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);
   const celebration = createCelebration(layout.stage, made.specials.sparkle);
-  const stage = buildStage(game, { garden: made.garden, scenery: scenery.layer, celebration: celebration.layer });
+  const around = { garden: made.garden, scenery: scenery.layer, celebration: celebration.layer };
+  const stage = buildStage(game, around);
   app.stage.addChild(stage.root);
   keepFitted(app, { stage: stage.root, ui }, layout.stage, game);
-  const impact = createImpact(wiring, { world: stage.world, hitStop: game.hitStop, ...celebration }, layout.board);
+  const hits = { world: stage.world, hitStop: game.hitStop, ...celebration };
+  const impact = createImpact(wiring, hits, layout.board);
   restoreAfterContextLoss(app, pond);
   const { boardView, pads, boosters } = game;
   addFrameLoop(app.ticker, {
