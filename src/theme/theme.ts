@@ -1,9 +1,10 @@
 import { MOONLIT_GARDEN } from './moonlitGarden';
 
 /**
- * The game's theme: one object holds the whole look, the UI's tokens and the scene around the pond. The HTML UI reads
- * the tokens as CSS variables (see pageTheme) and the Pixi code reads the same object, so the two never drift
- * apart. A new look is a new theme file picked here, not changes to components.
+ * The game's theme: one object holds the UI's tokens, the boosters' colors and the scene around the pond. The HTML UI
+ * reads the tokens as CSS variables (see pageTheme) and the Pixi code reads the same object, so the two never drift
+ * apart. A new look is a new theme file picked here, not changes to components. The water, the koi and the specials
+ * keep their own colors in their config (src/config/water.ts, koi.ts and specials.ts).
  */
 export const THEME = MOONLIT_GARDEN;
 

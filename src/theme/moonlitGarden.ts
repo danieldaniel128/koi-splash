@@ -4,9 +4,10 @@ import type { BackdropLook } from '../art/backdrop';
 const TYPEFACE = 'Nunito';
 
 /**
- * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every colour, font, size
- * and timing the UI uses, and the look of the scene around the pond (the mossy ground, the moon, the fireflies).
- * Sizes are in stage px (the UI layer is scaled with the stage).
+ * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every color, font, size
+ * and timing the UI uses, the boosters' colors (on the bar and on the board), the points' ink, and the look of the
+ * scene around the pond (the mossy ground, the moon, the fireflies). Sizes are in stage px (the UI layer is scaled
+ * with the stage).
  */
 export const MOONLIT_GARDEN = {
   color: {
