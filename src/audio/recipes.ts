@@ -1,4 +1,5 @@
-import { AUDIO } from '../config/audio';
+import { AUDIO, MATCH_SOUND } from '../config/audio';
+import { MIN_RUN } from '../model/rules';
 import { LEVEL } from '../config/level';
 import { SPECIALS_SOUND } from '../config/specials';
 import type { Voice } from './Synth';
@@ -37,11 +38,12 @@ export function tick(v: Voice, movesLeft: number): void {
 
 /** A match: plucked notes climbing with each round of a cascade, a splash, and plips. */
 export function match(v: Voice, round: number, size: number): void {
-  const b = 4 + Math.min(round, 9);
-  v.pluck(v.note(b), 0.15);
-  v.pluck(v.note(b + 2), 0.1, 0.06);
-  if (size > 3) v.pluck(v.note(b + 4), 0.09, 0.12);
-  v.noise(0.3, 0.07 + Math.min(size, 10) * 0.008, 1300, { sweepTo: 380 });
+  const root = MATCH_SOUND.firstNote + Math.min(round, MATCH_SOUND.maxClimb);
+  v.pluck(v.note(root), 0.15);
+  v.pluck(v.note(root + MATCH_SOUND.second), 0.1, 0.06);
+  if (size > MIN_RUN) v.pluck(v.note(root + MATCH_SOUND.third), 0.09, 0.12);
+  const splash = MATCH_SOUND.splash + Math.min(size, MATCH_SOUND.koiCap) * MATCH_SOUND.perKoi;
+  v.noise(0.3, splash, 1300, { sweepTo: 380 });
   for (let k = 0; k < 3; k++) v.plip(0.04 + k * 0.05 + Math.random() * 0.03);
 }
 

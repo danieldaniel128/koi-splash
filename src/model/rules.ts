@@ -18,7 +18,8 @@ import { isAdjacent, sameCell } from './types';
 import { resolveRound, swapTriggers } from './specials';
 import type { Trigger } from './specials';
 
-const MIN_RUN = 3;
+/** The shortest run of one colour that matches. */
+export const MIN_RUN = 3;
 /** Safety net: a cascade this long means a bug, not a lucky player. */
 const MAX_CASCADE = 50;
 

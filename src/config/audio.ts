@@ -7,6 +7,22 @@
  * - landGap, diveGap: the closest two landings or dives may sound (s), so a school stays gentle
  * - bell: the partials of the struck bell (frequency ratios)
  */
+/**
+ * A match's sound climbs with each round of a cascade: its first note is this scale degree, and it climbs one degree
+ * a round up to `maxClimb`; a bigger match adds a third note. The splash under it grows by `perKoi` for each koi
+ * cleared, up to `koiCap` koi.
+ */
+export const MATCH_SOUND = {
+  firstNote: 4,
+  maxClimb: 9,
+  /** Scale degrees above the first note for the second and third plucks. */
+  second: 2,
+  third: 4,
+  splash: 0.07,
+  perKoi: 0.008,
+  koiCap: 10,
+} as const;
+
 /** The sound's channels: each has its own volume and switch, and they all meet in the master. */
 export const BUSES = ['music', 'ambience', 'sfx'] as const;
 export type Bus = (typeof BUSES)[number];
