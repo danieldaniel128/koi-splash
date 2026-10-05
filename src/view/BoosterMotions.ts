@@ -75,6 +75,9 @@ export class BoosterMotions extends Container {
     const headingA = a.heading;
     const headingB = b.heading;
     this.events.emit('koiLeapt', { duration });
+    // the first koi leaps higher: it's drawn over the second where they cross
+    this.view.bringToFront(b);
+    this.view.bringToFront(a);
     gsap.delayedCall(duration * 0.47, () => {
       this.hitStop.hold(look.hitStop);
     });
@@ -155,7 +158,6 @@ export class BoosterMotions extends Container {
     const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
     const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
     const rest = koi.restScale;
-    this.view.bringToFront(koi);
     this.splash(move.from, WATER.bumpPush);
     const k = { t: 0 };
     await gsap.to(k, {
