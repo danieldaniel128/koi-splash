@@ -154,17 +154,17 @@ export function settle(
   ) {
     if (rounds.length >= MAX_CASCADE) throw new Error('cascade did not settle');
     // the first round puts its special where the player swapped; later rounds in the middle of the shape
-    const round = resolveRound(board, matches, rounds.length === 0 ? (start.swap ?? []) : [], firing);
+    const resolution = resolveRound(board, matches, rounds.length === 0 ? (start.swap ?? []) : [], firing);
     firing = [];
     const struck = [
-      ...round.cleared.map((c) => c.at),
-      ...round.created.map((c) => c.at),
-      ...round.struckPads,
+      ...resolution.cleared.map((c) => c.at),
+      ...resolution.created.map((c) => c.at),
+      ...resolution.struckPads,
     ];
     const padEvents = hitPads(board, start.pads, struck);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.colorCount, rng);
-    const { created, fired, cleared } = round;
+    const { created, fired, cleared } = resolution;
     rounds.push({ matches, created, fired, cleared, padEvents, falls, spawns });
   }
   const reshuffled = !hasAnyMove(board);

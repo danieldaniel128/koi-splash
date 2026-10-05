@@ -1,7 +1,7 @@
 import type { PieceColor, PadEvent } from './types';
 
 /** What one cascade round did, as far as a goal cares. */
-export interface RoundOutcome {
+export interface RoundTally {
   readonly points: number;
   readonly padEvents: readonly PadEvent[];
   /** The colors of the koi it cleared, one entry per koi. */
@@ -22,7 +22,7 @@ export interface GoalProgress {
  * the compiler then asks for it in createGoal, the goal chip's icon (GoalTray) and the end card's line (ResultCard).
  */
 export interface Goal {
-  record(round: RoundOutcome): void;
+  record(tally: RoundTally): void;
   isComplete(): boolean;
   /** Each goal's progress, in the order the level lists them. */
   progress(): GoalProgress[];
@@ -45,12 +45,12 @@ export function goalsMet(goals: readonly GoalProgress[]): number {
  * goal counts every point the player sees (and may be met by another goal's bonus). Returns the round's points with
  * the bonuses. O(goals) per goal met.
  */
-export function recordRound(goal: Goal, round: RoundOutcome, bonus: number): number {
+export function recordRound(goal: Goal, tally: RoundTally, bonus: number): number {
   const metBefore = goalsMet(goal.progress());
-  goal.record(round);
+  goal.record(tally);
   const met = goalsMet(goal.progress()) - metBefore;
-  if (met === 0) return round.points;
-  return round.points + recordRound(goal, { points: met * bonus, padEvents: [], cleared: [] }, bonus);
+  if (met === 0) return tally.points;
+  return tally.points + recordRound(goal, { points: met * bonus, padEvents: [], cleared: [] }, bonus);
 }
 
 /** Which type of goal: bloom lotuses, score points or clear koi of a color. */
@@ -86,15 +86,15 @@ export function createGoal(def: GoalDef): Goal {
       return new CountingGoal(
         { type: 'lotus' },
         def.count,
-        (round) => round.padEvents.filter((e) => e.type === 'bloom').length,
+        (tally) => tally.padEvents.filter((e) => e.type === 'bloom').length,
       );
     case 'score':
-      return new CountingGoal({ type: 'score' }, def.target, (round) => round.points);
+      return new CountingGoal({ type: 'score' }, def.target, (tally) => tally.points);
     case 'koi':
       return new CountingGoal(
         { type: 'koi', color: def.color },
         def.count,
-        (round) => round.cleared.filter((color) => color === def.color).length,
+        (tally) => tally.cleared.filter((color) => color === def.color).length,
       );
   }
 }
@@ -106,11 +106,11 @@ class CountingGoal implements Goal {
   constructor(
     private readonly label: Pick<GoalProgress, 'type' | 'color'>,
     private readonly target: number,
-    private readonly gain: (round: RoundOutcome) => number,
+    private readonly gain: (tally: RoundTally) => number,
   ) {}
 
-  record(round: RoundOutcome): void {
-    this.done += this.gain(round);
+  record(tally: RoundTally): void {
+    this.done += this.gain(tally);
   }
 
   isComplete(): boolean {
@@ -130,8 +130,8 @@ class CountingGoal implements Goal {
 class AllGoals implements Goal {
   constructor(private readonly goals: readonly Goal[]) {}
 
-  record(round: RoundOutcome): void {
-    for (const goal of this.goals) goal.record(round);
+  record(tally: RoundTally): void {
+    for (const goal of this.goals) goal.record(tally);
   }
 
   isComplete(): boolean {

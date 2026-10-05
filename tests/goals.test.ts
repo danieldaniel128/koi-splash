@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BOARD } from '../src/config/board';
 import { LEVEL } from '../src/config/level';
 import { checkGoals, createGoal, createGoals, goalsMet, recordRound } from '../src/model/goals';
-import type { RoundOutcome } from '../src/model/goals';
+import type { RoundTally } from '../src/model/goals';
 import type { PadEvent } from '../src/model/types';
 
 const bloom: PadEvent = {
@@ -10,7 +10,7 @@ const bloom: PadEvent = {
   pad: { id: 1, at: { col: 0, row: 0 }, kind: 'bud', hitsLeft: 0, hitsNeeded: 2 },
 };
 const hit: PadEvent = { ...bloom, type: 'hit' };
-const round = (over: Partial<RoundOutcome>): RoundOutcome => ({
+const round = (over: Partial<RoundTally>): RoundTally => ({
   points: 0,
   padEvents: [],
   cleared: [],

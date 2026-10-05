@@ -17,7 +17,7 @@ export interface Trigger {
 }
 
 /** What one round of a cascade did with matches and specials, before the koi fall. */
-export interface RoundOutcome {
+export interface RoundResolution {
   readonly created: Created[];
   readonly fired: Fired[];
   readonly cleared: Cleared[];
@@ -75,20 +75,20 @@ export function resolveRound(
   matches: readonly Match[],
   swap: readonly Cell[],
   triggers: readonly Trigger[],
-): RoundOutcome {
-  const outcome: RoundOutcome = { created: [], fired: [], cleared: [], struckPads: [] };
+): RoundResolution {
+  const resolution: RoundResolution = { created: [], fired: [], cleared: [], struckPads: [] };
   const kept = new Set<string>();
   const queue: Trigger[] = [...triggers];
   for (const group of groupMatches(matches)) {
     const made = makeSpecial(board, group, swap);
     if (made) {
-      outcome.created.push(made);
+      resolution.created.push(made);
       kept.add(cellKey(made.at));
     }
-    for (const at of group.cells) if (!kept.has(cellKey(at))) clearCell(board, at, outcome, queue, null);
+    for (const at of group.cells) if (!kept.has(cellKey(at))) clearCell(board, at, resolution, queue, null);
   }
-  for (let next = queue.shift(); next; next = queue.shift()) fire(board, next, outcome, queue, kept);
-  return outcome;
+  for (let next = queue.shift(); next; next = queue.shift()) fire(board, next, resolution, queue, kept);
+  return resolution;
 }
 
 /** Turns the shape's chosen koi into its special, keeping its id so the view can follow its sprite. */
@@ -106,13 +106,13 @@ function makeSpecial(board: Board, group: MatchGroup, swap: readonly Cell[]): Cr
 function clearCell(
   board: Board,
   at: Cell,
-  outcome: RoundOutcome,
+  resolution: RoundResolution,
   queue: Trigger[],
   by: { blast: number; order: number } | null,
 ): void {
   const piece = board.get(at);
   if (!piece) return;
-  outcome.cleared.push(by ? { piece, at, blast: by.blast, order: by.order } : { piece, at });
+  resolution.cleared.push(by ? { piece, at, blast: by.blast, order: by.order } : { piece, at });
   board.set(at, null);
   if (piece.special) queue.push({ at }); // caught: it fires in turn, from where it was
 }
@@ -121,21 +121,21 @@ function clearCell(
 function fire(
   board: Board,
   trigger: Trigger,
-  outcome: RoundOutcome,
+  resolution: RoundResolution,
   queue: Trigger[],
   kept: Set<string>,
 ): void {
-  const piece = firingPiece(board, outcome, trigger.at);
+  const piece = firingPiece(board, resolution, trigger.at);
   if (!piece?.special) return;
   const { special } = piece;
   const target = special.type === 'rainbow' ? (trigger.target ?? mostCommonColor(board)) : undefined;
   const reach = SPECIAL_REACH[special.type](board, trigger.at, special, target);
-  const blast = outcome.fired.length;
-  outcome.fired.push({ piece, at: trigger.at, reach, ...(target === undefined ? {} : { target }) });
+  const blast = resolution.fired.length;
+  resolution.fired.push({ piece, at: trigger.at, reach, ...(target === undefined ? {} : { target }) });
   reach.forEach((at, order) => {
     if (kept.has(cellKey(at))) return;
-    if (board.hasPad(at)) outcome.struckPads.push(at);
-    else clearCell(board, at, outcome, queue, { blast, order });
+    if (board.hasPad(at)) resolution.struckPads.push(at);
+    else clearCell(board, at, resolution, queue, { blast, order });
   });
 }
 
@@ -143,14 +143,14 @@ function fire(
  * The special at `at` about to fire, taken off the board if it's still on it (a swapped one is; a matched or caught
  * one was cleared already). Null if it has fired this round.
  */
-function firingPiece(board: Board, outcome: RoundOutcome, at: Cell): Piece | null {
+function firingPiece(board: Board, resolution: RoundResolution, at: Cell): Piece | null {
   const onBoard = board.get(at);
   if (onBoard?.special) {
-    outcome.cleared.push({ piece: onBoard, at });
+    resolution.cleared.push({ piece: onBoard, at });
     board.set(at, null);
   }
-  const piece = onBoard?.special ? onBoard : outcome.cleared.find((c) => sameCell(c.at, at))?.piece;
-  return piece && !outcome.fired.some((f) => f.piece.id === piece.id) ? piece : null;
+  const piece = onBoard?.special ? onBoard : resolution.cleared.find((c) => sameCell(c.at, at))?.piece;
+  return piece && !resolution.fired.some((f) => f.piece.id === piece.id) ? piece : null;
 }
 
 /** A cell and the eight round it, as column and row steps. */
