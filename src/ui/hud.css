@@ -131,11 +131,12 @@
   font-size: var(--chip-count);
 }
 
+/* A met goal's bonus: it pops out of the middle of its chip, then flies into the score. */
 .chip__bonus {
   position: absolute;
   left: 50%;
-  top: -6px;
-  translate: -50% 0;
+  top: 50%;
+  translate: -50% -50%;
   color: var(--color-gold);
   font-size: var(--text-lg);
   white-space: nowrap;

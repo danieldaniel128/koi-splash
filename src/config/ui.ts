@@ -34,8 +34,8 @@ export const HUD_MOTION = {
   goalBump: 1.3,
   goalSettle: 0.4,
   starEarned: 1.7,
-  /** A met goal's bonus rises out of its chip for this long (s). */
-  bonusRise: 1.3,
+  /** A met goal's bonus pops out of its chip, holds, then flies into the score: all in this long (s). */
+  bonusFlight: 1.3,
 } as const;
 
 /** How the booster bar answers: a press swells a button's orb, and a booster just spent shrinks it (scale, s). */
