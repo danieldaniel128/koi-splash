@@ -2,10 +2,10 @@ import type { Application, Sprite } from 'pixi.js';
 import { LEVEL } from '../config/level';
 import { BootPipeline } from '../core/BootPipeline';
 import type { GameEventBus } from '../game/events';
+import type { ScreenFlow } from '../game/ScreenFlow';
 import type { GoalIcons } from '../ui/GoalTray';
 import { closeOnEscape } from '../ui/escapeKey';
 import { Hud } from '../ui/Hud';
-import type { ResultCard } from '../ui/ResultCard';
 import type { KoiTextures } from '../view/KoiTextures';
 import type { SpecialTextures } from '../view/SpecialTextures';
 import type { PondWater } from '../view/water/PondWater';
@@ -20,11 +20,11 @@ import { addSoundMenu } from './sound';
 import type { Sound } from './sound';
 import { buildStage, putUnderWater } from './stage';
 
-/** What the game is wired to before loading starts: the events bus, the sound, and the end-of-level card. */
+/** What the game is wired to before loading starts: the events bus, the sound, and the flow between screens. */
 export interface GameWiring {
   readonly events: GameEventBus;
   readonly sound: Sound;
-  readonly result: ResultCard;
+  readonly screenFlow: ScreenFlow;
 }
 
 /**
@@ -95,7 +95,14 @@ function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring
   const { events, sound } = wiring;
   const hud = new Hud(ui, layout.hud, { goalIcons: made.goalIcons, stars: LEVEL.stars });
   const menu = addSoundMenu(screen, sound, events);
-  const materials = { koi: made.koi, specials: made.specialKoi, pond, hud, result: wiring.result, events };
+  const materials = {
+    koi: made.koi,
+    specials: made.specialKoi,
+    pond,
+    hud,
+    screenFlow: wiring.screenFlow,
+    events,
+  };
   const { parts: game, control } = createGame(screen, materials, app.canvas);
   closeOnEscape(document, [() => menu.close(), () => control.back()]); // the top one open closes first
   const koiLife = putUnderWater(game.boardView, pond, layout.board);

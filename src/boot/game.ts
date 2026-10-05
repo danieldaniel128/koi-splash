@@ -10,12 +10,12 @@ import type { BoosterSounds } from '../game/BoosterControl';
 import { SwapControl } from '../game/SwapControl';
 import type { GameEventBus } from '../game/events';
 import { GameScene } from '../game/GameScene';
+import type { ScreenFlow } from '../game/ScreenFlow';
 import type { GameLayout } from '../layout/gameLayout';
 import type { Cell, Special } from '../model/types';
 import { BoosterBar } from '../ui/BoosterBar';
 import type { Hud } from '../ui/Hud';
 import { InstructionPill } from '../ui/InstructionPill';
-import type { ResultCard } from '../ui/ResultCard';
 import { SpecialMenu } from '../ui/SpecialMenu';
 import { BoardAnimator } from '../view/BoardAnimator';
 import { BoardMarks } from '../view/BoardMarks';
@@ -33,24 +33,27 @@ import type { PondWater } from '../view/water/PondWater';
 import { createBoardView } from './koi';
 import type { GameScreen } from './screen';
 
-/** What the game is played with: the koi baked for it, the pond, the HUD, the end card and the events bus. */
+/**
+ * What the game is played with: the koi baked for it, the pond, the HUD, the screen flow (which opens the end card
+ * and plays again) and the events bus.
+ */
 export interface GameMaterials {
   readonly koi: KoiTextures;
   readonly specials: SpecialTextures;
   readonly pond: PondWater;
   readonly hud: Hud;
-  readonly result: ResultCard;
+  readonly screenFlow: ScreenFlow;
   readonly events: GameEventBus;
 }
 
-/** Everything the game is played on: the board and its water, the HUD, the popups, the end card, the effects. */
+/** Everything the game is played on: the board and its water, the HUD, the popups, the screens, the effects. */
 export interface GameParts {
   readonly boardView: BoardView;
   readonly pond: PondWater;
   readonly popups: ScorePopups;
   readonly hud: Hud;
   readonly pads: PadView;
-  readonly result: ResultCard;
+  readonly screenFlow: ScreenFlow;
   readonly specials: { fx: SpecialFx; motions: SpecialMotions };
   readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
   readonly events: GameEventBus;
@@ -76,7 +79,7 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
     popups: createScorePopups(hud, board),
     hud,
     pads: createPads(pond, hud, board, screen.resolution.art),
-    result: made.result,
+    screenFlow: made.screenFlow,
     specials: createSpecialEffects({ boardView, textures: made.specials, pond, board, events }),
     boosters: createBoosterViews({ boardView, specials: made.specials, pond, cell: board.cell, events }),
     events,
@@ -85,11 +88,12 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
 }
 
 /**
- * The game: the scene (presenter) wired to every display it drives, and the player's input that feeds it. Returns
- * the boosters' presenter, for the Escape key.
+ * The game: the scene (presenter) wired to every display it drives, and the player's input that feeds it. Playing
+ * again, from the end card, starts the level and the boosters over. Returns the boosters' presenter, for the Escape
+ * key.
  */
 function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasElement): BoosterControl {
-  const { boardView, hud, pads, result } = parts;
+  const { boardView, hud, pads, screenFlow } = parts;
   const bar = new BoosterBar(screen.ui, screen.layout.bar, BOOSTERS);
   const level = { ...LEVEL, ...SCORE };
   const animator = createAnimator(parts, screen, bar);
@@ -102,7 +106,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
     animator,
     status: hud,
     pads,
-    result,
+    result: screenFlow,
     events: parts.events,
   });
   const control = createBoosterControl(scene, {
@@ -115,7 +119,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
   const swaps = new SwapControl(scene, parts.boosters.marks);
   listenToPlayer(
     { scene, control, swaps },
-    { bar, result, boardView, canvas, cell: screen.layout.board.cell },
+    { bar, screenFlow, boardView, canvas, cell: screen.layout.board.cell },
   );
   return control;
 }
@@ -129,11 +133,17 @@ interface Presenters {
 
 /**
  * The player's input: the board's taps and drags go to the armed booster, or else to the swap. Arming a booster or
- * starting the level over drops a picked koi.
+ * playing again drops a picked koi.
  */
 function listenToPlayer(
   { scene, control, swaps }: Presenters,
-  on: { bar: BoosterBar; result: ResultCard; boardView: BoardView; canvas: HTMLCanvasElement; cell: number },
+  on: {
+    bar: BoosterBar;
+    screenFlow: ScreenFlow;
+    boardView: BoardView;
+    canvas: HTMLCanvasElement;
+    cell: number;
+  },
 ): void {
   const gestures = (): BoardGestures => (control.armed ? control : swaps);
   new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
@@ -148,7 +158,7 @@ function listenToPlayer(
     control.press(type);
     if (control.armed) swaps.drop();
   });
-  on.result.onRestart(() => {
+  on.screenFlow.onReplay(() => {
     scene.restart();
     control.reset();
     swaps.drop();
