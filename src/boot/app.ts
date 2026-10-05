@@ -1,7 +1,7 @@
 import { Application } from 'pixi.js';
 import type { Container } from 'pixi.js';
 import { GPU_LOSS } from '../config/ui';
-import { WATER } from '../config/water';
+import { RENDER, WATER } from '../config/water';
 import type { GameLayout } from '../layout/gameLayout';
 import { THEME } from '../theme/theme';
 import { BOOT_FAILURES, BootFailure } from '../ui/BootError';
@@ -21,10 +21,11 @@ export async function createApp(host: HTMLElement): Promise<Application> {
     resizeTo: host,
     background: THEME.scene.bank, // the bank shader covers the screen; this only shows before the first frame
     preference: 'webgl', // the water shaders are written in GLSL
-    resolution: Math.min(window.devicePixelRatio, 2), // the water is per-pixel work: cap it on 3x phones
+    resolution: Math.min(window.devicePixelRatio, RENDER.maxResolution),
     antialias: true,
     autoDensity: true,
   });
+  app.ticker.maxFPS = RENDER.maxFps;
   host.appendChild(app.canvas);
   return app;
 }

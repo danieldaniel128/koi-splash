@@ -139,3 +139,12 @@ export const WATER = {
   /** A koi lifted while swapping casts its shadow further: offset grows by this per unit of lift (scale - 1). */
   shadowLiftReach: 6,
 } as const;
+
+/**
+ * How hard the screen is drawn: the water is per-pixel work, so the pixel ratio is capped (3x phones draw at 2x) and
+ * so is the frame rate (a 120 Hz phone draws the 60 Hz water once per step, not twice).
+ */
+export const RENDER = {
+  maxResolution: 2,
+  maxFps: 60,
+} as const;
