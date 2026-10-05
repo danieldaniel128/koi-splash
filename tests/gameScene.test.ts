@@ -4,15 +4,20 @@ import { createGameEvents } from '../src/game/events';
 import { GameScene } from '../src/game/GameScene';
 import type { GameSceneDeps } from '../src/game/GameScene';
 import type { GameStatus } from '../src/game/GameStatus';
+import type { GameEventBus } from '../src/game/events';
 import type { Board } from '../src/model/Board';
 import type { Pad } from '../src/model/pads';
+import { findMove } from '../src/model/rules';
 import type { Cell } from '../src/model/types';
 
 const done = (): Promise<void> => Promise.resolve();
+/** Lets a turn played through the stubs (which finish at once) run to its end. */
+const turnPlayed = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 /** What the stubbed scene was told and what it said: its board, each status, the pads, the bumps, its events. */
 interface Seen {
   board: Board | null;
+  events: GameEventBus;
   statuses: GameStatus[];
   pads: Pad[];
   nudged: Cell[];
@@ -23,9 +28,18 @@ interface Seen {
 
 /** A scene with every display stubbed out, recording what it was told and what it said. */
 function stubScene(): Seen & { scene: GameScene } {
-  const seen: Seen = { board: null, statuses: [], pads: [], nudged: [], bumped: [], said: [], playable: [] };
-  const { statuses, pads, nudged, bumped, said, playable } = seen;
   const events = createGameEvents();
+  const seen: Seen = {
+    board: null,
+    events,
+    statuses: [],
+    pads: [],
+    nudged: [],
+    bumped: [],
+    said: [],
+    playable: [],
+  };
+  const { statuses, pads, nudged, bumped, said, playable } = seen;
   events.on('invalidSwap', () => said.push('invalidSwap'));
   const deps = {
     spec: { cols: 7, rows: 9, kinds: 5 },
@@ -81,7 +95,7 @@ describe('GameScene', () => {
       pad.at.row > 0 ? { col: pad.at.col, row: pad.at.row - 1 } : { col: pad.at.col, row: pad.at.row + 1 };
 
     scene.handleSwipe(from, pad.at);
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await turnPlayed();
 
     expect(nudged).toEqual([pad.at]);
     expect(statuses.at(-1)?.movesLeft).toBe(10);
@@ -91,7 +105,7 @@ describe('GameScene', () => {
     const { scene, statuses, pads, bumped, said, playable } = stubScene();
     const row = [0, 1, 2].find((r) => !pads.some((pad) => pad.at.col === 0 && pad.at.row === r)) ?? 0;
     scene.handleSwipe({ col: 0, row }, { col: -1, row }); // a koi on the left edge, swiped left
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await turnPlayed();
 
     expect(bumped).toEqual([{ col: -1, row }]);
     expect(said).toEqual(['invalidSwap']);
@@ -114,5 +128,22 @@ describe('GameScene', () => {
     expect(await scene.useBooster({ type: 'swap', a, b })).toBe(true);
     expect(board.get(b)?.special).toEqual({ type: 'whirl' });
     expect(board.get(a)).toBe(other);
+  });
+
+  it('announces a new level start on Play again, so the music and the rest can start over', async () => {
+    const { scene, board, events, statuses } = stubScene();
+    if (!board) throw new Error('nothing rendered');
+    let starts = 0;
+    events.on('levelStarted', () => {
+      starts++;
+    });
+    for (let move = findMove(board); move && statuses.at(-1)?.movesLeft !== 0; move = findMove(board)) {
+      scene.handleSwipe(move[0], move[1]);
+      await turnPlayed();
+    }
+    expect(starts).toBe(0);
+    scene.restart();
+    expect(starts).toBe(1);
+    expect(statuses.at(-1)?.movesLeft).toBe(10);
   });
 });

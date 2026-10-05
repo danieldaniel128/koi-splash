@@ -91,6 +91,7 @@ const SOUND_OF: { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents
   koiMorphed: (v) => {
     sounds.morph(v);
   },
+  levelStarted: () => undefined, // no sound of its own: the music settles back to calm (see Soundtrack)
   won: (v) => {
     sounds.win(v);
   },

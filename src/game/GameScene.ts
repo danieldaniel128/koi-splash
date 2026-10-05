@@ -133,6 +133,7 @@ export class GameScene {
     deps.view.setPlayable(true);
     deps.pads.reset(this.pads.pads);
     deps.status.update(this.status());
+    deps.events.emit('levelStarted');
   }
 
   /** Swipe handler for the input. Ignored while a turn is playing or after the level has ended. */
@@ -181,6 +182,7 @@ export class GameScene {
     this.deps.status.update(this.status());
     this.deps.result.hide();
     this.turn.transition('idle');
+    this.deps.events.emit('levelStarted');
   }
 
   /** True when the board takes a swap: it is still and the level is on. */

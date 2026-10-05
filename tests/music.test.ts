@@ -190,4 +190,15 @@ describe('Soundtrack', () => {
       ['music', MUSIC.duck.special],
     ]);
   });
+
+  it('turns the music calm as soon as a level starts again, before any move', () => {
+    const events = createGameEvents();
+    const moods: Mood[] = [];
+    const track: Track = { update: () => undefined, setMood: (mood) => void moods.push(mood) };
+    new Soundtrack(events, [track], { duck: () => undefined });
+    events.emit('moveSpent', { movesLeft: 1 });
+    events.emit('won');
+    events.emit('levelStarted');
+    expect(moods).toEqual(['tense', 'won', 'calm']);
+  });
 });
