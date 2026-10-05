@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { paintBeam, SPECTRUM } from '../art/specialKoi';
+import { easeInOutCubic, easeOutBack, easeOutCubic } from '../core/easing';
 import { SPECIAL_FX } from '../config/specials';
 import { TIMING } from '../config/timing';
 import type { Cell, Fired, Kind } from '../model/types';
@@ -106,7 +107,7 @@ export class SpecialFx extends Container {
       ease: 'none',
       onUpdate: () => {
         const reach = Math.min(1, 2.2 * grow.k);
-        beam.width = this.length * look.length * (1 - Math.pow(1 - reach, 3)) + this.cell;
+        beam.width = this.length * look.length * easeOutCubic(reach) + this.cell;
         beam.height = this.cell * look.width * (1 - 0.6 * grow.k);
         beam.alpha = 1 - grow.k;
       },
@@ -143,7 +144,7 @@ export class SpecialFx extends Container {
         this.events.emit('whirlFired');
       },
       onUpdate: () => {
-        const grow = easeOutBack(Math.min(1, time.t / whirlSpin));
+        const grow = easeOutBack(Math.min(1, time.t / whirlSpin), 1.9);
         const out = Math.max(0, (time.t - stay) / look.fade);
         eddy.setSize(this.cell * (look.from + (look.to - look.from) * grow) * (1 + 0.2 * out));
         eddy.rotation = spinAngle(time.t, whirlSpin, look.spin0, look.spinMax);
@@ -200,8 +201,8 @@ export class SpecialFx extends Container {
       duration: look.life,
       ease: 'none',
       onUpdate: () => {
-        const head = 1 - Math.pow(1 - Math.min(1, life.t / travel), 3);
-        const tail = easeInOut(Math.max(0, (life.t - travel) / (look.life - travel)));
+        const head = easeOutCubic(Math.min(1, life.t / travel));
+        const tail = easeInOutCubic(Math.max(0, (life.t - travel) / (look.life - travel)));
         drawArc(line, { from, control, to }, tail, head, colour);
       },
       onComplete: () => {
@@ -265,14 +266,4 @@ function pointOn({ from, control, to }: Curve, t: number): PointData {
 function spinAngle(t: number, rampUp: number, spin0: number, spinMax: number): number {
   const extra = spinMax - spin0;
   return spin0 * t + (t < rampUp ? (extra * t * t) / (2 * rampUp) : extra * (t - rampUp / 2));
-}
-
-function easeOutBack(t: number): number {
-  const c = 1.9;
-  const u = t - 1;
-  return 1 + (c + 1) * u * u * u + c * u * u;
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }

@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { paintPellet } from '../art/pellet';
+import { easeInOutCubic, smoothstep } from '../core/easing';
 import { BOOSTER_MOTION } from '../config/specials';
 import { WATER } from '../config/water';
 import type { Moved } from '../model/boosters';
@@ -78,7 +79,7 @@ export class BoosterMotions extends Container {
         ...this.path(first, look.bend),
         duration,
         height,
-        spin: (k) => headingA + Math.PI * 2 * easeInOut(k),
+        spin: (k) => headingA + Math.PI * 2 * easeInOutCubic(k),
       }),
       this.arc(b, second, {
         ...this.path(second, -look.bend),
@@ -129,7 +130,7 @@ export class BoosterMotions extends Container {
         const up = Math.sin(Math.PI * k.t);
         koi.y = home.y - up * look.rise * this.cell;
         koi.scale.set(rest * (1 + 0.42 * up * look.rise));
-        koi.heading = heading + Math.PI * 2 * look.spinTurns * easeInOut(k.t);
+        koi.heading = heading + Math.PI * 2 * look.spinTurns * easeInOutCubic(k.t);
       },
     });
     koi.position.copyFrom(home);
@@ -158,7 +159,7 @@ export class BoosterMotions extends Container {
       duration: leap.duration,
       ease: 'none',
       onUpdate: () => {
-        const along = (k.t + smoothstep(k.t)) / 2; // half eased: it leaves and lands softly
+        const along = (k.t + smoothstep(0, 1, k.t)) / 2; // half eased: it leaves and lands softly
         const up = Math.sin(Math.PI * k.t);
         const bow = leap.bow * length * up;
         koi.x = from.x + (to.x - from.x) * along + normal.x * bow;
@@ -297,12 +298,4 @@ function wait(seconds: number): Promise<void> {
   return new Promise((resolve) => {
     gsap.delayedCall(seconds, resolve);
   });
-}
-
-function smoothstep(t: number): number {
-  return t * t * (3 - 2 * t);
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
