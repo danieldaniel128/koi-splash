@@ -157,7 +157,7 @@
 }
 
 /* the striped koi shows the way its line will sweep, so it stays square to the board */
-.petal__koi--line {
+.petal__koi--striped {
   transform: none;
 }
 

@@ -7,7 +7,7 @@ import type { Cell, Special } from '../src/model/types';
 import { splitPoints } from '../src/view/splitPoints';
 
 const SPEC = { cols: 7, rows: 9, colorCount: 5 };
-const SPECIALS: Special[] = [{ type: 'line', along: 'row' }, { type: 'whirl' }, { type: 'rainbow' }];
+const SPECIALS: Special[] = [{ type: 'striped', along: 'row' }, { type: 'whirlpool' }, { type: 'rainbow' }];
 
 /** A swap that does something on this board: a match, or else a special swapped with the koi beside it. */
 function playableSwap(board: Board): [Cell, Cell] | null {

@@ -420,4 +420,4 @@ function strongestMade(round: CascadeRound): { made?: Special['type'] } {
   return made ? { made } : {};
 }
 
-const SPECIAL_RANK: readonly Special['type'][] = ['rainbow', 'whirl', 'line'];
+const SPECIAL_RANK: readonly Special['type'][] = ['rainbow', 'whirlpool', 'striped'];

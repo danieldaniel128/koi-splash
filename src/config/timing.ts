@@ -60,9 +60,9 @@ export const TIMING = {
   specials: {
     merge: 0.36,
     sweep: 0.024,
-    whirlSpin: 0.32,
-    whirlPull: 0.34,
-    whirlCorner: 0.03,
+    whirlpoolSpin: 0.32,
+    whirlpoolPull: 0.34,
+    whirlpoolCornerDelay: 0.03,
     rainbowRise: 0.3,
     rainbowStep: 0.05,
     rainbowTravel: 0.14,

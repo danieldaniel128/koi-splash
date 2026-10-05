@@ -35,9 +35,9 @@ describe('boosters', () => {
     const change = applyBooster(board, {
       type: 'special',
       at: { col: 2, row: 2 },
-      special: { type: 'whirl' },
+      special: { type: 'whirlpool' },
     });
-    expect(change?.made[0]?.piece).toMatchObject({ id, special: { type: 'whirl' } });
+    expect(change?.made[0]?.piece).toMatchObject({ id, special: { type: 'whirlpool' } });
     expect(canTarget(board, 'special', { col: 2, row: 2 })).toBe(false);
   });
 

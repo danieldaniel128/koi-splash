@@ -12,7 +12,7 @@ export const SPECIAL_LOOK = {
   sheen: { frames: 10, every: 1.5, sweep: 0.5 },
   /** The glow under a striped koi: stretched along it (length, width), its strength and how it pulses. */
   glow: { length: 1.9, width: 1.3, alpha: 0.45, pulse: 0.2, speed: 5 },
-  /** A rainbow koi: how fast its colours flow, its prism glow (size, spin) and the sparkles orbiting it. */
+  /** A rainbow koi: how fast its colours flow, its rainbow glow (size, spin) and the sparkles orbiting it. */
   rainbow: {
     flow: 1.9,
     glow: 1.8,
@@ -23,20 +23,20 @@ export const SPECIAL_LOOK = {
     orbit: 0.36,
   },
   /** A whirlpool: its eddy's size and spin, how fast the koi curled in its eye turns, and the curl's radius. */
-  whirl: { eddy: 1.2, spin: 2.6, koiSpin: 1.7, curl: 0.21 },
+  whirlpool: { eddy: 1.2, spin: 2.6, koiSpin: 1.7, curl: 0.21 },
 } as const;
 
 /**
  * The specials' effects (sizes in cells, times in seconds), after the prototype: the line beam, the whirlpool's
- * vortex and pop, the rainbow's prism beams, how hard each pushes the water, and a short hit-stop on the big moments.
+ * eddy and pop, the rainbow arcs, how hard each pushes the water, and a short hit-stop on the big moments.
  */
 export const SPECIAL_FX = {
   /** The beam grows to `length` boards long along the line, `width` cells thick, and fades over `life`. */
-  beam: { life: 0.55, length: 2.2, width: 1.3, push: 0.5, pushRadius: 12 },
-  /** The vortex grows from `from` to `to` cells across while it spins up (rad/s), then fades over `fade`. */
-  vortex: { from: 1.2, to: 3.1, spin0: 3, spinMax: 15, fade: 0.45, pull: -0.9, pop: 1.6, popRadius: 22 },
-  /** Prism beams: how far they bow out (share of their length), their life, widths (px) and the splash they land with. */
-  prism: {
+  striped: { life: 0.55, length: 2.2, width: 1.3, push: 0.5, pushRadius: 12 },
+  /** The whirlpool grows from `from` to `to` cells across while it spins up (rad/s), then fades over `fade`. */
+  whirlpool: { from: 1.2, to: 3.1, spin0: 3, spinMax: 15, fade: 0.45, pull: -0.9, pop: 1.6, popRadius: 22 },
+  /** Rainbow arcs: how far they bow out (share of their length), their life, widths (px) and the splash they land with. */
+  rainbow: {
     bend: 0.22,
     life: 0.46,
     widths: [10, 4.5, 1.6],
@@ -115,10 +115,10 @@ export const BOOSTER_MARKS = {
 
 /**
  * The timings the sounds follow (s), so they line up with what they go with: a whirlpool's spin and pull, the morph's
- * spin, the petals' stagger, the lotus's unfolding, and how high a run of prism chimes climbs.
+ * spin, the petals' stagger, the lotus's unfolding, and how high a run of rainbow chimes climbs.
  */
 export const SPECIALS_SOUND = {
-  whirl: TIMING.specials.whirlSpin + TIMING.specials.whirlPull,
+  whirlpool: TIMING.specials.whirlpoolSpin + TIMING.specials.whirlpoolPull,
   morph: BOOSTER_MOTION.special.spin,
   petalStagger: SPECIAL_MENU.stagger,
   bloom: { unfold: 0.85, stagger: 0.04 },

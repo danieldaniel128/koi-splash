@@ -27,8 +27,8 @@ describe('Soundtrack', () => {
 
   it('dips the music under every special that fires, as deep as its config says, and brings it back', () => {
     const { events, dips } = rig();
-    events.emit('lineFired');
-    events.emit('whirlPopped');
+    events.emit('stripedFired');
+    events.emit('whirlpoolPopped');
     events.emit('rainbowFired');
     const dip: [Bus, number, number] = ['music', MUSIC.duck.special, MUSIC.duck.back];
     expect(dips).toEqual([dip, dip, dip]);

@@ -79,7 +79,8 @@ export class SpecialMenu implements SpecialPicker {
       stageWidth: this.board.stageWidth,
     });
     const petals = this.choices.map((choice, k) => {
-      const special: Special = choice.type === 'line' ? { type: 'line', along: line } : { type: choice.type };
+      const special: Special =
+        choice.type === 'striped' ? { type: 'striped', along: line } : { type: choice.type };
       return this.petal(
         choice,
         this.board.preview(at, special),
@@ -108,7 +109,10 @@ export class SpecialMenu implements SpecialPicker {
     k: number,
   ): HTMLElement {
     const size = SPECIAL_MENU.petal * this.cellSize;
-    const picture = image(choice.type === 'line' ? 'petal__koi petal__koi--line' : 'petal__koi', preview);
+    const picture = image(
+      choice.type === 'striped' ? 'petal__koi petal__koi--striped' : 'petal__koi',
+      preview,
+    );
     picture.draggable = false; // a click that drifts a little still picks the petal
     const petal = button('control petal', choice.name, picture, el('span', 'petal__name', choice.name));
     setRect(petal, { x: spot.x - size / 2, y: spot.y - size / 2, width: size, height: size });

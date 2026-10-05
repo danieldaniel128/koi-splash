@@ -150,10 +150,10 @@ describe('GameScene', () => {
     if (!a || !b) throw new Error('no two koi of one colour');
     const other = board.get(b);
 
-    expect(await scene.useBooster({ type: 'special', at: a, special: { type: 'whirl' } })).toBe(true);
+    expect(await scene.useBooster({ type: 'special', at: a, special: { type: 'whirlpool' } })).toBe(true);
     // the koi trade places but the colours stay put, so nothing matches: the whirlpool just moves
     expect(await scene.useBooster({ type: 'swap', a, b })).toBe(true);
-    expect(board.get(b)?.special).toEqual({ type: 'whirl' });
+    expect(board.get(b)?.special).toEqual({ type: 'whirlpool' });
     expect(board.get(a)).toBe(other);
   });
 

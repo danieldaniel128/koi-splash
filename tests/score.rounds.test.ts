@@ -33,16 +33,16 @@ describe('scoreRound', () => {
   });
 
   it("pays three koi's worth for each koi a special's shape had past three", () => {
-    const striped = { special: { type: 'line', along: 'row' }, size: 4 } as const;
+    const striped = { special: { type: 'striped', along: 'row' }, size: 4 } as const;
     const rainbow = { special: { type: 'rainbow' }, size: 5 } as const;
-    const whirl = { special: { type: 'whirl' }, size: 5 } as const;
+    const whirlpool = { special: { type: 'whirlpool' }, size: 5 } as const;
     expect(scoreRound(round(3, [striped]), 0, POINTS)).toBe((3 + 3) * POINTS);
     expect(scoreRound(round(4, [rainbow]), 0, POINTS)).toBe((4 + 6) * POINTS);
-    expect(scoreRound(round(4, [whirl]), 0, POINTS)).toBe((4 + 6) * POINTS);
+    expect(scoreRound(round(4, [whirlpool]), 0, POINTS)).toBe((4 + 6) * POINTS);
   });
 
   it('adds up the bonuses of every special a round made, and multiplies them with the round', () => {
-    const striped = { special: { type: 'line', along: 'col' }, size: 4 } as const;
+    const striped = { special: { type: 'striped', along: 'col' }, size: 4 } as const;
     const rainbow = { special: { type: 'rainbow' }, size: 5 } as const;
     expect(scoreRound(round(7, [striped, rainbow]), 2, POINTS)).toBe(3 * (7 + 3 + 6) * POINTS);
   });

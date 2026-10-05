@@ -52,7 +52,7 @@ describe('a stuck board', () => {
 
   it('is not dealt again while it holds a special: swapping the special is a move', () => {
     const board = boardFrom(STUCK);
-    makeSpecial(board, { col: 2, row: 1 }, { type: 'whirl' });
+    makeSpecial(board, { col: 2, row: 1 }, { type: 'whirlpool' });
     expect(findMove(board)).toBeNull();
     expect(hasAnyMove(board)).toBe(true);
     const before = piecesOf(board);
@@ -82,7 +82,7 @@ describe('trySwap refusing a swap', () => {
 
   it('takes a swap with a special beside a koi, though it makes no match', () => {
     const board = boardFrom(STUCK);
-    makeSpecial(board, { col: 2, row: 1 }, { type: 'line', along: 'row' });
+    makeSpecial(board, { col: 2, row: 1 }, { type: 'striped', along: 'row' });
     const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, seeded(1));
     expect(result.valid).toBe(true);
     if (result.valid) expect(result.rounds[0]?.matches).toEqual([]);

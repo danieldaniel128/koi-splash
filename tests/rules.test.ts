@@ -122,7 +122,7 @@ describe('hasAnyMove', () => {
     // a special between a pad and the bank, with a koi under it on the second board
     const special = (board: Board): void => {
       board.setBlocked({ col: 0, row: 0 }, true);
-      board.set({ col: 1, row: 0 }, { ...board.createPiece(1), special: { type: 'whirl' } });
+      board.set({ col: 1, row: 0 }, { ...board.createPiece(1), special: { type: 'whirlpool' } });
     };
     const boxedIn = new Board(3, 1, [{ col: 2, row: 0 }]);
     special(boxedIn);
@@ -147,7 +147,7 @@ describe('trySwap', () => {
   it('refuses a swap into a lily pad or the bank, even a special, and changes nothing', () => {
     const board = new Board(3, 1, [{ col: 2, row: 0 }]);
     board.setBlocked({ col: 0, row: 0 }, true); // a pad on the left, the bank on the right
-    const special = { ...board.createPiece(1), special: { type: 'whirl' as const } };
+    const special = { ...board.createPiece(1), special: { type: 'whirlpool' as const } };
     board.set({ col: 1, row: 0 }, special);
     const spec = { cols: 3, rows: 1, colorCount: 5 };
     for (const into of [

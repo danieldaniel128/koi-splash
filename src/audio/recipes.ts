@@ -100,13 +100,13 @@ export function special(v: Voice): void {
 }
 
 /** A rainbow koi is born: the special's sound and a glassy chime. */
-export function rainbowBorn(v: Voice): void {
+export function rainbowCreated(v: Voice): void {
   special(v);
-  prismHit(v, SPECIALS_SOUND.chimeMax);
+  rainbowArcLanded(v, SPECIALS_SOUND.chimeMax);
 }
 
 /** A whirlpool is born: a swirl of water, the special's sound and plips. */
-export function whirlBorn(v: Voice): void {
+export function whirlpoolCreated(v: Voice): void {
   v.noise(0.35, 0.08, 500, { sweepTo: 2400, attack: 0.2 });
   special(v);
   for (let k = 0; k < 3; k++) v.plip(0.12 + k * 0.05);
@@ -127,24 +127,24 @@ export function rainbow(v: Voice): void {
   v.noise(0.6, 0.05, 2400, { sweepTo: 7000, attack: 0.2 });
 }
 
-/** A prism beam lands: a glassy chime climbing with every hit. */
-export function prismHit(v: Voice, n: number): void {
+/** A rainbow arc lands: a glassy chime climbing with every hit. */
+export function rainbowArcLanded(v: Voice, n: number): void {
   const f = v.note(6 + Math.min(n, SPECIALS_SOUND.chimeMax));
   v.tone(f, 0.32, 0.055);
   v.tone(f * 2.005, 0.16, 0.02);
 }
 
 /** A whirlpool spins up: a whoosh swelling over a deep slide down the drain and gurgling blips. */
-export function whirl(v: Voice): void {
-  const d = SPECIALS_SOUND.whirl;
+export function whirlpoolFired(v: Voice): void {
+  const d = SPECIALS_SOUND.whirlpool;
   v.noise(d + 0.1, 0.15, 260, { sweepTo: 2200, attack: d * 0.7 });
   v.tone(150, d + 0.1, 0.12, { glide: 50, attack: d * 0.3 });
   for (let k = 0; k < 5; k++)
     v.tone(rand(90, 160), 0.07, 0.055, { delay: 0.05 + (k * d) / 6, glide: rand(220, 340) });
 }
 
-/** The vortex closes: a splash and a deep plunk under a burst of rising bubbly bloops. */
-export function whirlPop(v: Voice): void {
+/** The whirlpool closes: a splash and a deep plunk under a burst of rising bubbly bloops. */
+export function whirlpoolPopped(v: Voice): void {
   v.noise(0.45, 0.15, 1700, { sweepTo: 280 });
   v.tone(115, 0.32, 0.14, { glide: 58 });
   for (let k = 0; k < 6; k++)

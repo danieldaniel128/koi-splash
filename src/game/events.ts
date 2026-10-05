@@ -34,13 +34,13 @@ export interface GameEvents {
   allGoalsMet: undefined;
   /** A special is born, or fires. */
   specialBorn: { type: SpecialType };
-  lineFired: undefined;
-  whirlFired: undefined;
-  whirlPopped: undefined;
+  stripedFired: undefined;
+  whirlpoolFired: undefined;
+  whirlpoolPopped: undefined;
   rainbowRose: undefined;
   rainbowFired: undefined;
   /** A rainbow koi's beam lands on its nth koi. */
-  prismHit: { n: number };
+  rainbowArcLanded: { n: number };
   /** The boosters: armed (its place on the bar), put away, a tap it can't take, a koi picked up. */
   boosterArmed: { type: BoosterType; slot: number };
   boosterCancelled: undefined;

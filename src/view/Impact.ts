@@ -40,11 +40,11 @@ export class Impact {
     events.on('specialBorn', () => {
       this.hit(shake.born, IMPACT.flash.born);
     });
-    events.on('lineFired', () => {
-      this.hit(shake.line, 0);
+    events.on('stripedFired', () => {
+      this.hit(shake.striped, 0);
     });
-    events.on('whirlPopped', () => {
-      this.hit(shake.whirlPop, IMPACT.flash.special);
+    events.on('whirlpoolPopped', () => {
+      this.hit(shake.whirlpool, IMPACT.flash.special);
       parts.hitStop.hold(SPECIAL_FX.hitStop.time);
     });
     events.on('rainbowFired', () => {

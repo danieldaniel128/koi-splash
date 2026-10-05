@@ -28,8 +28,8 @@ export interface RoundOutcome {
 /** The special a matched shape makes: a run of 5 a rainbow koi, an L or T of 5+ a whirlpool, a run of 4 a striped koi. */
 export function specialFor(group: MatchGroup): Special | null {
   if (group.longest >= 5) return { type: 'rainbow' };
-  if (group.corner && group.cells.length >= 5) return { type: 'whirl' };
-  if (group.longest === 4) return { type: 'line', along: group.along };
+  if (group.corner && group.cells.length >= 5) return { type: 'whirlpool' };
+  if (group.longest === 4) return { type: 'striped', along: group.along };
   return null;
 }
 
@@ -45,7 +45,7 @@ export function spawnCellFor(
 ): Cell | null {
   const free = (cell: Cell | null | undefined): cell is Cell =>
     !!cell && group.cells.some((c) => sameCell(c, cell)) && !board.get(cell)?.special;
-  const preferred = [special.type === 'whirl' ? group.corner : null, ...swap, group.middle];
+  const preferred = [special.type === 'whirlpool' ? group.corner : null, ...swap, group.middle];
   return preferred.find(free) ?? group.cells.find(free) ?? null;
 }
 
@@ -162,7 +162,7 @@ type Reach = (board: Board, at: Cell, special: Special, target?: PieceColor | 'a
 /** What each special type reaches (Strategy, one entry per type; the full list for a new special is at Special). */
 const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   // a striped koi sweeps its whole row or column, outward from itself
-  line: (board, at, special) => {
+  striped: (board, at, special) => {
     const along = alongOf(special);
     const cells = board.line(along, along === 'row' ? at.row : at.col);
     return byDistance(
@@ -171,7 +171,7 @@ const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
     );
   },
   // a whirlpool drains the eight cells round it
-  whirl: (board, at) => {
+  whirlpool: (board, at) => {
     const cells = AROUND.map(([dc, dr]) => ({ col: at.col + dc, row: at.row + dr }));
     return byDistance(
       cells.filter((cell) => board.inBounds(cell) && !sameCell(cell, at) && !board.isHole(cell)),

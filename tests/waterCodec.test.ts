@@ -33,7 +33,7 @@ describe('the water state codec', () => {
   });
 
   it('has room for the strongest single push the game makes', () => {
-    const strongest = SPECIAL_FX.vortex.pop; // a whirlpool's pop
+    const strongest = SPECIAL_FX.whirlpool.pop; // a whirlpool's pop
     expect(Math.abs(roundTrip(strongest) - strongest)).toBeLessThanOrEqual(STEP);
   });
 

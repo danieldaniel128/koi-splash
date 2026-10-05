@@ -7,10 +7,10 @@ export interface SpecialTiming {
   readonly merge: number;
   /** A striped koi's sweep reaches one more cell every this long. */
   readonly sweep: number;
-  /** A whirlpool spins up, then sucks its neighbours down over `whirlPull`; its corners a little later. */
-  readonly whirlSpin: number;
-  readonly whirlPull: number;
-  readonly whirlCorner: number;
+  /** A whirlpool spins up, then sucks its neighbours down over `whirlpoolPull`; its corners a little later. */
+  readonly whirlpoolSpin: number;
+  readonly whirlpoolPull: number;
+  readonly whirlpoolCornerDelay: number;
   /** A rainbow koi rises, then its beams leave one every `rainbowStep` and take `rainbowTravel` to land. */
   readonly rainbowRise: number;
   readonly rainbowStep: number;
@@ -95,13 +95,13 @@ export function blastLands(round: CascadeRound, plan: RoundPlan, blast: number):
   return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.at ?? 0);
 }
 
-/** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a prism beam. */
+/** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a rainbow arc. */
 function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing: SpecialTiming): ClearPlan {
   const type = fired.piece.special?.type;
-  if (type === 'whirl') {
+  if (type === 'whirlpool') {
     const corner = at.col !== fired.at.col && at.row !== fired.at.row;
-    const delay = start + timing.whirlSpin + (corner ? timing.whirlCorner : 0);
-    return { delay, lasts: timing.whirlPull, how: 'drain', toward: fired.at };
+    const delay = start + timing.whirlpoolSpin + (corner ? timing.whirlpoolCornerDelay : 0);
+    return { delay, lasts: timing.whirlpoolPull, how: 'drain', toward: fired.at };
   }
   if (type === 'rainbow') {
     const delay = start + timing.rainbowRise + order * timing.rainbowStep + timing.rainbowTravel;
@@ -114,7 +114,7 @@ function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing:
 /** How long a firing special stays: until its whirlpool has drained, or its last beam has landed. */
 function firing(fired: Fired, reached: number, timing: SpecialTiming): number {
   const type = fired.piece.special?.type;
-  if (type === 'whirl') return timing.whirlSpin + timing.whirlCorner + timing.whirlPull;
+  if (type === 'whirlpool') return timing.whirlpoolSpin + timing.whirlpoolCornerDelay + timing.whirlpoolPull;
   if (type === 'rainbow') {
     return timing.rainbowRise + Math.max(0, reached - 1) * timing.rainbowStep + timing.rainbowTravel;
   }

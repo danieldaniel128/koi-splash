@@ -79,8 +79,8 @@ export const BOOSTERS = [
  */
 export const SPECIAL_MENU = {
   choices: [
-    { type: 'line', name: 'Striped koi' },
-    { type: 'whirl', name: 'Whirlpool' },
+    { type: 'striped', name: 'Striped koi' },
+    { type: 'whirlpool', name: 'Whirlpool' },
     { type: 'rainbow', name: 'Rainbow koi' },
   ],
   reach: 1.7,
@@ -164,7 +164,7 @@ export const BANNER = {
   maxGrowth: 4,
   text: {
     combo: 'Combo x',
-    made: { line: 'Striped koi!', whirl: 'Whirlpool!', rainbow: 'Rainbow koi!' },
+    made: { striped: 'Striped koi!', whirlpool: 'Whirlpool!', rainbow: 'Rainbow koi!' },
     reshuffle: 'Swirl!',
     goalsMet: 'All goals met!',
     goalsMetSub: 'Bonus moves',

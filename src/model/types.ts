@@ -28,7 +28,9 @@ export type PieceColor = number;
  * (SPECIAL_MENU) are listed by hand.
  */
 export type Special =
-  { readonly type: 'line'; readonly along: Axis } | { readonly type: 'whirl' } | { readonly type: 'rainbow' };
+  | { readonly type: 'striped'; readonly along: Axis }
+  | { readonly type: 'whirlpool' }
+  | { readonly type: 'rainbow' };
 
 /** Which special a koi is: striped (line), whirlpool or rainbow. */
 export type SpecialType = Special['type'];
@@ -147,7 +149,7 @@ export const colorOf = (piece: Piece): PieceColor | null =>
 
 /** The line a striped koi sweeps. Only a striped koi has one, so any other special throws. */
 export function alongOf(special: Special): Axis {
-  if (special.type !== 'line') throw new Error(`a ${special.type} special sweeps no line`);
+  if (special.type !== 'striped') throw new Error(`a ${special.type} special sweeps no line`);
   return special.along;
 }
 

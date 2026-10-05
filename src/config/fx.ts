@@ -53,7 +53,7 @@ export const CAMERA = {
  * huge ones; the vibration on phones (ms).
  */
 export const IMPACT = {
-  shake: { perKoi: 0.02, perRound: 0.12, line: 0.3, whirlPop: 0.42, rainbow: 0.35, born: 0.15, win: 0.5 },
+  shake: { perKoi: 0.02, perRound: 0.12, striped: 0.3, whirlpool: 0.42, rainbow: 0.35, born: 0.15, win: 0.5 },
   hitStop: { big: 0.07, huge: 0.13, bigRound: 5, hugeRound: 9, bigCascade: 3, hugeCascade: 4 },
   vibrate: { special: 18, combo: 12, win: [24, 60, 30] },
   /** A white flash over the pond (its strength, 0 to 1) that fades at `decay` a second. */

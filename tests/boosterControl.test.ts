@@ -134,12 +134,12 @@ describe('BoosterControl', () => {
   });
 
   it('the special booster turns the koi into the petal chosen; tapping away keeps it armed', async () => {
-    const chosen = setup({ choice: 'line' });
+    const chosen = setup({ choice: 'striped' });
     chosen.control.press('special');
     chosen.control.tap({ col: 3, row: 3 });
     await chosen.settle();
     expect(chosen.used).toEqual([
-      { type: 'special', at: { col: 3, row: 3 }, special: { type: 'line', along: 'row' } },
+      { type: 'special', at: { col: 3, row: 3 }, special: { type: 'striped', along: 'row' } },
     ]);
 
     const away = setup({ choice: null });

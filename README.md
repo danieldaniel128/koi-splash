@@ -225,10 +225,10 @@ a striped koi gets bands of its colour and white and a rainbow koi gets its scal
 'color' blend keeps their light and shade), under the same outline as every other koi. A whirlpool is a painted eddy
 with the koi curled into its eye. At rest each has its own look (`SpecialLooks`, one class per special): a striped
 koi faces along its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (one hue filter
-shared by every rainbow koi, at the screen's resolution) over a prism glow with orbiting sparkles, and a whirlpool's
+shared by every rainbow koi, at the screen's resolution) over a rainbow glow with orbiting sparkles, and a whirlpool's
 eddy turns (its curled koi casts a curled shadow and waterline). When they fire, `planRound` works
 out from the model's data when every koi goes and how (dive, spiral into the special that was made, drain into a
-whirlpool, zapped by a prism beam), the animator plays that plan, `SpecialFx` draws the light (beam, vortex, prism
+whirlpool, zapped by a rainbow arc), the animator plays that plan, `SpecialFx` draws the light (beam, eddy, rainbow arcs
 arcs, a flash at birth), and every effect also moves the water. The timings and sizes are in `TIMING.specials` and
 `SPECIAL_FX`.
 

@@ -43,10 +43,10 @@ describe('applyBooster with nothing to do', () => {
 
   it('does nothing when the special booster is used on a special, and keeps that special', () => {
     const board = boardFrom(ROWS);
-    const whirl = makeSpecial(board, cell(1, 1), { type: 'whirl' });
+    const whirlpool = makeSpecial(board, cell(1, 1), { type: 'whirlpool' });
     const use = { type: 'special', at: cell(1, 1), special: { type: 'rainbow' } } as const;
     expect(applyBooster(board, use)).toBeNull();
-    expect(board.get(cell(1, 1))).toBe(whirl);
+    expect(board.get(cell(1, 1))).toBe(whirlpool);
   });
 
   it('does nothing when the colour fed has fewer than three koi', () => {

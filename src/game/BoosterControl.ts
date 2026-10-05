@@ -41,7 +41,7 @@ export interface SpecialPicker {
 }
 
 /** The way a striped koi's line sweeps: along its row or its column. */
-type LineAlong = Extract<Special, { type: 'line' }>['along'];
+type LineAlong = Extract<Special, { type: 'striped' }>['along'];
 
 /** What the player hears as they use the boosters. */
 export interface BoosterSounds {
@@ -254,7 +254,7 @@ export class BoosterControl {
       this.deps.sounds.cancel();
       return;
     }
-    const special: Special = choice === 'line' ? { type: 'line', along } : { type: choice };
+    const special: Special = choice === 'striped' ? { type: 'striped', along } : { type: choice };
     await this.use({ type: 'special', at: cell, special });
   }
 
