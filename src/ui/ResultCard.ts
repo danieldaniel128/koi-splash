@@ -10,8 +10,9 @@ import { button, el, wantsLessMotion } from './UiLayer';
 /**
  * The end-of-level card over the dimmed pond: won (with the stars earned landing one by one) or out of moves, the
  * score and the goal, and a button to play again. It dims the whole screen and its card scales with the stage
- * (--ui-scale). Display only: whoever owns the level decides what playing again means (onRestart), and what a star
- * landing sounds like (onStarLanded).
+ * (--ui-scale). It is a modal dialog: named by its title and described by the score and the goals, and while it's up
+ * the game under it takes no tap or Tab (the screen flow puts the focus on Play again). Display only: whoever owns
+ * the level decides what playing again means (onRestart), and what a star landing sounds like (onStarLanded).
  */
 export class ResultCard implements ResultDisplay {
   private readonly root: HTMLElement;
@@ -28,7 +29,7 @@ export class ResultCard implements ResultDisplay {
   private takesTaps = false;
   private starLanded: ((k: number) => void) | null = null;
 
-  constructor(host: HTMLElement) {
+  constructor(private readonly host: HTMLElement) {
     for (const star of this.stars) setIcon(star, STAR);
     this.card = el(
       'div',
@@ -41,6 +42,7 @@ export class ResultCard implements ResultDisplay {
     );
     this.root = el('div', 'result', this.card);
     this.root.hidden = true;
+    this.makeDialog();
     host.appendChild(this.root);
   }
 
@@ -62,7 +64,9 @@ export class ResultCard implements ResultDisplay {
     this.score.textContent = `${status.score}`;
     this.detail.textContent = status.goals.map(goalLine).join(' · ');
     this.starRow.hidden = !won;
+    this.starRow.setAttribute('aria-label', `${status.stars} of ${this.stars.length} stars`);
     this.root.hidden = false;
+    this.holdGame(true);
     this.timers.after(Math.max(RESULT_CARD.fadeIn, RESULT_CARD.popIn), () => {
       this.takesTaps = true;
     });
@@ -79,11 +83,31 @@ export class ResultCard implements ResultDisplay {
     this.timers.cancelAll();
     this.takesTaps = false;
     this.root.hidden = true;
+    this.holdGame(false);
   }
 
   /** Puts the keyboard focus on the card's button, so Enter plays again. */
   focus(): void {
     this.again.focus();
+  }
+
+  /** The card is a modal dialog, named by its title and described by its score and goals. */
+  private makeDialog(): void {
+    this.title.id = 'result-title';
+    this.score.id = 'result-score';
+    this.detail.id = 'result-detail';
+    this.card.setAttribute('role', 'dialog');
+    this.card.setAttribute('aria-modal', 'true');
+    this.card.setAttribute('aria-labelledby', this.title.id);
+    this.card.setAttribute('aria-describedby', `${this.score.id} ${this.detail.id}`);
+    this.starRow.setAttribute('role', 'img');
+  }
+
+  /** While the card is up, the rest of the game's element (the board, the HUD, the bar) is inert under it. */
+  private holdGame(held: boolean): void {
+    for (const part of this.host.children) {
+      if (part !== this.root && part instanceof HTMLElement) part.inert = held;
+    }
   }
 
   /** The stars earned light up one after another, each popping in (unless less motion); the rest stay dark. */
