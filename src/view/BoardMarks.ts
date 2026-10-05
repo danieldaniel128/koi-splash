@@ -1,5 +1,6 @@
 import { gsap } from 'gsap';
 import { Container, Graphics } from 'pixi.js';
+import type { PointData } from 'pixi.js';
 import { BOOSTER_MARKS } from '../config/specials';
 import type { Cell } from '../model/types';
 import type { Koi } from './Koi';
@@ -9,6 +10,7 @@ export interface MarkedBoard {
   koiAt(cell: Cell): Koi | null;
   koi(): Iterable<Koi>;
   cellOf(koi: Koi): Cell | null;
+  cellToPoint(cell: Cell): PointData;
 }
 
 /**
@@ -50,11 +52,12 @@ export class BoardMarks extends Container {
     this.picked = cell ? this.board.koiAt(cell) : null;
   }
 
-  /** A tap the booster can't take: that koi wobbles. */
+  /** A tap the booster can't take: that koi wobbles round its cell (a tap mid-wobble starts it over). */
   shake(cell: Cell): void {
     const koi = this.board.koiAt(cell);
     if (!koi) return;
-    const home = koi.x;
+    const home = this.board.cellToPoint(cell).x;
+    gsap.killTweensOf(koi, 'x');
     gsap
       .timeline()
       .to(koi, { x: home - this.cell * 0.08, duration: 0.06 })
