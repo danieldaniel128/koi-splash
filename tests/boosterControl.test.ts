@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BoosterControl } from '../src/game/BoosterControl';
-import type { BoosterGame } from '../src/game/BoosterControl';
+import { StateMachine } from '../src/core/StateMachine';
+import { BOOSTER_STEPS, BoosterControl } from '../src/game/BoosterControl';
+import type { Arming, BoosterGame, BoosterStep } from '../src/game/BoosterControl';
 import type { BoosterType, BoosterUse } from '../src/model/boosters';
 import type { Cell, Special } from '../src/model/types';
 
@@ -153,5 +154,22 @@ describe('BoosterControl', () => {
     control.tap({ col: 2, row: 2 });
     await settle();
     expect(used).toEqual([{ type: 'feed', at: { col: 2, row: 2 }, lines: 3 }]);
+  });
+});
+
+describe('BOOSTER_STEPS', () => {
+  it('lets each booster take only the steps of its own flow', () => {
+    const can = (type: BoosterType, from: BoosterStep, to: BoosterStep): boolean =>
+      new StateMachine<BoosterStep, Arming>(from, BOOSTER_STEPS, { type, picked: null }).can(to);
+    const firstTap = { swap: 'picked', special: 'choosing', feed: 'playing' } as const;
+    for (const type of ['swap', 'special', 'feed'] as const) {
+      for (const to of ['picked', 'choosing', 'playing'] as const) {
+        expect(can(type, 'armed', to), `${type}: armed -> ${to}`).toBe(firstTap[type] === to);
+      }
+    }
+    expect(can('swap', 'picked', 'playing')).toBe(true);
+    expect(can('special', 'picked', 'playing')).toBe(false);
+    expect(can('special', 'choosing', 'playing')).toBe(true);
+    expect(can('swap', 'choosing', 'playing')).toBe(false);
   });
 });

@@ -54,31 +54,39 @@ export interface BoosterSlot {
   readonly tip: string;
 }
 
-type Step = 'idle' | 'armed' | 'picked' | 'choosing' | 'playing';
+/** The steps of using a booster. */
+export type BoosterStep = 'idle' | 'armed' | 'picked' | 'choosing' | 'playing';
 
-/** What the steps' guards read. */
-interface Arming {
+/** What the steps' guards read: the armed booster, and the koi a swap picked first. */
+export interface Arming {
   type: BoosterType | null;
   picked: Cell | null;
 }
 
+/** A guard that passes only while this booster is armed. */
+const armedWith =
+  (type: BoosterType) =>
+  (arming: Arming): boolean =>
+    arming.type === type;
+
 /**
- * The flow of using a booster: armed / picking / choosing / playing, with guarded transitions. A swap picks its
- * second koi after the first; a special opens the petal menu first.
+ * The flow of using a booster: armed / picking / choosing / playing, with guarded transitions. Each booster takes
+ * only the steps of its own flow: a swap picks its first koi and plays with the second, a special opens the petals
+ * and plays the one chosen, a feed plays straight from its tap.
  */
-const STEPS: readonly Transition<Step, Arming>[] = [
+export const BOOSTER_STEPS: readonly Transition<BoosterStep, Arming>[] = [
   { from: 'idle', to: 'armed' },
   { from: 'armed', to: 'armed' }, // another booster's button: it takes over
   { from: 'armed', to: 'idle' },
-  { from: 'armed', to: 'picked', when: (arming) => arming.type === 'swap' },
-  { from: 'armed', to: 'choosing', when: (arming) => arming.type === 'special' },
-  { from: 'armed', to: 'playing' },
-  { from: 'picked', to: 'armed' }, // the picked koi tapped again: it settles back
+  { from: 'armed', to: 'picked', when: armedWith('swap') },
+  { from: 'armed', to: 'choosing', when: armedWith('special') },
+  { from: 'armed', to: 'playing', when: armedWith('feed') },
+  { from: 'picked', to: 'armed' }, // the picked koi tapped again (it settles back), or another booster's button
   { from: 'picked', to: 'idle' },
-  { from: 'picked', to: 'playing' },
-  { from: 'choosing', to: 'armed' }, // tapped away from the petals: still armed
+  { from: 'picked', to: 'playing', when: armedWith('swap') },
+  { from: 'choosing', to: 'armed' }, // tapped away from the petals (still armed), or another booster's button
   { from: 'choosing', to: 'idle' },
-  { from: 'choosing', to: 'playing' },
+  { from: 'choosing', to: 'playing', when: armedWith('special') },
   { from: 'playing', to: 'idle' },
 ];
 
@@ -92,7 +100,7 @@ export class BoosterControl {
   private readonly left = new Map<BoosterType, number>();
   private readonly tips = new Map<BoosterType, string>();
   private readonly arming: Arming = { type: null, picked: null };
-  private readonly step: StateMachine<Step, Arming>;
+  private readonly step: StateMachine<BoosterStep, Arming>;
 
   constructor(
     private readonly deps: {
@@ -109,7 +117,7 @@ export class BoosterControl {
     },
   ) {
     // however the choosing ends (a petal, a tap away, a cancel, another booster), the petals close with it
-    this.step = new StateMachine<Step, Arming>('idle', STEPS, this.arming, {
+    this.step = new StateMachine<BoosterStep, Arming>('idle', BOOSTER_STEPS, this.arming, {
       choosing: {
         onExit: () => {
           this.deps.picker.close();
