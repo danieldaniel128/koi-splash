@@ -4,6 +4,9 @@
  */
 export const KOI_SET = ['m3-red', 'm3-gold', 'dream-rose-gold', 'dream-jade', 'dream-amethyst'] as const;
 
+/** One entry per kind, in KOI_SET order: a list of another length doesn't compile. */
+type OnePerKind<T, Set extends readonly unknown[] = typeof KOI_SET> = { readonly [K in keyof Set]: T };
+
 /**
  * Each kind's colours as a special koi, in KOI_SET order: its glow (under a striped koi, a whirlpool's arms, beams)
  * and the band of a striped koi (the other bands are white).
@@ -14,7 +17,7 @@ export const KOI_COLORS = [
   { glow: '#ffa6c9', band: '#ec7fa8' },
   { glow: '#7ff0b0', band: '#3fbf74' },
   { glow: '#c39bff', band: '#9a62e6' },
-] as const satisfies readonly { glow: string; band: string }[];
+] as const satisfies OnePerKind<{ glow: string; band: string }>;
 
 export const KOI_LOOK = {
   /** Body width (0.12 slim .. 0.28 chubby): chubby enough that the colour fills the cell. */

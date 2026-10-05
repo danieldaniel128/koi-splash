@@ -1,4 +1,3 @@
-import { BOARD } from './board';
 import { POND } from './pond';
 
 /** What the layout is built from: the grid, the bands above and below it, and the spacing. Stage px. */
@@ -43,8 +42,6 @@ export interface LayoutConfig {
  * phone viewport in CSS pixels) and grows to cover the whole screen; everything else is placed from these values.
  */
 export const LAYOUT = {
-  cols: BOARD.cols,
-  rows: BOARD.rows,
   designWidth: 360,
   designHeight: 640,
   hudHeight: 80,
@@ -65,4 +62,4 @@ export const LAYOUT = {
   maxCell: 60,
   pillHeight: 40,
   pillGap: 12,
-} as const satisfies LayoutConfig;
+} as const satisfies Omit<LayoutConfig, 'cols' | 'rows'>; // the board's size comes from its shape

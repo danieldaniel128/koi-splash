@@ -1,13 +1,16 @@
 import type { Application } from 'pixi.js';
-import { SHAPE } from '../config/board';
+import { BOARD } from '../config/board';
 import { KOI_LOOK } from '../config/koi';
 import { LAYOUT } from '../config/layout';
+import { LEVEL } from '../config/level';
 import { POND } from '../config/pond';
 import { layoutGame } from '../layout/gameLayout';
 import type { GameLayout } from '../layout/gameLayout';
 import { traceShore } from '../layout/outline';
 import type { Outline } from '../layout/outline';
 import { readSafeInsets } from '../layout/safeInsets';
+import { parseShape } from '../model/shape';
+import type { BoardSpec } from '../model/types';
 import { UiLayer } from '../ui/UiLayer';
 
 /**
@@ -15,6 +18,8 @@ import { UiLayer } from '../ui/UiLayer';
  * canvas, and how finely to paint.
  */
 export interface GameScreen {
+  /** The level's board: its shape and the koi colours in play. */
+  readonly spec: BoardSpec;
   readonly layout: GameLayout;
   readonly shore: readonly Outline[];
   readonly ui: UiLayer;
@@ -30,13 +35,15 @@ export interface PaintResolution {
 }
 
 /**
- * Lays the game out for the screen it starts on, and puts the UI layer over the canvas. The layout is made once; a
- * later resize scales the stage to fit (see keepFitted).
+ * Reads the level's board and lays the game out for the screen it starts on, and puts the UI layer over the canvas.
+ * The layout is made once; a later resize scales the stage to fit (see keepFitted).
  */
 export function measureScreen(app: Application, host: HTMLElement): GameScreen {
-  const layout = layoutGame(app.screen, readSafeInsets(), LAYOUT);
-  const shore = traceShore(SHAPE, layout.board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
+  const shape = parseShape(LEVEL.shape);
+  const layout = layoutGame(app.screen, readSafeInsets(), { ...LAYOUT, cols: shape.cols, rows: shape.rows });
+  const shore = traceShore(shape, layout.board, { margin: POND.margin, cornerRadius: POND.cornerRadius });
   return {
+    spec: { ...shape, kinds: BOARD.kinds },
     layout,
     shore,
     ui: new UiLayer(host, layout.stage),
