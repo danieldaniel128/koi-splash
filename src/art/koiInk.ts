@@ -56,11 +56,11 @@ export function bakeInkedKoi(
 
   const canvas = blank(fins.width);
   const ctx = context(canvas);
-  ctx.globalAlpha = ink.finOutlineAlpha;
-  outline(ctx, fins, ink.outline, width);
+  ctx.globalAlpha = ink.finOutlineAlpha; // one soft shape: copy by copy, the overlaps would build up to solid ink
+  ctx.drawImage(grown(fins, ink.outline, width), 0, 0);
   ctx.globalAlpha = 1;
   ctx.drawImage(fins, 0, 0);
-  outline(ctx, body, ink.outline, width);
+  ctx.drawImage(grown(body, ink.outline, width), 0, 0);
   ctx.drawImage(body, 0, 0);
   return canvas;
 }
@@ -103,18 +103,17 @@ export function bakeKoiContact(
   return canvas;
 }
 
-/** Draws `source`'s silhouette in `color`, grown by `width` px all round, under whatever is drawn next. */
-function outline(
-  ctx: CanvasRenderingContext2D,
-  source: HTMLCanvasElement,
-  color: string,
-  width: number,
-): void {
+/** `source`'s silhouette in `color`, grown by `width` px all round: copies of it moved out every way, on one canvas. */
+function grown(source: HTMLCanvasElement, color: string, width: number): HTMLCanvasElement {
   const shape = solid(source, color);
+  const canvas = blank(source.width);
+  const ctx = context(canvas);
   for (let i = 0; i < OUTLINE_STEPS; i++) {
     const angle = (i / OUTLINE_STEPS) * Math.PI * 2;
     ctx.drawImage(shape, Math.cos(angle) * width, Math.sin(angle) * width);
   }
+  ctx.drawImage(shape, 0, 0);
+  return canvas;
 }
 
 /** `source`'s silhouette in `color`, grown by `grow` px all round and blurred by `blur` px. */
@@ -124,11 +123,8 @@ function softSilhouette(
   grow: number,
   blur: number,
 ): HTMLCanvasElement {
-  const grown = blank(source.width);
-  outline(context(grown), source, color, grow);
-  context(grown).drawImage(solid(source, color), 0, 0);
   const canvas = blank(source.width);
-  drawBlurred(context(canvas), grown, [0, 0], blur, color);
+  drawBlurred(context(canvas), grown(source, color, grow), [0, 0], blur, color);
   return canvas;
 }
 
