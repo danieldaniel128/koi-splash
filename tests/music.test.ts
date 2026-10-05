@@ -123,6 +123,26 @@ describe('GardenMusic', () => {
     expect(voice.tones).toBe(first);
   });
 
+  it('plays the win cadence only while it can be heard, and not once the game has moved on', () => {
+    // the first bar after these moods (a win first, unheard, when `silentWin`)
+    const bar = (silentWin: boolean, moods: readonly Mood[]): number[] => {
+      const voice = clockedVoice();
+      const music = new GardenMusic(voice, () => 0.5);
+      if (silentWin) {
+        voice.time = null;
+        music.setMood('won');
+        music.update();
+      }
+      voice.time = 10;
+      for (const mood of moods) music.setMood(mood);
+      music.update();
+      return voice.delays;
+    };
+    expect(bar(true, ['won'])).toEqual(bar(false, ['lost'])); // won while silent: the chords just rest
+    expect(bar(false, ['won', 'calm'])).toEqual(bar(false, ['calm'])); // played again before the bar line
+    expect(bar(false, ['won'])).not.toEqual(bar(false, ['lost'])); // heard: the cadence plays
+  });
+
   it('never schedules a bar in the past, when frames stalled or the clock ran on while it was silent', () => {
     for (const pause of [false, true]) {
       const voice = clockedVoice();
