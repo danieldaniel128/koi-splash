@@ -54,6 +54,12 @@ export class KoiWaterline {
     this.marks.set(koi, { ...marks, contactPoses: shape.contacts });
   }
 
+  /** A koi out of the water (leaping) casts no waterline until it is back in. */
+  setAirborne(koi: Koi, airborne: boolean): void {
+    const marks = this.marks.get(koi);
+    if (marks) marks.contact.visible = !airborne;
+  }
+
   remove(koi: Koi): void {
     const marks = this.marks.get(koi);
     if (!marks) return;

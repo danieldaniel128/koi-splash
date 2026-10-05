@@ -135,6 +135,21 @@ export class BoardView extends Container implements BoardDisplay {
     this.koiLayer.addChild(koi);
   }
 
+  /**
+   * A koi leaps out of the water into `air`, a layer over the pads and the surface in the board's own space: out of
+   * the pond's filter (no clipping, no bending through the waves) and casting no waterline, until it lands.
+   */
+  leap(koi: Koi, air: Container): void {
+    air.addChild(koi);
+    this.waterline.setAirborne(koi, true);
+  }
+
+  /** A leaping koi drops back into the water, over the other koi. */
+  splashDown(koi: Koi): void {
+    this.koiLayer.addChild(koi);
+    this.waterline.setAirborne(koi, false);
+  }
+
   /** Centre of a cell, in this container's space. */
   cellToPoint(cell: Cell): Point {
     const half = this.layout.cellSize / 2;

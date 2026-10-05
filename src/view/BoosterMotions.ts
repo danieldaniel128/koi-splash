@@ -79,9 +79,10 @@ export class BoosterMotions extends Container {
     const headingA = a.heading;
     const headingB = b.heading;
     this.events.emit('koiLeapt', { duration });
-    // the first koi leaps higher: it's drawn over the second where they cross
-    this.view.bringToFront(b);
-    this.view.bringToFront(a);
+    // out of the water, over the pads and the surface while they're in the air; the first koi leaps higher, so it's
+    // drawn over the second where they cross
+    this.view.leap(b, this);
+    this.view.leap(a, this);
     gsap.delayedCall(duration * 0.47, () => {
       this.hitStop.hold(look.hitStop);
     });
@@ -180,6 +181,7 @@ export class BoosterMotions extends Container {
     });
     koi.position.copyFrom(to);
     koi.scale.set(rest);
+    this.view.splashDown(koi);
     this.splash(move.to, WATER.bumpPush * 1.5);
     this.events.emit('koiLanded', { low: leap.bow < 0 }); // the second koi bows the other way and plops lower
   }
