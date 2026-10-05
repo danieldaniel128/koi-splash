@@ -14,6 +14,9 @@ export interface BoardSpec {
   readonly holes?: readonly Cell[];
 }
 
+/** A row or a column of the board: the way a striped koi sweeps, or a run lies. */
+export type Axis = 'row' | 'col';
+
 /** Which koi colour a piece is (an index into the koi set). */
 export type Kind = number;
 
@@ -25,9 +28,7 @@ export type Kind = number;
  * (SPECIAL_MENU) are listed by hand.
  */
 export type Special =
-  | { readonly type: 'line'; readonly along: 'row' | 'col' }
-  | { readonly type: 'whirl' }
-  | { readonly type: 'rainbow' };
+  { readonly type: 'line'; readonly along: Axis } | { readonly type: 'whirl' } | { readonly type: 'rainbow' };
 
 /** Which special a koi is: striped (line), whirlpool or rainbow. */
 export type SpecialType = Special['type'];
@@ -70,7 +71,7 @@ export type PadEvent =
 export interface Match {
   readonly kind: Kind;
   readonly cells: readonly Cell[];
-  readonly direction: 'row' | 'col';
+  readonly direction: Axis;
 }
 
 /** A piece that was removed: matched, or caught in a special's blast (`blast` indexes the round's `fired`). */
@@ -131,5 +132,23 @@ export type SwapResult =
 
 export const sameCell = (a: Cell, b: Cell): boolean => a.col === b.col && a.row === b.row;
 
-export const isAdjacent = (a: Cell, b: Cell): boolean =>
-  Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1;
+/** A cell as a string, for keeping cells in a Set or a Map. */
+export const cellKey = (cell: Cell): string => `${cell.col},${cell.row}`;
+
+/** How far apart two cells are, squared (straight line): for sorting nearest first. */
+export const distanceSq = (a: Cell, b: Cell): number => (a.col - b.col) ** 2 + (a.row - b.row) ** 2;
+
+/** How many steps apart two cells are, moving only up, down, left or right. */
+export const stepsApart = (a: Cell, b: Cell): number => Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
+
+/** The colour a piece matches as: null for a rainbow koi, which has no colour of its own. */
+export const colourOf = (piece: Piece): Kind | null =>
+  piece.special?.type === 'rainbow' ? null : piece.kind;
+
+/** The line a striped koi sweeps. Only a striped koi has one, so any other special throws. */
+export function alongOf(special: Special): Axis {
+  if (special.type !== 'line') throw new Error(`a ${special.type} special sweeps no line`);
+  return special.along;
+}
+
+export const isAdjacent = (a: Cell, b: Cell): boolean => stepsApart(a, b) === 1;

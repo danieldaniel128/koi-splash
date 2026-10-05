@@ -1,4 +1,5 @@
-import type { Cell, Kind, Piece } from './types';
+import type { Cell, Kind, Piece, Axis } from './types';
+import { colourOf } from './types';
 
 /**
  * The grid of pieces. Only storage and bounds; the game rules live in rules.ts. A cell can be blocked (a lily pad
@@ -63,7 +64,20 @@ export class Board {
   /** The colour a piece matches as: null for an empty cell, and for a rainbow koi (it matches nothing). */
   kindAt(cell: Cell): Kind | null {
     const piece = this.get(cell);
-    return piece && piece.special?.type !== 'rainbow' ? piece.kind : null;
+    return piece ? colourOf(piece) : null;
+  }
+
+  /** The cells whose koi match as this colour. O(N). */
+  cellsOf(kind: Kind): Cell[] {
+    return [...this.cells()].filter((cell) => this.kindAt(cell) === kind);
+  }
+
+  /** Every cell of one row or column (holes included), in order. */
+  line(along: Axis, index: number): Cell[] {
+    const length = along === 'row' ? this.cols : this.rows;
+    return Array.from({ length }, (_, i) =>
+      along === 'row' ? { col: i, row: index } : { col: index, row: i },
+    );
   }
 
   /** Trades the pieces of two cells. Both are checked first, so a swap that can't happen changes nothing. */

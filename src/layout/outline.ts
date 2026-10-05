@@ -1,5 +1,6 @@
 import type { BoardShape } from '../model/shape';
 import type { Rect } from './gameLayout';
+import { cellKey } from '../model/types';
 
 type Vec = readonly [number, number];
 
@@ -93,9 +94,9 @@ interface GridCorner {
  * corners. Where two loops touch at a point, each keeps turning right, so they stay apart.
  */
 function boundaryLoops(shape: BoardShape): GridCorner[][] {
-  const holes = new Set(shape.holes.map(({ col, row }) => `${col},${row}`));
+  const holes = new Set(shape.holes.map(cellKey));
   const water = (col: number, row: number): boolean =>
-    col >= 0 && col < shape.cols && row >= 0 && row < shape.rows && !holes.has(`${col},${row}`);
+    col >= 0 && col < shape.cols && row >= 0 && row < shape.rows && !holes.has(cellKey({ col, row }));
   const edges = new Map<string, Vec[]>(); // from a grid point to the directions leaving it
   const add = (x: number, y: number, dir: Vec): void => {
     const list = edges.get(`${x},${y}`) ?? [];

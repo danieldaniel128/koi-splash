@@ -1,5 +1,5 @@
 import type { Board } from './Board';
-import { sameCell } from './types';
+import { distanceSq, sameCell, stepsApart } from './types';
 import type { Cell, Kind, Piece, Special } from './types';
 
 /**
@@ -35,7 +35,7 @@ export interface BoosterChange {
 const TAKES: Readonly<Record<BoosterType, (board: Board, piece: Piece, at: Cell) => boolean>> = {
   swap: () => true,
   special: (_board, piece) => !piece.special,
-  feed: (board, piece, at) => board.kindAt(at) !== null && countKind(board, piece.kind) >= 3,
+  feed: (board, piece, at) => board.kindAt(at) !== null && board.cellsOf(piece.kind).length >= 3,
 };
 
 /** Whether a booster can be used on this cell: a koi, and for the special booster a plain one. O(1), feed O(N). */
@@ -89,7 +89,7 @@ function makeSpecial(board: Board, at: Cell, special: Special): BoosterChange | 
 function feed(board: Board, at: Cell, lines: number): BoosterChange | null {
   const kind = board.kindAt(at);
   if (kind === null) return null;
-  const school = cellsOf(board, kind);
+  const school = board.cellsOf(kind);
   const count = Math.min(lines, Math.floor(school.length / 3));
   if (count === 0) return null;
   const targets = pickLines(board, at, count).flat();
@@ -111,10 +111,7 @@ function pickLines(board: Board, food: Cell, count: number): Cell[][] {
       if (line.every((c) => board.inBounds(c) && !board.isBlocked(c))) candidates.push(line);
     }
   }
-  const distance = (line: Cell[]): number => {
-    const middle = line[1] ?? food;
-    return (middle.col - food.col) ** 2 + (middle.row - food.row) ** 2;
-  };
+  const distance = (line: Cell[]): number => distanceSq(line[1] ?? food, food);
   candidates.sort((a, b) => distance(a) - distance(b));
   const chosen: Cell[][] = [];
   for (const line of candidates) {
@@ -151,7 +148,7 @@ function assign(board: Board, targets: readonly Cell[], school: readonly Cell[])
 
 /** Two lines with no cell of one touching a cell of the other (a cell apart), so each school stays its own. */
 function apart(a: readonly Cell[], b: readonly Cell[]): boolean {
-  return a.every((c) => b.every((o) => Math.abs(o.col - c.col) + Math.abs(o.row - c.row) > 1));
+  return a.every((c) => b.every((o) => stepsApart(o, c) > 1));
 }
 
 /** Removes and returns the cell in `cells` nearest to `to`. */
@@ -159,21 +156,13 @@ function takeNearest(cells: Cell[], to: Cell): Cell | null {
   let best = -1;
   let bestDistance = Infinity;
   cells.forEach((cell, i) => {
-    const d = (cell.col - to.col) ** 2 + (cell.row - to.row) ** 2;
+    const d = distanceSq(cell, to);
     if (d < bestDistance) {
       best = i;
       bestDistance = d;
     }
   });
   return best < 0 ? null : (cells.splice(best, 1)[0] ?? null);
-}
-
-function cellsOf(board: Board, kind: Kind): Cell[] {
-  return [...board.cells()].filter((cell) => board.kindAt(cell) === kind);
-}
-
-function countKind(board: Board, kind: Kind): number {
-  return cellsOf(board, kind).length;
 }
 
 /** One booster on the bar: which, its name, how many a level gives, and what the pill says while it's armed. */

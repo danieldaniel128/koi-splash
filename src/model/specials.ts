@@ -1,7 +1,7 @@
 import type { Board } from './Board';
 import { groupMatches } from './groups';
 import type { MatchGroup } from './groups';
-import { sameCell } from './types';
+import { alongOf, cellKey, colourOf, distanceSq, sameCell } from './types';
 import type { Cell, Cleared, Created, Fired, Kind, Match, Piece, Special } from './types';
 
 /**
@@ -83,9 +83,9 @@ export function resolveRound(
     const made = makeSpecial(board, group, swap);
     if (made) {
       outcome.created.push(made);
-      kept.add(key(made.at));
+      kept.add(cellKey(made.at));
     }
-    for (const at of group.cells) if (!kept.has(key(at))) clearCell(board, at, outcome, queue, null);
+    for (const at of group.cells) if (!kept.has(cellKey(at))) clearCell(board, at, outcome, queue, null);
   }
   for (let next = queue.shift(); next; next = queue.shift()) fire(board, next, outcome, queue, kept);
   return outcome;
@@ -133,7 +133,7 @@ function fire(
   const blast = outcome.fired.length;
   outcome.fired.push({ piece, at: trigger.at, reach, ...(target === undefined ? {} : { target }) });
   reach.forEach((at, order) => {
-    if (kept.has(key(at))) return;
+    if (kept.has(cellKey(at))) return;
     if (board.isBlocked(at) && !board.isHole(at)) outcome.struckPads.push(at);
     else clearCell(board, at, outcome, queue, { blast, order });
   });
@@ -153,6 +153,9 @@ function firingPiece(board: Board, outcome: RoundOutcome, at: Cell): Piece | nul
   return piece && !outcome.fired.some((f) => f.piece.id === piece.id) ? piece : null;
 }
 
+/** A cell and the eight round it, as column and row steps. */
+const AROUND = [-1, 0, 1].flatMap((dr) => [-1, 0, 1].map((dc) => [dc, dr] as const));
+
 /** The cells a special reaches from its cell, nearest first (`target`: the colour a rainbow koi takes). */
 type Reach = (board: Board, at: Cell, special: Special, target?: Kind | 'all') => Cell[];
 
@@ -160,11 +163,8 @@ type Reach = (board: Board, at: Cell, special: Special, target?: Kind | 'all') =
 const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   // a striped koi sweeps its whole row or column, outward from itself
   line: (board, at, special) => {
-    const along = special.type === 'line' ? special.along : 'row';
-    const length = along === 'row' ? board.cols : board.rows;
-    const cells = Array.from({ length }, (_, i) =>
-      along === 'row' ? { col: i, row: at.row } : { col: at.col, row: i },
-    );
+    const along = alongOf(special);
+    const cells = board.line(along, along === 'row' ? at.row : at.col);
     return byDistance(
       cells.filter((cell) => !sameCell(cell, at) && !board.isHole(cell)),
       at,
@@ -172,9 +172,7 @@ const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   },
   // a whirlpool drains the eight cells round it
   whirl: (board, at) => {
-    const cells: Cell[] = [];
-    for (let dr = -1; dr <= 1; dr++)
-      for (let dc = -1; dc <= 1; dc++) cells.push({ col: at.col + dc, row: at.row + dr });
+    const cells = AROUND.map(([dc, dr]) => ({ col: at.col + dc, row: at.row + dr }));
     return byDistance(
       cells.filter((cell) => board.inBounds(cell) && !sameCell(cell, at) && !board.isHole(cell)),
       at,
@@ -184,11 +182,7 @@ const SPECIAL_REACH: Readonly<Record<Special['type'], Reach>> = {
   rainbow: (board, at, _special, target) => {
     const cells = [...board.cells()].filter((cell) => {
       const piece = board.get(cell);
-      return (
-        !!piece &&
-        !sameCell(cell, at) &&
-        (target === 'all' || (piece.special?.type !== 'rainbow' && piece.kind === target))
-      );
+      return !!piece && !sameCell(cell, at) && (target === 'all' || colourOf(piece) === target);
     });
     return byDistance(cells, at);
   },
@@ -205,10 +199,5 @@ function commonKind(board: Board): Kind {
 }
 
 function byDistance(cells: Cell[], from: Cell): Cell[] {
-  const distance = (cell: Cell): number => (cell.col - from.col) ** 2 + (cell.row - from.row) ** 2;
-  return cells.sort((a, b) => distance(a) - distance(b));
-}
-
-function key(cell: Cell): string {
-  return `${cell.col},${cell.row}`;
+  return cells.sort((a, b) => distanceSq(a, from) - distanceSq(b, from));
 }

@@ -1,5 +1,6 @@
 import type { Random } from '../core/Random';
 import type { BoardSpec, Cell, Pad, PadEvent } from './types';
+import { cellKey } from './types';
 
 export interface PadSpec {
   /** Lotus buds on the board (the lotus goal counts their blooms). */
@@ -64,11 +65,11 @@ export class PadField {
    * Bloomed buds and drifted pads leave the field (the caller frees their cells). O(P * 4) lookups, P = pads.
    */
   hit(cleared: readonly Cell[]): PadEvent[] {
-    const hitCells = new Set(cleared.map(key));
+    const hitCells = new Set(cleared.map(cellKey));
     const events: PadEvent[] = [];
     for (const pad of this.field.values()) {
       const touched = AROUND.some((d) =>
-        hitCells.has(key({ col: pad.at.col + d.col, row: pad.at.row + d.row })),
+        hitCells.has(cellKey({ col: pad.at.col + d.col, row: pad.at.row + d.row })),
       );
       if (touched) events.push(this.applyHit(pad));
     }
@@ -86,10 +87,6 @@ export class PadField {
   }
 }
 
-function key(cell: Cell): string {
-  return `${cell.col},${cell.row}`;
-}
-
 /** Picks cells in order, skipping any closer than `spacing` (in either direction) to one already picked. */
 function spacedCells(cells: readonly Cell[], spacing: number, count: number): Cell[] {
   const picked: Cell[] = [];
@@ -105,10 +102,11 @@ function spacedCells(cells: readonly Cell[], spacing: number, count: number): Ce
 
 /** Every cell of the board in random order (Fisher-Yates). */
 function shuffledCells(board: BoardSpec, rng: Random): Cell[] {
-  const holes = new Set((board.holes ?? []).map(key));
+  const holes = new Set((board.holes ?? []).map(cellKey));
   const cells: Cell[] = [];
   for (let row = 0; row < board.rows; row++) {
-    for (let col = 0; col < board.cols; col++) if (!holes.has(key({ col, row }))) cells.push({ col, row });
+    for (let col = 0; col < board.cols; col++)
+      if (!holes.has(cellKey({ col, row }))) cells.push({ col, row });
   }
   for (let i = cells.length - 1; i > 0; i--) {
     const j = rng.int(0, i);
