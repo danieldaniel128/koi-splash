@@ -14,10 +14,11 @@ import type { Outline } from '../layout/outline';
 import { ringAlongShore } from '../layout/shore';
 import { THEME } from '../theme/theme';
 import { createBackdrop } from '../view/Backdrop';
-import { Fireflies } from '../view/Fireflies';
+import { Fireflies, fireflyGlow } from '../view/Fireflies';
 import { ShoreRing } from '../view/ShoreRing';
 import { PondProps } from '../view/water/PondProps';
 import { PondWater } from '../view/water/PondWater';
+import type { ArtSet } from './art';
 import type { GameScreen } from './screen';
 
 /** The bank, and the water below and above the board, inside the shore (its distance field, see bakeShoreField). */
@@ -60,21 +61,23 @@ export interface Scenery {
   readonly fireflies: Fireflies;
 }
 
-/** The pond's border and stones, painted once, and fireflies over the bank. */
-export function createScenery({ layout, shore, resolution }: GameScreen): Scenery {
-  const props = new PondProps(placeProps(layout.pond), resolution.art, propLook());
+/** The pond's border (painted once for its shore) and stones, and fireflies over the bank. */
+export function createScenery({ layout, shore, resolution }: GameScreen, art: ArtSet): Scenery {
+  const props = new PondProps(placeProps(layout.pond), { ...art, look: propLook() });
   // the ring is baked at exactly the screen's pixels per stage px (the layout is made for this screen)
   const border = createBorder(shore, resolution.screen);
   const screen = { x: 0, y: 0, width: layout.stage.width, height: layout.stage.height };
-  const fireflies = new Fireflies({
-    spots: [
-      ...POND.fireflies.top.map((spot) => placeOn(screen, spot)),
-      ...POND.fireflies.belowPond.map((spot) => placeOn(layout.pond, spot)),
-    ],
-    roam: POND.fireflyRoam,
-    size: POND.fireflySize,
-    color: THEME.scene.firefly,
-  });
+  const fireflies = new Fireflies(
+    {
+      spots: [
+        ...POND.fireflies.top.map((spot) => placeOn(screen, spot)),
+        ...POND.fireflies.belowPond.map((spot) => placeOn(layout.pond, spot)),
+      ],
+      roam: POND.fireflyRoam,
+      size: POND.fireflySize,
+    },
+    fireflyGlow(art.book, THEME.scene.firefly),
+  );
   const layer = new Container();
   layer.addChild(props, border, fireflies);
   return { layer, fireflies };

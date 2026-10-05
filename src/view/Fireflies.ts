@@ -1,14 +1,15 @@
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Sprite } from 'pixi.js';
+import type { Texture } from 'pixi.js';
 import { paintGlow } from '../art/glow';
+import type { ArtBook } from './ArtBook';
 
 /** How a firefly wanders and glows (seconds, px). */
 export interface FireflyLook {
   /** Where each one hovers, stage px. */
   readonly spots: readonly (readonly [number, number])[];
-  /** How far it wanders from its spot, and the size and colour of its glow. */
+  /** How far it wanders from its spot, and the size of its glow. */
   readonly roam: number;
   readonly size: number;
-  readonly color: string;
 }
 
 interface Firefly {
@@ -27,9 +28,8 @@ export class Fireflies extends Container {
   private readonly roam: number;
   private time = 0;
 
-  constructor(look: FireflyLook, random: () => number = Math.random) {
+  constructor(look: FireflyLook, glow: Texture, random: () => number = Math.random) {
     super();
-    const glow = Texture.from(paintGlow(look.color, 64));
     this.flies = look.spots.map((home) => {
       const sprite = new Sprite(glow);
       sprite.anchor.set(0.5);
@@ -52,4 +52,9 @@ export class Fireflies extends Container {
       sprite.alpha = 0.15 + 0.85 * Math.pow(Math.max(0, Math.sin(t * blink + phase)), 2);
     }
   }
+}
+
+/** A firefly's glow in its colour, from the art book (sized by its sprite). */
+export function fireflyGlow(book: ArtBook, color: string): Texture {
+  return book.texture('fx/firefly', () => paintGlow(color, 64));
 }

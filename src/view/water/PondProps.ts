@@ -1,7 +1,8 @@
-import { Container, Sprite, Texture } from 'pixi.js';
+import { Container, Sprite } from 'pixi.js';
 import { bakeProp } from '../../art/pondProps';
 import type { PondProp } from '../../config/pond';
 import type { PropLook } from '../../art/pondProps';
+import type { ArtScale } from '../ArtBook';
 
 /**
  * Most stones and pads the water shaders take: the pond's own props first, then the lily pads on the board (see
@@ -9,13 +10,16 @@ import type { PropLook } from '../../art/pondProps';
  */
 export const MAX_PROPS = 16;
 
-/** The stones around the pond, painted once at startup (see art/pondProps) and drawn over the water. */
+/**
+ * The stones around the pond, from the art book (see art/pondProps) and drawn over the water. They're sized in stage
+ * px by the config, so only the art's resolution matters, not its cell.
+ */
 export class PondProps extends Container {
-  /** O(props) canvas paints and uploads, once. */
-  constructor(props: readonly PondProp[], resolution: number, look: PropLook) {
+  /** When painted, O(props) canvas paints and uploads, once. */
+  constructor(props: readonly PondProp[], { book, resolution, look }: ArtScale & { look: PropLook }) {
     super();
-    for (const prop of props) {
-      const texture = Texture.from(bakeProp(prop, resolution, look));
+    for (const [i, prop] of props.entries()) {
+      const texture = book.texture(`prop/${i}`, () => bakeProp(prop, resolution, look));
       const sprite = new Sprite(texture);
       sprite.anchor.set(0.5);
       sprite.scale.set(1 / resolution);
