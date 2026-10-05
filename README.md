@@ -32,26 +32,34 @@ Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` 
 
 ## AI usage
 
-I used Claude throughout. AI wrote the code:
+I built Koi Splash with Claude as my main tool, and I'm upfront about it: most of the code was written by AI, under
+my direction.
 
-- the project setup and tooling (Vite, TypeScript, ESLint, Prettier, the CI and deploy workflows)
-- the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
-- the model and its tests
-- the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
-- the water and the effects (simulation, shaders, dives and swims, wakes, shadows, ripples, waterline foam)
+**What AI did:** wrote most of the code (the model, the view and effects, the water shaders, the sound and music
+synthesis, the UI, the tests and the tooling), painted the art in code, ran the browser regression tests, and reviewed
+the code against my standards.
 
-My part:
+**What I did:**
 
-- I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
-  standards into ESLint config.
-- I designed the state machine: guarded transitions in a table, with enter/exit hooks.
-- I planned the lotus goal: the rules, a goal interface so a level can swap goals, and every number in config (hits
-  to bloom, lotuses, moves).
-- I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
-  for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
-- I reviewed the code and play-tested it on desktop and on my phone.
+- **Architecture and standards.** I set the architecture and held the code to it.
+  - I chose the patterns from the start, and where each one belongs: MVP with a passive view (the whole cascade comes
+    back as data), a composition root with constructor injection and no singletons, ports between the presenter and
+    the view, state machines for the turn, the boosters and the screens, an event bus, Strategy maps keyed by type (so
+    a new special, booster or goal is a few entries), Composite goals, object pools for effects and a boot pipeline.
+  - I reviewed with a human eye, reading the code as the teammate who would change it next. I sent back anything
+    over-engineered, unclear or a pattern for its own sake, and pushed for one name per idea, every tuning number in
+    config, every color from the theme, short self-explanatory functions, and async code that can't lock the game.
+  - The standards are enforced, not just written: lint rules decide which layer can import which, CI fails on any
+    warning or on functions that grow too long or complex, and over 260 tests guard the rules.
+- **Game design.** The rules, the goals, the boosters and specials (from my own prototype), the level and the feel
+  targets.
+- **Art direction.** I picked the ink-and-moonlight look, the stone pond, the garden and the HUD from references, and
+  rejected what didn't fit.
+- **Testing and judgement.** I play-tested every change on desktop and on my phone, sent things back until they felt
+  right, and decided what shipped.
 
-AI also built a throwaway prototype before this repo, and helped me write this README.
+Working this way let me try many ideas fast and spend my time on direction, feel and polish. There are no third-party
+images or sounds: everything you see and hear is generated in code.
 
 ## Next steps
 
