@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { Color, Point } from 'pixi.js';
+import { Point } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
@@ -10,6 +10,8 @@ import type { GameEventBus } from '../game/events';
 import type { TurnAnimator } from '../game/GameScene';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
+import { rise, sink } from './motion/koiMotions';
+import { play, wait } from './motion/play';
 import { planRound } from './specialTiming';
 import type { ClearPlan } from './specialTiming';
 import { splitPoints } from './splitPoints';
@@ -38,9 +40,8 @@ export interface MatchEffects {
   points(at: PointData, amount: number): void;
 }
 
-const WHITE = 0xffffff;
-/** Diving koi take on this pale water-blue as they sink, keeping their own colour (a dark tint turns them muddy). */
-const UNDERWATER = new Color(TIMING.diveTint).toNumber();
+/** How a koi leaves the board around the specials, by the way its round's plan says it goes; null when it dives. */
+type ExitMotion = (koi: Koi, piece: Piece, plan: ClearPlan) => Promise<void> | null;
 
 /**
  * Plays the model's results on the board view, koi-pond style: the dragged koi rises and passes over the other,
@@ -56,6 +57,8 @@ export class BoardAnimator implements TurnAnimator {
   private readonly specials: AnimatorDeps['specials'];
   private readonly boosters: AnimatorDeps['boosters'];
   private readonly events: GameEventBus;
+  /** How a koi leaves, by the way its plan says it goes. */
+  private readonly exits: Record<ClearPlan['how'], ExitMotion>;
 
   constructor(deps: AnimatorDeps) {
     this.view = deps.view;
@@ -65,6 +68,7 @@ export class BoardAnimator implements TurnAnimator {
     this.specials = deps.specials;
     this.boosters = deps.boosters;
     this.events = deps.events;
+    this.exits = this.exitMotions();
   }
 
   /** A booster changed the board: the view plays it (a leap, a feeding, a koi powering up) before it settles. */
@@ -129,7 +133,7 @@ export class BoardAnimator implements TurnAnimator {
     const dy = Math.sign(padCell.row - koi.at.row) * reach;
     const { restScale } = sprite;
     this.view.bringToFront(sprite);
-    await gsap
+    const bump = gsap
       .timeline()
       .to(sprite, { x: home.x + dx, y: home.y + dy, duration: TIMING.bumpIn, ease: 'power2.in' })
       .call(() => {
@@ -143,6 +147,7 @@ export class BoardAnimator implements TurnAnimator {
         repeat: 1,
       })
       .to(sprite, { x: home.x, y: home.y, duration: TIMING.bumpOut, ease: 'back.out(2)' }, '<');
+    await play(bump);
   }
 
   /**
@@ -171,7 +176,7 @@ export class BoardAnimator implements TurnAnimator {
   private async birth(made: Created): Promise<void> {
     const merge = made.from.length > 0 ? TIMING.specials.merge : 0;
     this.specials.fx.birth(made.at, made.piece.kind, merge);
-    await gsap.to({}, { duration: merge });
+    await wait(merge);
     this.view.makeSpecial(made.piece);
     if (made.piece.special) this.events.emit('specialBorn', { type: made.piece.special.type });
   }
@@ -189,21 +194,27 @@ export class BoardAnimator implements TurnAnimator {
 
   /** The way a koi leaves around the specials (see SpecialMotions), or null when it simply dives. */
   private specialExit(piece: Piece, plan: ClearPlan): Promise<void> | null {
-    const koi = this.view.spriteOf(piece.id);
+    return this.exits[plan.how](this.view.spriteOf(piece.id), piece, plan);
+  }
+
+  private exitMotions(): Record<ClearPlan['how'], ExitMotion> {
     const { motions } = this.specials;
-    const toward = plan.toward ? this.view.cellToPoint(plan.toward) : null;
-    switch (plan.how) {
-      case 'merge':
-        return toward ? motions.merge(koi, toward, plan.delay, plan.lasts) : null;
-      case 'drain':
-        return toward ? motions.drain(koi, toward, plan.delay, plan.lasts) : null;
-      case 'zap':
-        return motions.zap(koi, plan.delay);
-      case 'fire':
-        return piece.special ? motions.exit(koi, piece.special, plan.delay, plan.lasts) : null;
-      case 'dive':
-        return null;
-    }
+    const toward = (plan: ClearPlan): PointData | null =>
+      plan.toward ? this.view.cellToPoint(plan.toward) : null;
+    return {
+      dive: () => null,
+      merge: (koi, _piece, plan) => {
+        const into = toward(plan);
+        return into ? motions.merge(koi, into, plan.delay, plan.lasts) : null;
+      },
+      drain: (koi, _piece, plan) => {
+        const into = toward(plan);
+        return into ? motions.drain(koi, into, plan.delay, plan.lasts) : null;
+      },
+      zap: (koi, _piece, plan) => motions.zap(koi, plan.delay),
+      fire: (koi, piece, plan) =>
+        piece.special ? motions.exit(koi, piece.special, plan.delay, plan.lasts) : null,
+    };
   }
 
   /** The round's points pop up over its matches and over each special that fired (see splitPoints). */
@@ -228,14 +239,16 @@ export class BoardAnimator implements TurnAnimator {
   private async slide(koi: Koi, to: Cell, peak: number): Promise<void> {
     const target = this.view.cellToPoint(to);
     const size = koi.restScale * peak;
-    await gsap
-      .timeline()
-      .to(koi, { x: target.x, y: target.y, duration: TIMING.swap, ease: 'power2.inOut' }, 0)
-      .to(
-        koi.scale,
-        { x: size, y: size, duration: TIMING.swap / 2, ease: 'sine.out', yoyo: true, repeat: 1 },
-        0,
-      );
+    await play(
+      gsap
+        .timeline()
+        .to(koi, { x: target.x, y: target.y, duration: TIMING.swap, ease: 'power2.inOut' }, 0)
+        .to(
+          koi.scale,
+          { x: size, y: size, duration: TIMING.swap / 2, ease: 'sine.out', yoyo: true, repeat: 1 },
+          0,
+        ),
+    );
   }
 
   private async lean(placed: PlacedPiece, toward: Cell, peak: number): Promise<void> {
@@ -243,7 +256,7 @@ export class BoardAnimator implements TurnAnimator {
     const reach = TIMING.invalidReach * this.cellSize;
     const size = koi.restScale * peak;
     const half = TIMING.invalidSwap / 2;
-    await gsap
+    const lean = gsap
       .timeline()
       .to(
         koi,
@@ -258,6 +271,7 @@ export class BoardAnimator implements TurnAnimator {
         0,
       )
       .to(koi.scale, { x: size, y: size, duration: half, ease: 'sine.out', yoyo: true, repeat: 1 }, 0);
+    await play(lean);
   }
 
   /**
@@ -271,34 +285,13 @@ export class BoardAnimator implements TurnAnimator {
       this.events.emit('dive');
     });
     const ahead = TIMING.diveGlide * this.cellSize;
-    const deep = koi.restScale * TIMING.diveScale;
-    const sink = { depth: 0 };
-    await gsap
-      .timeline({ delay })
-      .to(
-        koi,
-        {
-          x: koi.x + Math.sin(koi.rotation) * ahead,
-          y: koi.y - Math.cos(koi.rotation) * ahead,
-          duration: TIMING.dive,
-          ease: 'sine.in',
-        },
-        0,
-      )
-      .to(koi.scale, { x: deep, y: deep, duration: TIMING.dive, ease: 'power1.in' }, 0)
-      .to(
-        sink,
-        {
-          depth: 1,
-          duration: TIMING.dive,
-          ease: 'power1.in',
-          onUpdate: () => {
-            koi.alpha = 1 - sink.depth * sink.depth;
-            koi.tint = mixColor(WHITE, UNDERWATER, sink.depth);
-          },
-        },
-        0,
-      );
+    const glide = {
+      x: koi.x + Math.sin(koi.rotation) * ahead,
+      y: koi.y - Math.cos(koi.rotation) * ahead,
+      duration: TIMING.dive,
+      ease: 'sine.in',
+    };
+    await play(gsap.timeline({ delay }).to(koi, glide, 0).add(sink(koi, TIMING.dive), 0));
     this.view.removePiece(id);
   }
 
@@ -311,13 +304,15 @@ export class BoardAnimator implements TurnAnimator {
     gsap.delayedCall(delay, () => {
       koi.turnToward(Math.atan2(target.x - koi.x, koi.y - target.y), 1);
     });
-    await gsap.to(koi, {
-      x: target.x,
-      y: target.y,
-      duration: TIMING.swimBase + TIMING.swimPerRow * rows,
-      delay,
-      ease: 'sine.inOut',
-    });
+    await play(
+      gsap.to(koi, {
+        x: target.x,
+        y: target.y,
+        duration: TIMING.swimBase + TIMING.swimPerRow * rows,
+        delay,
+        ease: 'sine.inOut',
+      }),
+    );
     this.events.emit('land');
   }
 
@@ -325,25 +320,15 @@ export class BoardAnimator implements TurnAnimator {
   private async rise(spawn: Spawn, delay: number): Promise<void> {
     const koi = this.view.addPiece(spawn.piece, spawn.to);
     const point = this.view.cellToPoint(spawn.to);
-    const rest = koi.restScale;
-    const depth = { amount: 1 };
-    const show = (): void => {
-      const size = rest * (1 - (1 - TIMING.diveScale) * depth.amount);
-      koi.scale.set(size);
-      koi.alpha = 1 - depth.amount * depth.amount;
-      koi.tint = mixColor(WHITE, UNDERWATER, depth.amount);
+    const surfaces = (): void => {
+      this.water.push(this.onStage(point), WATER.surfacePush, WATER.diveRadius);
     };
-    show();
-    await gsap
-      .timeline({ delay: delay + TIMING.swimBase + spawn.order * TIMING.riseStagger })
-      .to(depth, { amount: 0, duration: TIMING.rise, ease: 'power2.out', onUpdate: show })
-      .call(
-        () => {
-          this.water.push(this.onStage(point), WATER.surfacePush, WATER.diveRadius);
-        },
-        [],
-        TIMING.rise * TIMING.riseSurfaceAt,
-      );
+    await play(
+      gsap
+        .timeline({ delay: delay + TIMING.swimBase + spawn.order * TIMING.riseStagger })
+        .add(rise(koi, TIMING.rise))
+        .call(surfaces, [], TIMING.rise * TIMING.riseSurfaceAt),
+    );
   }
 }
 
@@ -355,14 +340,4 @@ function centreOf(points: readonly PointData[]): Point {
     centre.y += point.y / points.length;
   }
   return centre;
-}
-
-/** Blends two 0xRRGGBB colours: `t` = 0 gives `from`, 1 gives `to`. */
-function mixColor(from: number, to: number, t: number): number {
-  const channel = (shift: number): number => {
-    const a = (from >> shift) & 0xff;
-    const b = (to >> shift) & 0xff;
-    return Math.round(a + (b - a) * t) << shift;
-  };
-  return channel(16) | channel(8) | channel(0);
 }
