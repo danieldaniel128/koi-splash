@@ -64,8 +64,13 @@ export class SwipeTracker {
     this.gestures.tap(tapped);
   }
 
-  /** The gesture's pointer was lost (it lifted off the board): nothing happens. */
+  /** The gesture's pointer was lost (it lifted off the board, or the browser took it): nothing happens. */
   cancel(id: number): void {
     if (this.start?.id === id) this.start = null;
+  }
+
+  /** Forgets any gesture going on (the window lost focus, the page was hidden): its end may never come. */
+  reset(): void {
+    this.start = null;
   }
 }

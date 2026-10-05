@@ -67,4 +67,15 @@ describe('SwipeTracker', () => {
     tracker.up(1);
     expect(heard).toEqual([]);
   });
+
+  it('leaves nothing behind a lost gesture for a later touch to swipe with', () => {
+    const { tracker, heard } = setup();
+    tracker.down(press(1, 15, 15));
+    tracker.reset(); // the page was hidden mid-drag
+    tracker.move(1, { x: 30, y: 15 });
+    tracker.down(press(2, -5, 15)); // a later touch, beside the board
+    tracker.move(2, { x: 30, y: 15 });
+    tracker.up(2);
+    expect(heard).toEqual([]);
+  });
 });
