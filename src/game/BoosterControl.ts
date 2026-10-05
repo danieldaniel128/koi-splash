@@ -170,6 +170,17 @@ export class BoosterControl {
     this.deps.sounds.cancel();
   }
 
+  /**
+   * One step back (Escape): open petals close, and the booster stays armed as after a tap away; otherwise the armed
+   * booster is cancelled. False when no booster was armed.
+   */
+  back(): boolean {
+    if (!this.armed) return false;
+    if (this.step.is('choosing')) this.deps.picker.close();
+    else this.cancel();
+    return true;
+  }
+
   /** A tap on the board while a booster is armed. */
   tap(cell: Cell): void {
     const type = this.arming.type;

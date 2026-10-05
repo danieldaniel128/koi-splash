@@ -157,6 +157,19 @@ describe('BoosterControl', () => {
     expect(control.armed).toBe(false);
   });
 
+  it('Escape closes the open petals first, then cancels the booster', async () => {
+    const { control, log, settle } = setup();
+    control.press('special');
+    control.tap({ col: 3, row: 3 });
+    expect(control.back()).toBe(true);
+    await settle();
+    expect(log).toContain('petals:close');
+    expect(control.armed).toBe(true);
+    expect(control.back()).toBe(true);
+    expect(control.armed).toBe(false);
+    expect(control.back()).toBe(false);
+  });
+
   it('another booster pressed while the petals are open closes them and takes over', async () => {
     const { control, used, log, settle } = setup();
     control.press('special');

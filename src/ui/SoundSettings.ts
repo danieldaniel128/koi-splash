@@ -22,7 +22,7 @@ export interface SoundSettingsOptions<Id extends string> {
 /**
  * The speaker button at the end of the booster bar and the small glass menu it opens above it: a switch per sound
  * channel (music, ambience, effects). The speaker shows a cross when every channel is off. The menu closes on a
- * second press, a tap anywhere else or Escape.
+ * second press, a tap anywhere else or Escape (the game's key handler calls close).
  */
 export class SoundSettings<Id extends string> {
   private readonly button = el('button', 'orb sound-button');
@@ -49,6 +49,14 @@ export class SoundSettings<Id extends string> {
     this.showSpeaker();
     layer.place(this.menu, rects.menu);
     layer.place(this.button, rects.button);
+  }
+
+  /** Closes the menu and gives the focus back to its button. False when it wasn't open. */
+  close(): boolean {
+    if (!this.isOpen()) return false;
+    this.setOpen(false);
+    this.button.focus();
+    return true;
   }
 
   private isOpen(): boolean {
@@ -93,11 +101,6 @@ export class SoundSettings<Id extends string> {
     document.addEventListener('pointerdown', (event) => {
       const target = event.target as Node | null;
       if (this.isOpen() && !this.menu.contains(target) && !this.button.contains(target)) this.setOpen(false);
-    });
-    document.addEventListener('keydown', (event) => {
-      if (event.key !== 'Escape' || !this.isOpen()) return;
-      this.setOpen(false);
-      this.button.focus();
     });
   }
 }
