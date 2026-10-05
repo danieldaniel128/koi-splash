@@ -158,7 +158,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
   const swaps = new SwapControl(scene, parts.boosters.marks);
   listenToPlayer(
     { scene, control, swaps },
-    { bar, screenFlow, boardView, canvas, cell: screen.layout.board.cell },
+    { bar, screenFlow, boardView, animator, canvas, cell: screen.layout.board.cell },
   );
   return control;
 }
@@ -180,11 +180,17 @@ function listenToPlayer(
     bar: BoosterBar;
     screenFlow: ScreenFlow;
     boardView: BoardView;
+    animator: BoardAnimator;
     canvas: HTMLCanvasElement;
     cell: number;
   },
 ): void {
   const gestures = (): BoardGestures => (control.armed ? control : swaps);
+  // a koi under a finger answers at once, before the gesture is known
+  on.boardView.on('pointerdown', (event) => {
+    const cell = on.boardView.pointToCell(on.boardView.toLocal(event.global));
+    if (cell && scene.canSwap && scene.hasKoi(cell)) on.animator.touch(cell);
+  });
   new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
     swipe: (from, to) => {
       gestures().swipe(from, to);

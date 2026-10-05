@@ -10,7 +10,7 @@ import type { GameEventBus } from '../game/events';
 import type { TurnAnimator } from '../game/GameScene';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
-import { pop, rise, sink } from './motion/koiMotions';
+import { headShake, pop, rise, sink, squash } from './motion/koiMotions';
 import { play, wait } from './motion/play';
 import { blastLands, planRound } from './specialTiming';
 import type { ClearPlan, RoundPlan } from './specialTiming';
@@ -114,11 +114,15 @@ export class BoardAnimator implements TurnAnimator {
     }
   }
 
-  /** A swap that makes no match: both koi lean toward each other and spring back, with a smaller shove. */
+  /**
+   * A swap that makes no match: both koi lean toward each other and spring back, with a smaller shove, then shake
+   * their heads as the water dims round them.
+   */
   async invalidSwap(first: PlacedPiece, second: PlacedPiece): Promise<void> {
     this.view.bringToFront(this.view.spriteOf(first.piece.id));
     this.stir(first.at, second.at, WATER.invalidSwapPush);
     await Promise.all([this.lean(first, second.at, TIMING.swapLift), this.lean(second, first.at, 1)]);
+    this.refuse(first, second);
   }
 
   /** A koi swiped into the bank (off the board, or a hole): it leans toward it and springs back, like a bad swap. */
@@ -126,6 +130,13 @@ export class BoardAnimator implements TurnAnimator {
     this.view.bringToFront(this.view.spriteOf(koi.piece.id));
     this.stir(koi.at, toward, WATER.invalidSwapPush);
     await this.lean(koi, toward, TIMING.swapLift);
+    this.refuse(koi);
+  }
+
+  /** A koi is touched: it squashes under the finger and springs back, so the board answers at once. */
+  touch(cell: Cell): void {
+    const koi = this.view.koiAt(cell);
+    if (koi) squash(koi, TIMING.touchSquash, TIMING.touchTime);
   }
 
   /**
@@ -155,6 +166,7 @@ export class BoardAnimator implements TurnAnimator {
       })
       .to(sprite, { x: home.x, y: home.y, duration: TIMING.bumpOut, ease: 'back.out(2)' }, '<');
     await play(bump);
+    this.refuse(koi);
   }
 
   /**
@@ -204,6 +216,18 @@ export class BoardAnimator implements TurnAnimator {
   /** The way a koi leaves around the specials (see SpecialMotions), or null when it simply dives. */
   private specialExit(piece: Piece, plan: ClearPlan): Promise<void> | null {
     return this.exits[plan.how](this.view.spriteOf(piece.id), piece, plan);
+  }
+
+  /**
+   * A move is refused: each koi shakes its head and the water dims round it for a moment. Not awaited: the board takes
+   * the next move at once.
+   */
+  private refuse(...placed: PlacedPiece[]): void {
+    const { angle, times, duration } = TIMING.refuse;
+    placed.forEach(({ piece, at }, i) => {
+      headShake(this.view.spriteOf(piece.id), i % 2 === 0 ? angle : -angle, times, duration);
+      this.water.push(this.onStage(this.view.cellToPoint(at)), WATER.refuseDip, WATER.refuseRadius);
+    });
   }
 
   private exitMotions(): Record<ClearPlan['how'], ExitMotion> {
@@ -269,15 +293,12 @@ export class BoardAnimator implements TurnAnimator {
   private async slide(koi: Koi, to: Cell, peak: number): Promise<void> {
     const target = this.view.cellToPoint(to);
     const size = koi.restScale * peak;
+    gsap.killTweensOf(koi.scale); // a touch's squash: the slide takes the scale over from here
     await play(
       gsap
         .timeline()
         .to(koi, { x: target.x, y: target.y, duration: TIMING.swap, ease: 'power2.inOut' }, 0)
-        .to(
-          koi.scale,
-          { x: size, y: size, duration: TIMING.swap / 2, ease: 'sine.out', yoyo: true, repeat: 1 },
-          0,
-        ),
+        .add(swell(koi, size, TIMING.swap / 2), 0),
     );
   }
 
@@ -286,6 +307,7 @@ export class BoardAnimator implements TurnAnimator {
     const reach = TIMING.invalidReach * this.cellSize;
     const size = koi.restScale * peak;
     const half = TIMING.invalidSwap / 2;
+    gsap.killTweensOf(koi.scale);
     const lean = gsap
       .timeline()
       .to(
@@ -300,7 +322,7 @@ export class BoardAnimator implements TurnAnimator {
         },
         0,
       )
-      .to(koi.scale, { x: size, y: size, duration: half, ease: 'sine.out', yoyo: true, repeat: 1 }, 0);
+      .add(swell(koi, size, half), 0);
     await play(lean);
   }
 
@@ -377,4 +399,12 @@ function centreOf(points: readonly PointData[]): Point {
     centre.y += point.y / points.length;
   }
   return centre;
+}
+
+/** Grows to `size` over `half` s and back to rest over another `half` (lifted toward the surface, then settling). */
+function swell(koi: Koi, size: number, half: number): gsap.core.Timeline {
+  return gsap
+    .timeline()
+    .to(koi.scale, { x: size, y: size, duration: half, ease: 'sine.out' })
+    .to(koi.scale, { x: koi.restScale, y: koi.restScale, duration: half, ease: 'sine.in' });
 }

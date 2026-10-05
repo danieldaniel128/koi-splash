@@ -47,6 +47,9 @@ export const WATER = {
   matchPushPerRound: 0.25,
   swapRadius: 15,
   swapSettlePush: 0.1,
+  /** A refused move dims the water round each koi for a moment: a small dip (a negative push). */
+  refuseDip: -0.22,
+  refuseRadius: 11,
   /** A swap that makes no match shoves the water this share of swapPush. */
   invalidSwapPush: 0.6,
   /** The small splash where a koi bumps into a lily pad. */
