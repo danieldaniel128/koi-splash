@@ -10,9 +10,11 @@
   gap: var(--space-xl);
 }
 
+/* A booster lifts with translate and scale, so a press (transform) or a shake plays on top of its lift. */
 .booster {
   position: relative;
   width: var(--size-boosterOrb);
+  transition-property: transform, translate, scale;
 }
 
 .booster__orb {
@@ -45,14 +47,15 @@
 }
 
 @media (hover: hover) {
-  .booster:hover:not(:active) {
-    transform: translateY(-2px);
+  .booster:hover:not(.booster--armed) {
+    translate: 0 -2px;
   }
 }
 
 /* The armed booster lifts and glows gold and pink, breathing. */
 .booster--armed {
-  transform: translateY(-8px) scale(1.07);
+  translate: 0 -8px;
+  scale: 1.07;
 }
 
 .booster--armed .booster__orb {

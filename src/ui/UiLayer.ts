@@ -114,10 +114,10 @@ export function bump(element: HTMLElement, scale: number, seconds: number): void
 }
 
 /**
- * Shakes an element side to side: a press the game can't take. It moves the element's `translate`, not its
- * `transform`, so a lifted or scaled element keeps its pose while it shakes.
+ * Shakes an element side to side: a press the game can't take. It moves the element's `transform`; a pose it holds
+ * (a lifted booster) is set with `translate` and `scale`, so it keeps that pose while it shakes.
  */
 export function shake(element: HTMLElement): void {
-  const steps = [0, ...NOPE_SHAKE.offsets, 0].map((x) => ({ translate: `${x}px 0` }));
+  const steps = [0, ...NOPE_SHAKE.offsets, 0].map((x) => ({ transform: `translateX(${x}px)` }));
   element.animate(steps, { duration: NOPE_SHAKE.time * 1000, easing: 'ease-out' });
 }
