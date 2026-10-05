@@ -24,13 +24,15 @@ export interface FrameParts {
 
 /** After every normal update, before the frame is drawn (Pixi draws at LOW). */
 const AFTER_MOTION = UPDATE_PRIORITY.NORMAL - 1;
+/** After the frame is drawn. */
+const AFTER_DRAWING = UPDATE_PRIORITY.UTILITY;
 
 /**
  * The game's work on every frame, in one place and in this order: the music and the ambience are written a little
  * ahead, the water steps, the lily pads rock, the booster's marks follow their koi, the koi swim and push the water
  * back (wakes when they move, tail flicks when they rest) and the fireflies drift. Then, once everything has moved,
  * the shadows follow the koi and the pond marks where they touch the water, for the foam around them, and the camera
- * and the flash settle.
+ * and the flash settle. Once the frame is drawn, the pond lets go of its filter's input (see releaseFilterInput).
  */
 export function addFrameLoop(ticker: Ticker, parts: FrameParts): void {
   const { soundtrack, pond, pads, marks, koiLife, fireflies, boardView, impact } = parts;
@@ -60,5 +62,12 @@ export function addFrameLoop(ticker: Ticker, parts: FrameParts): void {
     },
     undefined,
     AFTER_MOTION,
+  );
+  ticker.add(
+    () => {
+      pond.releaseFilterInput();
+    },
+    undefined,
+    AFTER_DRAWING,
   );
 }

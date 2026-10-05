@@ -8,6 +8,7 @@ import {
   GlProgram,
   Mesh,
   Shader,
+  Texture,
   UniformGroup,
 } from 'pixi.js';
 import type { Container as Layer, PointData, Renderer, TextureSource } from 'pixi.js';
@@ -178,6 +179,18 @@ export class PondWater implements WaterSurface {
       height: screenHeight / scale,
     };
     this.paintBank(visible, scale * resolution);
+  }
+
+  /**
+   * Lets go of the frame's filter input once the frame is drawn. Pixi leaves the last filter pass's pooled texture
+   * bound in the bind group every filter shares (the koi filter's first); when the screen is resized the pool
+   * destroys that idle texture while it is still bound, and Pixi warns about it.
+   */
+  releaseFilterInput(): void {
+    const shared = this.koiFilter.groups[0]; // set by Pixi's filter system once the filter has run
+    if (!shared) return;
+    shared.setResource(Texture.EMPTY.source, 1);
+    shared.setResource(Texture.EMPTY.source.style, 2);
   }
 
   /**
