@@ -120,9 +120,9 @@ export interface SettleStart {
 
 /**
  * Clears, fires, drops and refills until nothing matches and nothing is left to fire, one round at a time, and
- * reshuffles a board left with no move. Each round hits the pads next to the cleared koi (and under a blast); a pad
- * that blooms or drifts away opens its cell, and the koi above fall into it in that same round. Shared by swaps and
- * boosters. O(S * N).
+ * reshuffles a board left with no move. Each round hits the pads next to the koi it took (cleared, or turned into a
+ * new special) and under a blast; a pad that blooms or drifts away opens its cell, and the koi above fall into it in
+ * that same round. Shared by swaps and boosters. O(S * N).
  */
 export function settle(
   board: Board,
@@ -141,7 +141,11 @@ export function settle(
     // the first round puts its special where the player swapped; later rounds in the middle of the shape
     const round = resolveRound(board, matches, steps.length === 0 ? (start.swap ?? []) : [], firing);
     firing = [];
-    const struck = [...round.cleared.map((c) => c.at), ...round.struckPads];
+    const struck = [
+      ...round.cleared.map((c) => c.at),
+      ...round.created.map((c) => c.at),
+      ...round.struckPads,
+    ];
     const padEvents = hitPads(board, start.pads, struck);
     const falls = applyGravity(board);
     const spawns = refill(board, spec.kinds, rng);
