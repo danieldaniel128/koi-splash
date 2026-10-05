@@ -6,7 +6,44 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   base: './',
   plugins: [themeInPage()],
-  build: { target: 'es2022', outDir: 'dist' },
+  build: {
+    target: 'es2022',
+    outDir: 'dist',
+    rolldownOptions: {
+      output: {
+        // The libraries get chunks of their own, so the game's chunk stays small and a new build of the game doesn't
+        // make the browser download them again. Each group takes only what loads at startup ('$initial'), not what
+        // that pulls in, so the setup PixiJS loads on its own (browserAll, init) stays lazy and PixiJS's chunk stays
+        // under the 500 kB warning.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'pixi',
+              test: /node_modules[\\/]pixi\.js/,
+              priority: 2,
+              tags: ['$initial'],
+              includeDependenciesRecursively: false,
+            },
+            {
+              name: 'gsap',
+              test: /node_modules[\\/]gsap/,
+              priority: 1,
+              tags: ['$initial'],
+              includeDependenciesRecursively: false,
+            },
+            {
+              // the small libraries PixiJS uses: left in the game's chunk, PixiJS's chunk would import them from
+              // it while the game's chunk imports PixiJS, a loop that breaks at startup
+              name: 'vendor',
+              test: /node_modules/,
+              tags: ['$initial'],
+              includeDependenciesRecursively: false,
+            },
+          ],
+        },
+      },
+    },
+  },
   server: { host: true }, // reachable from a phone on the same Wi-Fi
   test: { include: ['tests/**/*.test.ts'] },
 });

@@ -3,7 +3,7 @@ import { INPUT } from '../config/input';
 import { LEVEL, SCORE } from '../config/level';
 import { BOOSTER_MOTION } from '../config/specials';
 import { BOOSTERS, SPECIAL_MENU } from '../config/ui';
-import { Random } from '../core/Random';
+import { Random, seedFromQuery } from '../core/Random';
 import { BoosterControl } from '../game/BoosterControl';
 import type { BoosterSounds } from '../game/BoosterControl';
 import { SwapControl } from '../game/SwapControl';
@@ -100,7 +100,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
   const scene = new GameScene({
     spec: screen.spec,
     level,
-    rng: new Random(),
+    rng: new Random(seedFromQuery(window.location.search, Date.now())), // ?seed=42 deals the same board every time
     view,
     animator,
     status: hud,

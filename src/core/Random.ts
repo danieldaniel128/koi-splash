@@ -34,3 +34,12 @@ export class Random {
     return item;
   }
 }
+
+/**
+ * The seed a page's address asks for (`?seed=42`), so a board can be dealt again exactly, or `fallback` when it asks
+ * for none or the seed isn't a whole number.
+ */
+export function seedFromQuery(query: string, fallback: number): number {
+  const asked = new URLSearchParams(query).get('seed') ?? '';
+  return /^-?\d+$/.test(asked) ? Number(asked) : fallback;
+}

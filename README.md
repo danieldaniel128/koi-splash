@@ -9,12 +9,18 @@ only, so it always shows the last finished milestone).
 
 ## Running it
 
+Needs Node 22.22.1 or newer (`.nvmrc` and CI use 24).
+
 ```
 npm install
-npm run dev      # local server, also reachable from a phone on the same Wi-Fi
+npm run dev      # local server on http://localhost:5173, also reachable from a phone on the same Wi-Fi
 npm run check    # typecheck + lint + tests
 npm run build    # static web build in dist/
+npm run preview  # serves that build
 ```
+
+The board is dealt from the clock; add `?seed=42` (any whole number) to the address to deal the same board every
+time, to play a bug again.
 
 ## Stack & assets
 
@@ -191,7 +197,7 @@ skips is `src/art/koiBank.ts`, the AI-written koi painter.
 ## Workflow
 
 Feature branches go into `develop` through pull requests, and `develop` goes into `main` when a milestone is done.
-`ci.yml` runs the typecheck, lint, tests and build on every push to a working branch and on every pull request.
+`ci.yml` runs the typecheck, lint, tests and build on every pull request and again on `develop` after each merge.
 `deploy.yml` runs the same checks on `main` and publishes to GitHub Pages. A pre-commit hook runs ESLint and
 Prettier on the staged files.
 
@@ -209,7 +215,7 @@ Milestones:
 32 Vitest tests in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by playing: a
 new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole. The rest
 cover scoring, the lily pads and goals, the state machine's guards and hooks, and how a swipe picks its cell. They
-run in CI on every push, so when I work on the feel I find out right away if I broke the rules.
+run in CI on every pull request, so when I work on the feel I find out before merging if I broke the rules.
 
 ## AI usage
 
