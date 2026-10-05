@@ -1,4 +1,5 @@
 import { drawBlurred } from './blur';
+import { blank, context, freshContext } from './canvas';
 import { bakeKoi } from './koiBank';
 import type { BakeOptions, KoiVariety } from './koiBank';
 
@@ -44,9 +45,7 @@ export function bakeInkedKoi(
     dress(fins);
     dress(body);
     const eyes = bakeKoi(variety, { ...bake, parts: 'eyes' });
-    const ctx = context(body);
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // the koi painter leaves its own scale on the canvas
+    const ctx = freshContext(body);
     ctx.drawImage(eyes, 0, 0);
     ctx.restore();
   }
@@ -144,18 +143,22 @@ function solid(source: HTMLCanvasElement, color: string): HTMLCanvasElement {
   return canvas;
 }
 
-/** Tints everything already on the canvas toward `color` by `amount`, keeping its alpha. */
+/** Tints everything already on a baked koi part toward `color` by `amount`, keeping its alpha. */
 function tint(canvas: HTMLCanvasElement, color: string, amount: number): void {
-  const ctx = context(canvas);
+  const ctx = freshContext(canvas);
   ctx.globalCompositeOperation = 'source-atop';
   ctx.globalAlpha = amount;
   ctx.fillStyle = color;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.restore();
 }
 
-/** The rear of the body sinks under the surface: tinted toward the water colour, more toward the tail. */
+/**
+ * The rear of a baked koi body sinks under the surface: tinted toward the water colour, more toward the tail. In
+ * plain pixels: in the scale the koi painter leaves behind, the fade would land below the canvas.
+ */
 function sinkTail(canvas: HTMLCanvasElement, color: string, amount: number): void {
-  const ctx = context(canvas);
+  const ctx = freshContext(canvas);
   const [from, to] = BODY_UNDER;
   const fade = ctx.createLinearGradient(0, canvas.height * from, 0, canvas.height * to);
   fade.addColorStop(0, `${color}00`);
@@ -164,16 +167,5 @@ function sinkTail(canvas: HTMLCanvasElement, color: string, amount: number): voi
   ctx.globalAlpha = amount;
   ctx.fillStyle = fade;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function blank(size: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  return canvas;
-}
-
-function context(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2D canvas not available');
-  return ctx;
+  ctx.restore();
 }

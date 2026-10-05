@@ -7,6 +7,8 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
+import { freshContext } from './canvas';
+
 type Ctx = CanvasRenderingContext2D;
 
 /**
@@ -39,7 +41,7 @@ export const SPECTRUM = [
  * A dressing for bakeInkedKoi, so the ink outline goes on top.
  */
 export function stripe(part: HTMLCanvasElement, look: StripeLook): void {
-  const ctx = fresh(part);
+  const ctx = freshContext(part);
   const band = (look.body.right - look.body.left) / look.count;
   const first = look.body.left - Math.ceil(look.body.left / band) * band; // the grid, carried out to the edges
   ctx.globalCompositeOperation = 'source-atop';
@@ -78,7 +80,7 @@ export function bodySpan(body: HTMLCanvasElement): { left: number; right: number
  */
 export function rainbow(part: HTMLCanvasElement): void {
   const original = copy(part);
-  const ctx = fresh(part);
+  const ctx = freshContext(part);
   const spectrum = ctx.createLinearGradient(0, part.height * 0.15, 0, part.height * 0.85);
   SPECTRUM.forEach((colour, i) => {
     spectrum.addColorStop(i / (SPECTRUM.length - 1), colour);
@@ -267,20 +269,6 @@ function blank(size: number): HTMLCanvasElement {
   canvas.width = Math.ceil(size);
   canvas.height = Math.ceil(size);
   return canvas;
-}
-
-/**
- * A canvas's context, saved and reset to plain pixels: the koi painter leaves its own scale and settings on it.
- * Restore it when done.
- */
-function fresh(canvas: HTMLCanvasElement): Ctx {
-  const ctx = context(canvas);
-  ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.filter = 'none';
-  return ctx;
 }
 
 function copy(source: HTMLCanvasElement): HTMLCanvasElement {
