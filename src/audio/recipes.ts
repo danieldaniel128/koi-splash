@@ -236,7 +236,7 @@ export function star(v: Voice, k: number): void {
   v.noise(0.25, 0.04, 2400, { sweepTo: 600 });
 }
 
-/** A button takes (play again, the sound toggle). */
+/** A button takes (play again, the sound menu). */
 export function click(v: Voice): void {
   v.tone(520, 0.06, 0.06, { type: 'triangle', glide: 720 });
 }
