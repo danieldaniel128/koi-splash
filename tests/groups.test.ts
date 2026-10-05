@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { groupMatches } from '../src/model/groups';
 import type { Match } from '../src/model/types';
 
-const row = (row: number, from: number, length: number, kind = 1): Match => ({
-  kind,
+const row = (row: number, from: number, length: number, color = 1): Match => ({
+  color,
   direction: 'row',
   cells: Array.from({ length }, (_, i) => ({ col: from + i, row })),
 });
-const col = (col: number, from: number, length: number, kind = 1): Match => ({
-  kind,
+const col = (col: number, from: number, length: number, color = 1): Match => ({
+  color,
   direction: 'col',
   cells: Array.from({ length }, (_, i) => ({ col, row: from + i })),
 });

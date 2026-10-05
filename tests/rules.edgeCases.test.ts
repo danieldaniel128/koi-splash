@@ -5,12 +5,12 @@ import { findMatches, findMove, hasAnyMove, settle, trySwap } from '../src/model
 import type { BoardSpec } from '../src/model/types';
 import { boardFrom, drawBoard, makeSpecial } from './support/boards';
 
-const SPEC: BoardSpec = { cols: 6, rows: 4, kinds: 5 };
+const SPEC: BoardSpec = { cols: 6, rows: 4, colorCount: 5 };
 
-/** No match, and no swap that makes one: every kind sits two cells from its nearest twin, with no third in reach. */
+/** No match, and no swap that makes one: every color sits two cells from its nearest twin, with no third in reach. */
 const STUCK = ['012301', '230123', '012301', '230123'];
 
-/** Each cell's piece, so a check can tell the very same koi from a new one of the same kind. */
+/** Each cell's piece, so a check can tell the very same koi from a new one of the same color. */
 const piecesOf = (board: Board): unknown[] => [...board.cells()].map((cell) => board.get(cell));
 
 describe('a stuck board', () => {
@@ -24,9 +24,9 @@ describe('a stuck board', () => {
   it('is dealt again when it settles: full, with no ready-made match and at least one move', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const board = boardFrom(STUCK);
-      const { steps, reshuffled } = settle(board, SPEC, seeded(seed));
+      const { rounds, reshuffled } = settle(board, SPEC, seeded(seed));
       expect(reshuffled).toBe(true);
-      expect(steps).toEqual([]);
+      expect(rounds).toEqual([]);
       for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
       expect(findMatches(board)).toEqual([]);
       expect(findMove(board)).not.toBeNull();
@@ -52,7 +52,7 @@ describe('a stuck board', () => {
 
   it('is not dealt again while it holds a special: swapping the special is a move', () => {
     const board = boardFrom(STUCK);
-    makeSpecial(board, { col: 2, row: 1 }, { type: 'whirl' });
+    makeSpecial(board, { col: 2, row: 1 }, { type: 'whirlpool' });
     expect(findMove(board)).toBeNull();
     expect(hasAnyMove(board)).toBe(true);
     const before = piecesOf(board);
@@ -82,17 +82,17 @@ describe('trySwap refusing a swap', () => {
 
   it('takes a swap with a special beside a koi, though it makes no match', () => {
     const board = boardFrom(STUCK);
-    makeSpecial(board, { col: 2, row: 1 }, { type: 'line', along: 'row' });
+    makeSpecial(board, { col: 2, row: 1 }, { type: 'striped', along: 'row' });
     const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, seeded(1));
     expect(result.valid).toBe(true);
-    if (result.valid) expect(result.steps[0]?.matches).toEqual([]);
+    if (result.valid) expect(result.rounds[0]?.matches).toEqual([]);
   });
 });
 
 describe('the cascade cap', () => {
   it('stops a cascade that would never settle, instead of hanging the game', () => {
     // one koi colour: every new koi matches the ones beside it, round after round
-    const oneColour: BoardSpec = { cols: 4, rows: 3, kinds: 1 };
+    const oneColour: BoardSpec = { cols: 4, rows: 3, colorCount: 1 };
     const board = boardFrom(['0000', '0000', '0000']);
     expect(() => settle(board, oneColour, seeded(1))).toThrow('cascade did not settle');
   });
@@ -100,8 +100,8 @@ describe('the cascade cap', () => {
   it('lets a board that matches everywhere settle, however many rounds its new koi chain', () => {
     for (let seed = 1; seed <= 100; seed++) {
       const board = boardFrom(['000111', '222333', '000111', '222333']);
-      const { steps } = settle(board, { ...SPEC, kinds: 4 }, seeded(seed));
-      expect(steps.length).toBeGreaterThan(0);
+      const { rounds } = settle(board, { ...SPEC, colorCount: 4 }, seeded(seed));
+      expect(rounds.length).toBeGreaterThan(0);
       expect(findMatches(board)).toEqual([]);
       expect(drawBoard(board).join('')).not.toContain('-');
     }

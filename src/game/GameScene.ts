@@ -15,13 +15,13 @@ import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import { scoreRound } from '../model/score';
 import { starsFor, starsForWin } from '../model/stars';
 import type { StarRule } from '../model/stars';
-import type { BoardSpec, CascadeStep, Cell, Pad, PadEvent, PlacedPiece, Special } from '../model/types';
+import type { BoardSpec, CascadeRound, Cell, Pad, PadEvent, PlacedPiece, Special } from '../model/types';
 import type { BoosterChange } from '../model/boosters';
 import type { BoosterGame } from './BoosterControl';
 import type { GameEventBus } from './events';
 import type { GameStatus } from './GameStatus';
 import type { SwapGame } from './SwapControl';
-import { colourOf } from '../model/types';
+import { colorOf } from '../model/types';
 
 type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
 
@@ -29,7 +29,7 @@ type TurnState = 'idle' | 'swapping' | 'resolving' | 'won' | 'lost';
 interface LevelState {
   movesLeft: number;
   score: number;
-  readonly goal: Goal;
+  readonly goals: Goal;
 }
 
 /**
@@ -40,7 +40,7 @@ const TURN_TRANSITIONS: readonly Transition<TurnState, LevelState>[] = [
   { from: 'idle', to: 'swapping', when: (level) => level.movesLeft > 0 },
   { from: 'swapping', to: 'resolving' },
   { from: 'swapping', to: 'idle' }, // the swap made no match and went back
-  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goal.isComplete() },
+  { from: 'resolving', to: 'won', when: (level) => level.movesLeft === 0 && level.goals.isComplete() },
   { from: 'resolving', to: 'lost', when: (level) => level.movesLeft === 0 },
   { from: 'resolving', to: 'idle' },
   { from: 'won', to: 'idle' }, // play again
@@ -67,8 +67,8 @@ export interface TurnAnimator {
   /** A koi swiped into the bank, or into a lily pad: it bumps its nose and swims back. */
   bumpBank(koi: PlacedPiece, toward: Cell): Promise<void>;
   bumpPad(koi: PlacedPiece, padCell: Cell): Promise<void>;
-  /** One cascade round (`round` of its turn, 0 = the swap's own), with the points it scored. */
-  playStep(step: CascadeStep, points: number, round: number): Promise<void>;
+  /** One cascade round (`roundIndex` in its turn, 0 = the swap's own), with the points it scored. */
+  playRound(round: CascadeRound, points: number, roundIndex: number): Promise<void>;
   playBooster(use: BoosterUse, change: BoosterChange): Promise<void>;
 }
 
@@ -120,8 +120,8 @@ export interface GameSceneDeps {
 
 /** One cascade round, counted before it plays: its points, the goals it met (0 = the level's first) and the status after it. */
 interface CountedRound {
-  readonly step: CascadeStep;
-  readonly round: number;
+  readonly round: CascadeRound;
+  readonly roundIndex: number;
   readonly points: number;
   readonly met: readonly number[];
   readonly status: GameStatus;
@@ -148,11 +148,11 @@ export class GameScene implements BoosterGame, SwapGame {
   private pads: PadField;
 
   constructor(private readonly deps: GameSceneDeps) {
-    checkGoals(deps.level.goals, { buds: deps.level.pads.buds, kinds: deps.spec.kinds });
+    checkGoals(deps.level.goals, { buds: deps.level.pads.buds, colorCount: deps.spec.colorCount });
     // the pads go down first, so the koi only fill the free cells around them
     this.pads = PadField.scatter(deps.level.pads, deps.spec, deps.rng);
     this.board = createBoard(deps.spec, deps.rng, this.pads.cells);
-    this.level = { movesLeft: deps.level.moves, score: 0, goal: createGoals(deps.level.goals) };
+    this.level = { movesLeft: deps.level.moves, score: 0, goals: createGoals(deps.level.goals) };
     this.turn = new StateMachine<TurnState, LevelState>(
       'idle',
       TURN_TRANSITIONS,
@@ -192,7 +192,9 @@ export class GameScene implements BoosterGame, SwapGame {
     const change = applyBooster(this.board, use);
     if (!change) return false;
     const swap = use.type === 'swap' ? [use.b, use.a] : []; // a special made by it forms where the first koi lands
-    const turn = this.count(settle(this.board, this.deps.spec, this.deps.rng, { pads: this.pads, swap }));
+    const turn = this.count(
+      settle(this.board, this.deps.spec, this.deps.rng, { pads: this.pads, preferredSpecialCells: swap }),
+    );
     await this.runTurn(async () => {
       await this.deps.animator.playBooster(use, change);
       await this.playCascade(turn);
@@ -208,7 +210,7 @@ export class GameScene implements BoosterGame, SwapGame {
     resetBoard(this.board, this.deps.spec, this.deps.rng, this.pads.cells);
     this.level.movesLeft = this.deps.level.moves;
     this.level.score = 0;
-    this.level.goal.reset();
+    this.level.goals.reset();
     this.deps.result.hide();
     this.turn.transition('idle');
     this.showLevel();
@@ -265,7 +267,7 @@ export class GameScene implements BoosterGame, SwapGame {
     const koi = { piece, at: from };
     const pair = this.placedPair(from, to);
     if (this.isBank(to)) await this.runTurn(() => this.bumpBank(koi, to));
-    else if (this.board.isBlocked(to)) await this.runTurn(() => this.bumpPad(koi, to));
+    else if (this.board.hasPad(to)) await this.runTurn(() => this.bumpPad(koi, to));
     else if (pair) await this.runTurn(() => this.resolveSwap(pair));
   }
 
@@ -316,7 +318,7 @@ export class GameScene implements BoosterGame, SwapGame {
     }
 
     this.level.movesLeft--;
-    const lap = this.level.goal.isComplete(); // every goal met before this move: the moves left are a victory lap
+    const lap = this.level.goals.isComplete(); // every goal met before this move: the moves left are a victory lap
     const spent = this.status(); // the move is spent at once; the score climbs as the rounds play
     const turn = this.count(result);
     this.deps.events.emit('swap');
@@ -341,18 +343,18 @@ export class GameScene implements BoosterGame, SwapGame {
    * One cascade round: the pads next to the cleared koi react while the koi clear and fall (into a bloomed pad's
    * cell too), and the HUD climbs to the round's status.
    */
-  private async playRound({ step, round, points, met, status }: CountedRound): Promise<void> {
-    this.announce(step, round, met);
+  private async playRound({ round, roundIndex, points, met, status }: CountedRound): Promise<void> {
+    this.announce(round, roundIndex, met);
     await Promise.all([
-      this.deps.animator.playStep(step, points, round),
-      this.deps.pads.play(step.padEvents),
+      this.deps.animator.playRound(round, points, roundIndex),
+      this.deps.pads.play(round.padEvents),
     ]);
     this.deps.status.update(status);
   }
 
   /** Counts a settled board's rounds into the level (score and goals), in order, before any of them plays. */
-  private count(result: { steps: readonly CascadeStep[]; reshuffled: boolean }): CountedTurn {
-    const rounds = result.steps.map((step, round) => this.countRound(step, round));
+  private count(result: { rounds: readonly CascadeRound[]; reshuffled: boolean }): CountedTurn {
+    const rounds = result.rounds.map((round, roundIndex) => this.countRound(round, roundIndex));
     return { rounds, reshuffled: result.reshuffled };
   }
 
@@ -360,40 +362,40 @@ export class GameScene implements BoosterGame, SwapGame {
    * Feeds a round to the goals and adds its points to the score, with the bonus of each goal it met, and notes the
    * goals it met, numbered by when (0 = the first met).
    */
-  private countRound(step: CascadeStep, round: number): CountedRound {
-    const { goal } = this.level;
-    const points = scoreRound(step, round, this.deps.level.pointsPerPiece);
+  private countRound(round: CascadeRound, roundIndex: number): CountedRound {
+    const { goals } = this.level;
+    const points = scoreRound(round, roundIndex, this.deps.level.pointsPerPiece);
     // a rainbow koi has no colour of its own: it counts toward no colour goal
-    const cleared = step.cleared.map(({ piece }) => colourOf(piece)).filter((kind) => kind !== null);
-    const metBefore = goalsMet(goal.progress());
+    const cleared = round.cleared.map(({ piece }) => colorOf(piece)).filter((color) => color !== null);
+    const metBefore = goalsMet(goals.progress());
     this.level.score += recordRound(
-      goal,
-      { points, padEvents: step.padEvents, cleared },
+      goals,
+      { points, padEvents: round.padEvents, cleared },
       this.deps.level.goalBonus,
     );
-    const metAfter = goalsMet(goal.progress());
+    const metAfter = goalsMet(goals.progress());
     const met = Array.from({ length: metAfter - metBefore }, (_, i) => metBefore + i);
-    return { step, round, points, met, status: this.status() };
+    return { round, roundIndex, points, met, status: this.status() };
   }
 
   /** Says what a round did: its match, what happened to the lily pads (once each), and the goals it met. */
-  private announce(step: CascadeStep, round: number, met: readonly number[]): void {
+  private announce(round: CascadeRound, roundIndex: number, met: readonly number[]): void {
     const { events } = this.deps;
-    if (step.cleared.length > 0) {
-      events.emit('match', { round, size: step.cleared.length, ...strongestMade(step) });
+    if (round.cleared.length > 0) {
+      events.emit('match', { roundIndex, size: round.cleared.length, ...strongestMade(round) });
     }
-    const pads = new Set(step.padEvents.map((event) => event.type));
+    const pads = new Set(round.padEvents.map((event) => event.type));
     if (pads.has('hit')) events.emit('budHit');
     if (pads.has('bloom')) events.emit('bloom');
     if (pads.has('drift')) events.emit('padDrift');
     for (const n of met) events.emit('goalMet', { n });
-    if (met.at(-1) === this.level.goal.progress().length - 1) events.emit('allGoalsMet');
+    if (met.at(-1) === this.level.goals.progress().length - 1) events.emit('allGoalsMet');
   }
 
   private status(): GameStatus {
-    const { movesLeft, score, goal } = this.level;
+    const { movesLeft, score, goals } = this.level;
     const { moves, stars } = this.deps.level;
-    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goal.progress() };
+    return { movesLeft, moves, stars: starsFor(score, stars), score, goals: goals.progress() };
   }
 
   /** True where a koi meets the bank: off the board, or a hole in its shape. */
@@ -414,10 +416,10 @@ export class GameScene implements BoosterGame, SwapGame {
 }
 
 /** The strongest special a round made (a rainbow over a whirlpool over a striped koi), if it made one. */
-function strongestMade(step: CascadeStep): { made?: Special['type'] } {
-  const types = step.created.map(({ piece }) => piece.special?.type);
+function strongestMade(round: CascadeRound): { made?: Special['type'] } {
+  const types = round.created.map(({ piece }) => piece.special?.type);
   const made = SPECIAL_RANK.find((type) => types.includes(type));
   return made ? { made } : {};
 }
 
-const SPECIAL_RANK: readonly Special['type'][] = ['rainbow', 'whirl', 'line'];
+const SPECIAL_RANK: readonly Special['type'][] = ['rainbow', 'whirlpool', 'striped'];

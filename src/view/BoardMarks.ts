@@ -32,7 +32,7 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
 
   constructor(
     private readonly board: MarkedBoard,
-    private readonly cell: number,
+    private readonly cellSize: number,
   ) {
     super();
     this.ring.blendMode = 'add';
@@ -69,8 +69,8 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
     gsap.killTweensOf(koi, 'x');
     gsap
       .timeline()
-      .to(koi, { x: home - this.cell * 0.08, duration: 0.06 })
-      .to(koi, { x: home + this.cell * 0.06, duration: 0.08 })
+      .to(koi, { x: home - this.cellSize * 0.08, duration: 0.06 })
+      .to(koi, { x: home + this.cellSize * 0.06, duration: 0.08 })
       .to(koi, { x: home, duration: 0.12, ease: 'back.out(3)' });
   }
 
@@ -125,11 +125,11 @@ export class BoardMarks extends Container implements BoosterMarks, PickMark {
     koi.scale.set(koi.restScale * (1 + look.lift * 0.42));
     const { x, y } = koi.position;
     this.ring
-      .circle(x, y, this.cell * (0.5 + 0.03 * beat))
+      .circle(x, y, this.cellSize * (0.5 + 0.03 * beat))
       .stroke({ width: 3, color: look.gold, alpha: 0.7 + 0.3 * beat });
     for (const offset of [0, Math.PI]) {
       const start = this.time * 2.4 + offset;
-      const radius = this.cell * 0.6;
+      const radius = this.cellSize * 0.6;
       this.ring
         .moveTo(x + Math.cos(start) * radius, y + Math.sin(start) * radius) // each arc its own stroke, not joined on
         .arc(x, y, radius, start, start + 1.6)

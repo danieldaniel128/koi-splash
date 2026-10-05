@@ -34,8 +34,8 @@ function moodsFrom(setMood: (mood: Mood) => void): EventHandlers<GameEvents> {
 /** The events the music dips under for a moment so the effects come through, and how deep. */
 const DUCK_ON: readonly (readonly [keyof GameEvents, number])[] = [
   ['match', MUSIC.duck.match],
-  ['lineFired', MUSIC.duck.special],
-  ['whirlPopped', MUSIC.duck.special],
+  ['stripedFired', MUSIC.duck.special],
+  ['whirlpoolPopped', MUSIC.duck.special],
   ['rainbowFired', MUSIC.duck.special],
 ];
 

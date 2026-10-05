@@ -32,26 +32,34 @@ Wi-Fi). `npm run check` runs the typecheck, lint and tests, and `npm run build` 
 
 ## AI usage
 
-I used Claude throughout. AI wrote the code:
+I built Koi Splash with Claude as my main tool, and I'm upfront about it: most of the code was written by AI, under
+my direction.
 
-- the project setup and tooling (Vite, TypeScript, ESLint, Prettier, the CI and deploy workflows)
-- the koi art painter (`src/art/koiBank.ts`, `koiInk.ts`) and the pond props
-- the model and its tests
-- the view and game code (board, input, animations, HUD, end card, the game scene, the state machine's code)
-- the water and the effects (simulation, shaders, dives and swims, wakes, shadows, ripples, waterline foam)
+**What AI did:** wrote most of the code (the model, the view and effects, the water shaders, the sound and music
+synthesis, the UI, the tests and the tooling), painted the art in code, ran the browser regression tests, and reviewed
+the code against my standards.
 
-My part:
+**What I did:**
 
-- I designed the architecture (MVP, passive view, the cascade as data) and the code standards, and had AI turn the
-  standards into ESLint config.
-- I designed the state machine: guarded transitions in a table, with enter/exit hooks.
-- I planned the lotus goal: the rules, a goal interface so a level can swap goals, and every number in config (hits
-  to bloom, lotuses, moves).
-- I directed the art. AI built three looks and I picked ink and moonlight. I asked for the koi to touch the water and
-  for cartoon outlines, and I rejected the thin light lines on the water because they read as scribbles.
-- I reviewed the code and play-tested it on desktop and on my phone.
+- **Architecture and standards.** I set the architecture and held the code to it.
+  - I chose the patterns from the start, and where each one belongs: MVP with a passive view (the whole cascade comes
+    back as data), a composition root with constructor injection and no singletons, ports between the presenter and
+    the view, state machines for the turn, the boosters and the screens, an event bus, Strategy maps keyed by type (so
+    a new special, booster or goal is a few entries), Composite goals, object pools for effects and a boot pipeline.
+  - I reviewed with a human eye, reading the code as the teammate who would change it next. I sent back anything
+    over-engineered, unclear or a pattern for its own sake, and pushed for one name per idea, every tuning number in
+    config, every color from the theme, short self-explanatory functions, and async code that can't lock the game.
+  - The standards are enforced, not just written: lint rules decide which layer can import which, CI fails on any
+    warning or on functions that grow too long or complex, and over 260 tests guard the rules.
+- **Game design.** The rules, the goals, the boosters and specials (from my own prototype), the level and the feel
+  targets.
+- **Art direction.** I picked the ink-and-moonlight look, the stone pond, the garden and the HUD from references, and
+  rejected what didn't fit.
+- **Testing and judgement.** I play-tested every change on desktop and on my phone, sent things back until they felt
+  right, and decided what shipped.
 
-AI also built a throwaway prototype before this repo, and helped me write this README.
+Working this way let me try many ideas fast and spend my time on direction, feel and polish. There are no third-party
+images or sounds: everything you see and hear is generated in code.
 
 ## Next steps
 
@@ -93,11 +101,11 @@ the pond, the game, the stage, the sound, the frame loop), so there are no singl
 The game boots behind a loading screen. Its markup is in `index.html`, and the theme's tokens are written into the
 page at build time, so it shows, themed, from the first paint. `src/boot/loading.ts` lists the loading as named
 steps, each weighted by about how long it takes: the font, the goals' icons, the koi, the shore's distance field,
-the water, the garden, the stones, the game itself, and one frame drawn unseen so every shader is compiled before the
-first real one. `BootPipeline` (`src/core`) runs them in order, lets the page paint between them and moves the bar.
-Everything is made once, and playing again reuses it. The special koi aren't needed to start, so they're baked in the
-background once the game shows, one job per idle moment (`runWhenIdle`); one wanted sooner is baked on the spot. If
-boot fails, `main.ts` stops whatever had started and shows a readable error (no WebGL 2, the GPU lost).
+the water, the garden, the stones, the game itself, the koi's in-between tail poses and the special koi, and one frame
+drawn unseen so every shader is compiled before the first real one. `BootPipeline` (`src/core`) runs them in order,
+lets the page paint between them and moves the bar. The last bakes are lists of small jobs (one pose or one color
+each), run back to back with a paint every 50 ms, so the bar keeps moving and nothing is baked while the game is
+played. Everything is made once, and playing again reuses it. If boot fails, `main.ts` stops whatever had started and shows a readable error (no WebGL 2, the GPU lost).
 
 The screens (loading, playing, the end card, playing again) are a state machine (`ScreenFlow`), which also moves the
 keyboard focus. The turn runs on the same small state machine (`src/core/StateMachine.ts`), with guarded transitions
@@ -183,11 +191,14 @@ makes a match). The scene applies it and settles the board like after a swap, wi
 ### Tech art
 
 The water is a wave simulation on the GPU (`WaterSim`, `sim.frag`): a height field stepped 60 times a second, packed
-into 8-bit channels so it runs on any phone GPU. The koi disturb it: a moving koi leaves a wake, a resting one flicks
+into 8-bit channels so it runs on any phone GPU (read back at high precision; `waterCodec` mirrors the packing and
+tests it). The koi disturb it: a moving koi leaves a wake, a resting one flicks
 its tail, a swap shoves the water apart, and matched koi dive with a ring in the water while the koi above swim down
 into the gaps, under the lily pads. The shore and the pads soak the waves up. It's drawn in an ink and moonlight toon
 look: the bank is painted once per screen size, and three passes read the waves each frame (the water under the koi,
-a filter that bends the koi under the waves, and a surface pass with shore foam and gold glints). The koi have a dark
+a filter that bends the koi under the waves, and a surface pass with shore foam and gold glints). A leaping koi
+leaves the water's filter while it's in the air. One moon lights the whole scene (`THEME.scene.light`): the water's
+relief, the koi's, stones' and pads' shadows and the highlights all follow it. The koi have a dark
 cartoon outline, and a broken foam line at their waterline that follows them and breaks around the fins (drawn each
 frame from a mask of the koi, `KoiContact`).
 
@@ -213,10 +224,11 @@ The special koi come from the prototype, rebuilt in layers. Their art is painted
 a striped koi gets bands of its colour and white and a rainbow koi gets its scales recoloured with the spectrum (the
 'color' blend keeps their light and shade), under the same outline as every other koi. A whirlpool is a painted eddy
 with the koi curled into its eye. At rest each has its own look (`SpecialLooks`, one class per special): a striped
-koi faces along its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (a colour-matrix
-filter) over a prism glow with orbiting sparkles, and a whirlpool's eddy turns. When they fire, `planRound` works
+koi faces along its line over a pulsing glow with a sheen sweeping it, a rainbow koi's colours flow (one hue filter
+shared by every rainbow koi, at the screen's resolution) over a rainbow glow with orbiting sparkles, and a whirlpool's
+eddy turns (its curled koi casts a curled shadow and waterline). When they fire, `planRound` works
 out from the model's data when every koi goes and how (dive, spiral into the special that was made, drain into a
-whirlpool, zapped by a prism beam), the animator plays that plan, `SpecialFx` draws the light (beam, vortex, prism
+whirlpool, zapped by a rainbow arc), the animator plays that plan, `SpecialFx` draws the light (beam, eddy, rainbow arcs
 arcs, a flash at birth), and every effect also moves the water. The timings and sizes are in `TIMING.specials` and
 `SPECIAL_FX`.
 
@@ -321,11 +333,11 @@ that throws, and browser APIs that can refuse (audio, storage, vibration). The o
 
 ## Tests
 
-246 Vitest tests in 53 files, in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by
+266 Vitest tests in 56 files, in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by
 playing: a new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole,
 specials that chain, boosters aimed at a pad or the bank. The presenters are tested with stubs for their ports: a
 level won or lost on its last move, a turn whose animation fails, the booster flow, the swap by hand and the screen
-flow. The rest cover the core pieces (state machine, event bus, pool, boot pipeline, idle work), the layout, the
+flow. The rest cover the core pieces (state machine, event bus, pool, boot pipeline), the layout, the
 shore tracer, the distance field and the atlas, the music and the sound board, the shipped level (a playable deal
 for any seed), and the import graph. They run in CI on every pull request, so when I work on the feel I find out
 before merging if I broke the rules.

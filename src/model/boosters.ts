@@ -1,6 +1,6 @@
 import type { Board } from './Board';
 import { distanceSq, sameCell, stepsApart } from './types';
-import type { Cell, Kind, Piece, Special } from './types';
+import type { Cell, PieceColor, Piece, Special } from './types';
 
 /**
  * The boosters, as in the prototype: free tools that change the board without spending a move. Each is a plan here
@@ -28,14 +28,14 @@ export interface Moved {
 export interface BoosterChange {
   readonly moved: readonly Moved[];
   readonly made: readonly { readonly piece: Piece; readonly at: Cell }[];
-  readonly fed?: Kind;
+  readonly fedColor?: PieceColor;
 }
 
 /** Which koi each booster can take (one per type: a new booster asks for its rule here). */
 const TAKES: Readonly<Record<BoosterType, (board: Board, piece: Piece, at: Cell) => boolean>> = {
   swap: () => true,
   special: (_board, piece) => !piece.special,
-  feed: (board, piece, at) => board.kindAt(at) !== null && board.cellsOf(piece.kind).length >= 3,
+  feed: (board, piece, at) => board.colorAt(at) !== null && board.cellsOf(piece.color).length >= 3,
 };
 
 /** Whether a booster can be used on this cell: a koi, and for the special booster a plain one. O(1), feed O(N). */
@@ -87,16 +87,16 @@ function makeSpecial(board: Board, at: Cell, special: Special): BoosterChange | 
  * O(N * L) for L candidate lines.
  */
 function feed(board: Board, at: Cell, lines: number): BoosterChange | null {
-  const kind = board.kindAt(at);
-  if (kind === null) return null;
-  const school = board.cellsOf(kind);
+  const color = board.colorAt(at);
+  if (color === null) return null;
+  const school = board.cellsOf(color);
   const count = Math.min(lines, Math.floor(school.length / 3));
   if (count === 0) return null;
   const targets = pickLines(board, at, count).flat();
   const moved = assign(board, targets, school);
   for (const move of moved) board.set(move.to, null);
   for (const move of moved) board.set(move.to, move.piece);
-  return { moved, made: [], fed: kind };
+  return { moved, made: [], fedColor: color };
 }
 
 /** The nearest lines of 3 open cells to the food, a cell apart from each other. */

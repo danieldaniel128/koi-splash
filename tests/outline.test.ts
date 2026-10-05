@@ -4,7 +4,7 @@ import type { Outline } from '../src/layout/outline';
 import { parseShape } from '../src/model/shape';
 
 const CELL = 40;
-const BOARD = { x: 0, y: 0, cell: CELL };
+const BOARD = { x: 0, y: 0, cellSize: CELL };
 const SPEC = { margin: { left: 10, right: 10, top: 10, bottom: 10 }, cornerRadius: 12 };
 const trace = (drawing: string[]): Outline[] =>
   traceShore(parseShape(drawing), { ...BOARD, width: 0, height: 0 }, SPEC);

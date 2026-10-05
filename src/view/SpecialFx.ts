@@ -5,7 +5,7 @@ import { paintBeam, SPECTRUM } from '../art/specialKoi';
 import { easeInOutCubic, easeOutBack, easeOutCubic } from '../core/easing';
 import { SPECIAL_FX } from '../config/specials';
 import { TIMING } from '../config/timing';
-import type { Cell, Fired, Kind } from '../model/types';
+import type { Cell, Fired, PieceColor } from '../model/types';
 import type { BlastPlan } from './specialTiming';
 import type { SpecialTextures } from './SpecialTextures';
 import type { GameEventBus } from '../game/events';
@@ -20,7 +20,7 @@ export interface FxBoard {
 
 /**
  * The specials' light, over the koi in the board's space (after the prototype's): a striped koi's beam racing along
- * its line, a whirlpool's vortex spinning up, a rainbow koi's prism beams arcing to every koi it takes, a flash when
+ * its line, a whirlpool's eddy spinning up, a rainbow koi's arcs to every koi it takes, a flash when
  * a special is born. Each also moves the water (ripples along the sweep, the eddy's pull and pop, splashes where the
  * beams land) and says when each moment happens, so the camera, the hit-stop and the sounds land with it. Fire and
  * forget: every effect removes itself when done.
@@ -31,7 +31,7 @@ export class SpecialFx extends Container {
   private readonly board: FxBoard;
   private readonly textures: SpecialTextures;
   private readonly water: WaterSurface;
-  private readonly cell: number;
+  private readonly cellSize: number;
   private readonly length: number;
   private readonly events: GameEventBus;
 
@@ -40,7 +40,7 @@ export class SpecialFx extends Container {
     readonly textures: SpecialTextures;
     readonly water: WaterSurface;
     /** A cell's size, and the board's longest side (px): how far a beam reaches. */
-    readonly cell: number;
+    readonly cellSize: number;
     readonly length: number;
     /** Where it says when each blast's moments happen (the sounds follow them). */
     readonly events: GameEventBus;
@@ -49,15 +49,15 @@ export class SpecialFx extends Container {
     this.board = deps.board;
     this.textures = deps.textures;
     this.water = deps.water;
-    this.cell = deps.cell;
+    this.cellSize = deps.cellSize;
     this.length = deps.length;
     this.events = deps.events;
   }
 
   /** A special was born at `at`: a flash of its glow and a ring in the water, `delay` s from now. */
-  birth(at: Cell, kind: Kind, delay: number): void {
+  birth(at: Cell, color: PieceColor, delay: number): void {
     const look = SPECIAL_FX.birth;
-    const flash = this.additive(this.textures.glow, this.textures.color(kind).glow);
+    const flash = this.additive(this.textures.glow, this.textures.tintsOf(color).glow);
     flash.position.copyFrom(this.board.cellToPoint(at));
     flash.alpha = 0;
     gsap
@@ -78,10 +78,10 @@ export class SpecialFx extends Container {
       )
       .fromTo(
         flash,
-        { width: this.cell * 0.4, height: this.cell * 0.4 },
+        { width: this.cellSize * 0.4, height: this.cellSize * 0.4 },
         {
-          width: this.cell * look.flash,
-          height: this.cell * look.flash,
+          width: this.cellSize * look.flash,
+          height: this.cellSize * look.flash,
           duration: look.life,
           immediateRender: false,
         },
@@ -92,32 +92,32 @@ export class SpecialFx extends Container {
   /** A special fires (see planRound): its own effect, at its own time. */
   fire(blast: BlastPlan): void {
     const type = blast.fired.piece.special?.type;
-    if (type === 'line') this.beam(blast);
-    else if (type === 'whirl') this.vortex(blast);
-    else if (type === 'rainbow') this.prism(blast);
+    if (type === 'striped') this.fireStriped(blast);
+    else if (type === 'whirlpool') this.fireWhirlpool(blast);
+    else if (type === 'rainbow') this.fireRainbow(blast);
   }
 
   /** A beam of the koi's colour races along its row or column, and the water ripples as the sweep passes. */
-  private beam({ fired, at }: BlastPlan): void {
-    const look = SPECIAL_FX.beam;
-    const beam = this.additive(this.beamTexture, this.textures.color(fired.piece.kind).glow);
+  private fireStriped({ fired, delay }: BlastPlan): void {
+    const look = SPECIAL_FX.striped;
+    const beam = this.additive(this.beamTexture, this.textures.tintsOf(fired.piece.color).glow);
     beam.position.copyFrom(this.board.cellToPoint(fired.at));
     beam.rotation =
-      fired.piece.special?.type === 'line' && fired.piece.special.along === 'col' ? Math.PI / 2 : 0;
+      fired.piece.special?.type === 'striped' && fired.piece.special.along === 'col' ? Math.PI / 2 : 0;
     beam.alpha = 0;
-    gsap.delayedCall(at, () => {
-      this.events.emit('lineFired');
+    gsap.delayedCall(delay, () => {
+      this.events.emit('stripedFired');
     });
     const grow = { k: 0 };
     gsap.to(grow, {
       k: 1,
-      delay: at,
+      delay,
       duration: look.life,
       ease: 'none',
       onUpdate: () => {
         const reach = Math.min(1, 2.2 * grow.k);
-        beam.width = this.length * look.length * easeOutCubic(reach) + this.cell;
-        beam.height = this.cell * look.width * (1 - 0.6 * grow.k);
+        beam.width = this.length * look.length * easeOutCubic(reach) + this.cellSize;
+        beam.height = this.cellSize * look.width * (1 - 0.6 * grow.k);
         beam.alpha = 1 - grow.k;
       },
       onComplete: () => {
@@ -126,18 +126,18 @@ export class SpecialFx extends Container {
     });
     for (const cell of fired.reach) {
       const steps = Math.abs(cell.col - fired.at.col) + Math.abs(cell.row - fired.at.row);
-      gsap.delayedCall(at + steps * TIMING.specials.sweep, () => {
+      gsap.delayedCall(delay + steps * TIMING.specials.sweep, () => {
         this.splash(cell, look.push, look.pushRadius);
       });
     }
   }
 
   /** The whirlpool's eddy grows and spins up, pulling at the water, then pops with a big ring and a hit-stop. */
-  private vortex({ fired, at }: BlastPlan): void {
-    const look = SPECIAL_FX.vortex;
-    const { whirlSpin, whirlPull, whirlCorner } = TIMING.specials;
-    const stay = whirlSpin + whirlCorner + whirlPull;
-    const eddy = new Sprite(this.textures.eddy(fired.piece.kind));
+  private fireWhirlpool({ fired, delay }: BlastPlan): void {
+    const look = SPECIAL_FX.whirlpool;
+    const { whirlpoolSpin, whirlpoolPull, whirlpoolCornerDelay } = TIMING.specials;
+    const stay = whirlpoolSpin + whirlpoolCornerDelay + whirlpoolPull;
+    const eddy = new Sprite(this.textures.eddy(fired.piece.color));
     eddy.anchor.set(0.5);
     eddy.position.copyFrom(this.board.cellToPoint(fired.at));
     eddy.alpha = 0;
@@ -145,47 +145,47 @@ export class SpecialFx extends Container {
     const time = { t: 0 };
     gsap.to(time, {
       t: stay + look.fade,
-      delay: at,
+      delay,
       duration: stay + look.fade,
       ease: 'none',
       onStart: () => {
         this.splash(fired.at, look.pull, look.popRadius);
-        this.events.emit('whirlFired');
+        this.events.emit('whirlpoolFired');
       },
       onUpdate: () => {
-        const grow = easeOutBack(Math.min(1, time.t / whirlSpin), 1.9);
+        const grow = easeOutBack(Math.min(1, time.t / whirlpoolSpin), 1.9);
         const out = Math.max(0, (time.t - stay) / look.fade);
-        eddy.setSize(this.cell * (look.from + (look.to - look.from) * grow) * (1 + 0.2 * out));
-        eddy.rotation = spinAngle(time.t, whirlSpin, look.spin0, look.spinMax);
+        eddy.setSize(this.cellSize * (look.from + (look.to - look.from) * grow) * (1 + 0.2 * out));
+        eddy.rotation = spinAngle(time.t, whirlpoolSpin, look.spin0, look.spinMax);
         eddy.alpha = 1 - out * out;
       },
       onComplete: () => {
         eddy.destroy();
       },
     });
-    gsap.delayedCall(at + stay, () => {
+    gsap.delayedCall(delay + stay, () => {
       this.splash(fired.at, look.pop, look.popRadius);
-      this.events.emit('whirlPopped');
+      this.events.emit('whirlpoolPopped');
     });
   }
 
-  /** Prism beams arc from the rainbow koi to every koi it takes, nearest first, each in a colour of the spectrum. */
-  private prism({ fired, at }: BlastPlan): void {
+  /** Rainbow arcs arc from the rainbow koi to every koi it takes, nearest first, each in a colour of the spectrum. */
+  private fireRainbow({ fired, delay }: BlastPlan): void {
     const { rainbowRise, rainbowStep } = TIMING.specials;
-    gsap.delayedCall(at, () => {
+    gsap.delayedCall(delay, () => {
       this.events.emit('rainbowRose');
     });
-    gsap.delayedCall(at + rainbowRise, () => {
+    gsap.delayedCall(delay + rainbowRise, () => {
       this.events.emit('rainbowFired');
     });
     fired.reach.forEach((cell, n) => {
-      this.arc(fired, cell, n, at + rainbowRise + n * rainbowStep);
+      this.playRainbowArc(fired, cell, n, delay + rainbowRise + n * rainbowStep);
     });
   }
 
-  /** One prism beam: a bowed curve whose head shoots to the target, then whose tail draws in after it. */
-  private arc(fired: Fired, target: Cell, n: number, delay: number): void {
-    const look = SPECIAL_FX.prism;
+  /** One rainbow arc: a bowed curve whose head shoots to the target, then whose tail draws in after it. */
+  private playRainbowArc(fired: Fired, target: Cell, n: number, delay: number): void {
+    const look = SPECIAL_FX.rainbow;
     const travel = TIMING.specials.rainbowTravel;
     const from = this.board.cellToPoint(fired.at);
     const to = this.board.cellToPoint(target);
@@ -218,7 +218,7 @@ export class SpecialFx extends Container {
     });
     gsap.delayedCall(delay + travel, () => {
       this.splash(target, look.push, look.pushRadius);
-      this.events.emit('prismHit', { n });
+      this.events.emit('rainbowArcLanded', { n });
     });
   }
 
@@ -239,7 +239,7 @@ export class SpecialFx extends Container {
 
 /** The part of a quadratic curve between t0 and t1, stroked three times: a wide soft glow, a colour core, a white heart. */
 function drawArc(line: Graphics, curve: Curve, t0: number, t1: number, colour: string): void {
-  const look = SPECIAL_FX.prism;
+  const look = SPECIAL_FX.rainbow;
   const fade = 1 - 0.5 * t0;
   const samples = 14;
   line.clear();
@@ -269,7 +269,7 @@ function pointOn({ from, control, to }: Curve, t: number): PointData {
   };
 }
 
-/** The vortex's turn at time t: it spins up from spin0 to spinMax over `rampUp`, then keeps turning at spinMax. */
+/** The eddy's turn at time t: it spins up from spin0 to spinMax over `rampUp`, then keeps turning at spinMax. */
 function spinAngle(t: number, rampUp: number, spin0: number, spinMax: number): number {
   const extra = spinMax - spin0;
   return spin0 * t + (t < rampUp ? (extra * t * t) / (2 * rampUp) : extra * (t - rampUp / 2));

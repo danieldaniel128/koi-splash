@@ -6,9 +6,9 @@ import type { Voice } from './Synth';
 /** What each game event sounds like (a recipe per event, with its payload): the game's whole soundtrack, in one map. */
 /** What each special sounds like as it's born (one per type: a new special asks for its sound here). */
 const BORN_SOUND: Readonly<Record<SpecialType, (v: Voice) => void>> = {
-  line: sounds.special,
-  whirl: sounds.whirlBorn,
-  rainbow: sounds.rainbowBorn,
+  striped: sounds.special,
+  whirlpool: sounds.whirlpoolCreated,
+  rainbow: sounds.rainbowCreated,
 };
 
 type SoundMap = { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents[K]) => void };
@@ -22,8 +22,8 @@ const SOUND_OF: SoundMap = {
   moveSpent: (v, { movesLeft, goalsMet }) => {
     sounds.tick(v, goalsMet ? Infinity : movesLeft); // a victory lap ticks calmly
   },
-  match: (v, { round, size }) => {
-    sounds.match(v, round, size);
+  match: (v, { roundIndex, size }) => {
+    sounds.match(v, roundIndex, size);
   },
   dive: (v) => {
     sounds.dive(v);
@@ -52,14 +52,14 @@ const SOUND_OF: SoundMap = {
   specialBorn: (v, { type }) => {
     BORN_SOUND[type](v);
   },
-  lineFired: (v) => {
+  stripedFired: (v) => {
     sounds.current(v);
   },
-  whirlFired: (v) => {
-    sounds.whirl(v);
+  whirlpoolFired: (v) => {
+    sounds.whirlpoolFired(v);
   },
-  whirlPopped: (v) => {
-    sounds.whirlPop(v);
+  whirlpoolPopped: (v) => {
+    sounds.whirlpoolPopped(v);
   },
   rainbowRose: (v) => {
     sounds.special(v);
@@ -67,8 +67,8 @@ const SOUND_OF: SoundMap = {
   rainbowFired: (v) => {
     sounds.rainbow(v);
   },
-  prismHit: (v, { n }) => {
-    sounds.prismHit(v, n);
+  rainbowArcLanded: (v, { n }) => {
+    sounds.rainbowArcLanded(v, n);
   },
   boosterArmed: (v, { slot }) => {
     sounds.boostArm(v, slot);

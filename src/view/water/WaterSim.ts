@@ -1,10 +1,11 @@
 import { Container, Geometry, Mesh, RenderTexture, Shader, UniformGroup } from 'pixi.js';
-import type { Renderer, TextureSource } from 'pixi.js';
+import type { PointData, Renderer, TextureSource } from 'pixi.js';
 import { WATER } from '../../config/water';
 import common from './shaders/common.glsl?raw';
 import simFragment from './shaders/sim.frag?raw';
 import vertex from './shaders/water.vert?raw';
 import waves from './shaders/waves.glsl?raw';
+import { packWater } from './waterCodec';
 
 /** The stage rectangle the simulation covers (the pond). */
 export interface SimArea {
@@ -14,8 +15,8 @@ export interface SimArea {
   readonly height: number;
 }
 
-/** Packed "flat water" (height 0, speed 0): each value is 127.5 / 255 split into a high and a low byte. */
-const FLAT_WATER: [number, number, number, number] = [127 / 255, 0.5, 127 / 255, 0.5];
+/** Flat water (height 0, speed 0), packed as the simulation stores it. */
+const FLAT_WATER: [number, number, number, number] = [...packWater(0), ...packWater(0)];
 
 /**
  * A height-field water simulation on the GPU. Two textures take turns: each step reads one and writes the other.
@@ -78,16 +79,20 @@ export class WaterSim {
   }
 
   /**
-   * Pushes the surface at a stage point: negative `push` presses it down (a fish diving, a splash), positive lifts
-   * it. Applied on the next step. Past WATER.maxDrops in one step, it takes the place of the weakest push if it's
-   * stronger, so a splash is never crowded out by the koi's wakes. O(1), O(maxDrops) once the step is full.
+   * Pushes the surface at a stage point, as WaterSurface.push does: a positive `strength` presses it down (a fish
+   * diving, a splash), a negative one lifts it, at most WATER.stateRange either way. Applied on the next step. Past
+   * WATER.maxDrops in one step, it takes the place of the weakest push if it's stronger, so a splash is never crowded
+   * out by the koi's wakes. O(1), O(maxDrops) once the step is full.
    */
-  drop(stageX: number, stageY: number, radius: number, push: number): void {
-    const slot = this.dropCount < WATER.maxDrops ? this.dropCount++ : this.weakestDrop(push);
+  push(at: PointData, strength: number, radius: number): void {
+    const lift = -strength; // the state holds height: pressing down is negative
+    const slot = this.dropCount < WATER.maxDrops ? this.dropCount++ : this.weakestDrop(lift);
     if (slot < 0) return;
-    const cellX = ((stageX - this.area.x) / this.area.width) * this.cols;
-    const cellY = ((stageY - this.area.y) / this.area.height) * this.rows;
-    this.drops.set([cellX, cellY, radius / WATER.cellSize, push], slot * 4);
+    const cellX = ((at.x - this.area.x) / this.area.width) * this.cols;
+    const cellY = ((at.y - this.area.y) / this.area.height) * this.rows;
+    const range = WATER.stateRange; // what the state can hold: a stronger push would flatten the splash's crown
+    const capped = Math.min(Math.max(lift, -range), range);
+    this.drops.set([cellX, cellY, radius / WATER.cellSize, capped], slot * 4);
   }
 
   /**
@@ -174,10 +179,13 @@ export interface PondShapeResources {
 
 /**
  * A fragment shader with the shared helpers (noise, the pond's outline, lines) in front of it. Marked GLSL ES 3:
- * Pixi compiles anything else as WebGL 1 shaders, which lack fwidth (constant-width lines).
+ * Pixi compiles anything else as WebGL 1 shaders, which lack fwidth (constant-width lines). Its textures are read at
+ * high precision: left undeclared, Pixi makes them lowp, too coarse for the water state's low byte on the phone GPUs
+ * that honour it (the pond would never settle). WATER_RANGE is how far the water state reaches (see waterCodec).
  */
 export function withCommon(fragment: string): string {
-  return `#version 300 es\nprecision highp float;\n${common}\n${fragment}`;
+  const range = `const float WATER_RANGE = ${WATER.stateRange.toFixed(1)};`;
+  return `#version 300 es\nprecision highp float;\nprecision highp sampler2D;\n${range}\n${common}\n${fragment}`;
 }
 
 /** A fragment shader with the shared helpers and the wave-reading code in front of it (high precision for unpacking). */

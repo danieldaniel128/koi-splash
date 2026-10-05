@@ -12,20 +12,25 @@ interface Look {
   destroy(): void;
 }
 
-/** The layers the looks draw in: under the koi (glows, eddies) and over them (sheen, sparkles). */
+/**
+ * What the looks draw with: the layers under the koi (glows, eddies) and over them (sheen, sparkles), and the color
+ * flow every rainbow koi shares.
+ */
 interface Layers {
   readonly under: Container;
   readonly over: Container;
+  readonly rainbowHue: RainbowHue;
 }
 
 /**
  * The special koi's life at rest (after the prototype's): a striped koi faces its line over a pulsing glow, a sheen
- * sweeping along it now and then; a rainbow koi's colours flow over a spinning prism glow with sparkles orbiting it;
- * a whirlpool's eddy turns under its curled koi. One look per kind of special (LOOKS); each follows its koi.
+ * sweeping along it now and then; a rainbow koi's colours flow over a spinning rainbow glow with sparkles orbiting it;
+ * a whirlpool's eddy turns under its curled koi. one look per special type (LOOKS); each follows its koi.
  */
 export class SpecialLooks {
   readonly under = new Container();
   readonly over = new Container();
+  readonly rainbowHue = new RainbowHue();
   private readonly looks = new Map<Koi, Look>();
   private time = 0;
 
@@ -49,17 +54,48 @@ export class SpecialLooks {
   /** Every look follows its koi. Call once per frame after the koi moved. O(specials). */
   follow(deltaSeconds: number): void {
     this.time += deltaSeconds;
+    this.rainbowHue.turn(this.time);
     for (const [koi, look] of this.looks) look.follow(koi, this.time);
+  }
+}
+
+/**
+ * The colors flowing over every rainbow koi: one hue-turning filter they all share (one program, one set of
+ * uniforms, turned once a frame), drawn at the screen's resolution like the koi. Made with the first rainbow koi and
+ * destroyed with the last.
+ */
+class RainbowHue {
+  private filter: ColorMatrixFilter | null = null;
+  private users = 0;
+
+  /** A rainbow koi takes the filter. */
+  take(): ColorMatrixFilter {
+    this.users++;
+    this.filter ??= new ColorMatrixFilter({ resolution: 'inherit' });
+    return this.filter;
+  }
+
+  /** A rainbow koi is done with it; the last one destroys it. */
+  release(): void {
+    this.users = Math.max(0, this.users - 1);
+    if (this.users > 0 || !this.filter) return;
+    this.filter.destroy();
+    this.filter = null;
+  }
+
+  /** The colors flow on with the clock (s). */
+  turn(time: number): void {
+    this.filter?.hue((time * SPECIAL_LOOK.rainbow.flow * 180) / Math.PI, false);
   }
 }
 
 type LookMaker = (koi: Koi, special: Special, textures: SpecialTextures, layers: Layers) => Look;
 
-/** One look per kind of special (Strategy): a new special is one entry here. */
+/** one look per special type (Strategy): a new special is one entry here. */
 const LOOKS: Readonly<Record<Special['type'], LookMaker>> = {
-  line: (koi, special, textures, layers) => new StripedLook(koi, special, textures, layers),
+  striped: (koi, special, textures, layers) => new StripedLook(koi, special, textures, layers),
   rainbow: (koi, _special, textures, layers) => new RainbowLook(koi, textures, layers),
-  whirl: (koi, _special, textures, layers) => new WhirlLook(koi, textures, layers),
+  whirlpool: (koi, _special, textures, layers) => new WhirlpoolLook(koi, textures, layers),
 };
 
 /** A striped koi: it faces along its line, over a glow of its colour that pulses, with a sheen sweeping it. */
@@ -72,10 +108,10 @@ class StripedLook implements Look {
 
   constructor(koi: Koi, special: Special, textures: SpecialTextures, layers: Layers) {
     // along its line, whichever way round is nearer to where it was heading (head up is 0, right is PI / 2)
-    const axis = special.type === 'line' && special.along === 'row' ? Math.PI / 2 : 0;
+    const axis = special.type === 'striped' && special.along === 'row' ? Math.PI / 2 : 0;
     this.facing = Math.cos(koi.heading - axis) >= 0 ? axis : axis + Math.PI;
-    this.glow = additive(textures.glow, textures.color(koi.kind).glow);
-    this.frames = textures.sheen(koi.kind);
+    this.glow = additive(textures.glow, textures.tintsOf(koi.color).glow);
+    this.frames = textures.sheen(koi.color);
     this.sheen = additive(this.frames[0] ?? textures.glow);
     layers.under.addChild(this.glow);
     layers.over.addChild(this.sheen);
@@ -100,11 +136,11 @@ class StripedLook implements Look {
   }
 }
 
-/** A rainbow koi: its colours flow, over a spinning prism glow, with sparkles orbiting it. */
+/** A rainbow koi: its colors flow (RainbowHue), over a spinning rainbow glow, with sparkles orbiting it. */
 class RainbowLook implements Look {
   private readonly glow: Sprite;
   private readonly sparkles: Sprite[];
-  private readonly hue = new ColorMatrixFilter();
+  private readonly hue: RainbowHue;
   private readonly phase = Math.random() * Math.PI * 2;
 
   constructor(
@@ -112,16 +148,16 @@ class RainbowLook implements Look {
     textures: SpecialTextures,
     layers: Layers,
   ) {
-    this.glow = additive(textures.prism);
+    this.glow = additive(textures.rainbowGlow);
     this.sparkles = Array.from({ length: SPECIAL_LOOK.rainbow.sparkles }, () => additive(textures.sparkle));
-    koi.filters = [this.hue];
+    this.hue = layers.rainbowHue;
+    koi.filters = [this.hue.take()];
     layers.under.addChild(this.glow);
     layers.over.addChild(...this.sparkles);
   }
 
   follow(koi: Koi, time: number): void {
     const look = SPECIAL_LOOK.rainbow;
-    this.hue.hue(((time * look.flow + this.phase) * 180) / Math.PI, false);
     this.glow.position.copyFrom(koi.position);
     this.glow.rotation = time * look.glowSpin;
     this.glow.setSize(koi.width * look.glow * (1 + 0.06 * Math.sin(time * 3)));
@@ -139,13 +175,14 @@ class RainbowLook implements Look {
 
   destroy(): void {
     this.koi.filters = [];
+    this.hue.release();
     this.glow.destroy();
     for (const sparkle of this.sparkles) sparkle.destroy();
   }
 }
 
 /** A whirlpool: an eddy of its colour turning under the koi curled in its eye, which turns too. */
-class WhirlLook implements Look {
+class WhirlpoolLook implements Look {
   private readonly eddy: Sprite;
   private readonly phase = Math.random() * Math.PI * 2;
 
@@ -154,14 +191,14 @@ class WhirlLook implements Look {
     textures: SpecialTextures,
     layers: Layers,
   ) {
-    this.eddy = new Sprite(textures.eddy(koi.kind));
+    this.eddy = new Sprite(textures.eddy(koi.color));
     this.eddy.anchor.set(0.5);
     layers.under.addChild(this.eddy);
-    koi.spin = SPECIAL_LOOK.whirl.koiSpin; // the curled koi turns in the eye, head first, with the water
+    koi.spin = SPECIAL_LOOK.whirlpool.koiSpin; // the curled koi turns in the eye, head first, with the water
   }
 
   follow(koi: Koi, time: number): void {
-    const look = SPECIAL_LOOK.whirl;
+    const look = SPECIAL_LOOK.whirlpool;
     this.eddy.position.copyFrom(koi.position);
     this.eddy.rotation = time * look.spin + this.phase;
     this.eddy.setSize(koi.width * look.eddy);

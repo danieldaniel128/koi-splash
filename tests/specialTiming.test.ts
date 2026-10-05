@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { CascadeStep, Piece, Special } from '../src/model/types';
+import type { CascadeRound, Piece, Special } from '../src/model/types';
 import { blastLands, planRound } from '../src/view/specialTiming';
 
 const TIMING = {
   merge: 0.36,
   sweep: 0.03,
-  whirlSpin: 0.32,
-  whirlPull: 0.34,
-  whirlCorner: 0.03,
+  whirlpoolSpin: 0.32,
+  whirlpoolPull: 0.34,
+  whirlpoolCornerDelay: 0.03,
   rainbowRise: 0.3,
   rainbowStep: 0.05,
   rainbowTravel: 0.14,
@@ -15,8 +15,8 @@ const TIMING = {
   dive: 0.32,
 };
 let nextId = 1;
-const koi = (special?: Special): Piece => ({ id: nextId++, kind: 0, ...(special ? { special } : {}) });
-const step = (over: Partial<CascadeStep>): CascadeStep => ({
+const koi = (special?: Special): Piece => ({ id: nextId++, color: 0, ...(special ? { special } : {}) });
+const cascadeRound = (over: Partial<CascadeRound>): CascadeRound => ({
   matches: [],
   created: [],
   fired: [],
@@ -32,8 +32,8 @@ describe('planRound', () => {
     const merging = koi();
     const plain = koi();
     const plan = planRound(
-      step({
-        created: [{ piece: koi({ type: 'whirl' }), at: { col: 2, row: 2 }, from: [{ col: 3, row: 2 }] }],
+      cascadeRound({
+        created: [{ piece: koi({ type: 'whirlpool' }), at: { col: 2, row: 2 }, from: [{ col: 3, row: 2 }] }],
         cleared: [
           { piece: merging, at: { col: 3, row: 2 } },
           { piece: plain, at: { col: 6, row: 6 } },
@@ -46,11 +46,11 @@ describe('planRound', () => {
   });
 
   it('a striped sweep takes its cells in turn, outward', () => {
-    const striped = koi({ type: 'line', along: 'row' });
+    const striped = koi({ type: 'striped', along: 'row' });
     const near = koi();
     const far = koi();
     const plan = planRound(
-      step({
+      cascadeRound({
         fired: [{ piece: striped, at: { col: 3, row: 1 }, reach: [] }],
         cleared: [
           { piece: striped, at: { col: 3, row: 1 } },
@@ -65,48 +65,48 @@ describe('planRound', () => {
   });
 
   it('a special caught in a blast fires a beat after the blast reaches it, and the round waits for it', () => {
-    const striped = koi({ type: 'line', along: 'row' });
-    const whirl = koi({ type: 'whirl' });
+    const striped = koi({ type: 'striped', along: 'row' });
+    const whirlpool = koi({ type: 'whirlpool' });
     const drained = koi();
     const plan = planRound(
-      step({
+      cascadeRound({
         fired: [
           { piece: striped, at: { col: 0, row: 1 }, reach: [] },
-          { piece: whirl, at: { col: 4, row: 1 }, reach: [] },
+          { piece: whirlpool, at: { col: 4, row: 1 }, reach: [] },
         ],
         cleared: [
           { piece: striped, at: { col: 0, row: 1 } },
-          { piece: whirl, at: { col: 4, row: 1 }, blast: 0, order: 3 },
+          { piece: whirlpool, at: { col: 4, row: 1 }, blast: 0, order: 3 },
           { piece: drained, at: { col: 5, row: 2 }, blast: 1, order: 0 },
         ],
       }),
       TIMING,
     );
-    const whirlFires = 4 * 0.03 + 0.1;
-    expect(plan.blasts[1]?.at).toBeCloseTo(whirlFires);
+    const whirlpoolFires = 4 * 0.03 + 0.1;
+    expect(plan.blasts[1]?.delay).toBeCloseTo(whirlpoolFires);
     expect(plan.clears.get(drained.id)).toMatchObject({ how: 'drain', toward: { col: 4, row: 1 } });
-    expect(plan.clears.get(drained.id)?.delay).toBeCloseTo(whirlFires + 0.32 + 0.03); // a corner
-    expect(plan.end).toBeCloseTo(whirlFires + 0.32 + 0.03 + 0.34);
+    expect(plan.clears.get(drained.id)?.delay).toBeCloseTo(whirlpoolFires + 0.32 + 0.03); // a corner
+    expect(plan.end).toBeCloseTo(whirlpoolFires + 0.32 + 0.03 + 0.34);
   });
 });
 
 describe('blastLands', () => {
   it('is when the blast takes its first koi, so its points show as it lands', () => {
-    const whirl = koi({ type: 'whirl' });
-    const round = step({
-      fired: [{ piece: whirl, at: { col: 3, row: 3 }, reach: [] }],
+    const whirlpool = koi({ type: 'whirlpool' });
+    const round = cascadeRound({
+      fired: [{ piece: whirlpool, at: { col: 3, row: 3 }, reach: [] }],
       cleared: [
-        { piece: whirl, at: { col: 3, row: 3 } },
+        { piece: whirlpool, at: { col: 3, row: 3 } },
         { piece: koi(), at: { col: 4, row: 3 }, blast: 0, order: 0 },
         { piece: koi(), at: { col: 4, row: 4 }, blast: 0, order: 1 },
       ],
     });
-    expect(blastLands(round, planRound(round, TIMING), 0)).toBeCloseTo(TIMING.whirlSpin);
+    expect(blastLands(round, planRound(round, TIMING), 0)).toBeCloseTo(TIMING.whirlpoolSpin);
   });
 
   it('is when it fires, for a blast that takes nothing', () => {
-    const striped = koi({ type: 'line', along: 'row' });
-    const round = step({
+    const striped = koi({ type: 'striped', along: 'row' });
+    const round = cascadeRound({
       fired: [{ piece: striped, at: { col: 0, row: 0 }, reach: [] }],
       cleared: [{ piece: striped, at: { col: 0, row: 0 } }],
     });

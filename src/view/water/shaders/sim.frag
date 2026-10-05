@@ -1,5 +1,5 @@
 // One step of the water simulation (a height field driven by the wave equation). Each texel stores the surface
-// height and its vertical speed, each packed into two 8-bit channels so the simulation runs on any phone GPU.
+// height and its vertical speed, each packed into two 8-bit channels (packWater) so it runs on any phone GPU.
 // Every step: speed moves toward the neighbours (a 9-point average, so rings stay round instead of octagonal), the
 // height follows the speed, and the koi push the surface wherever they are (the "drops"). A touch of viscosity
 // smooths the height too: it barely touches the wide rings but quickly calms the tiny, grid-sized ripples that
@@ -22,30 +22,20 @@ uniform vec2 uShore;
 // each drop: xy = centre (cells), z = radius (cells), w = push (negative = down)
 uniform vec4 uDrops[MAX_DROPS];
 
-float unpack(vec2 v) {
-    return (v.x + v.y / 255.0) * 2.0 - 1.0;
-}
-
-vec2 pack(float value) {
-    float x = clamp(value * 0.5 + 0.5, 0.0, 1.0) * 255.0;
-    float high = min(floor(x), 254.0);
-    return vec2(high / 255.0, x - high); // high byte, then the remainder at full 8-bit resolution
-}
-
 float heightAt(vec2 cell) {
-    return unpack(texture(uState, cell / uSimSize).rg);
+    return unpackWater(texture(uState, cell / uSimSize).rg);
 }
 
 void main() {
     vec2 cell = vPosition;
     float edge = waterEdge(uSimArea.xy + cell / uSimSize * uSimArea.zw);
     if (edge > -1.0) {
-        finalColor = vec4(pack(0.0), pack(0.0)); // the bank, a stone or a pad: always flat
+        finalColor = vec4(packWater(0.0), packWater(0.0)); // the bank, a stone or a pad: always flat
         return;
     }
     vec4 here = texture(uState, cell / uSimSize);
-    float height = unpack(here.rg);
-    float speed = unpack(here.ba);
+    float height = unpackWater(here.rg);
+    float speed = unpackWater(here.ba);
 
     float sides = heightAt(cell + vec2(1.0, 0.0)) + heightAt(cell - vec2(1.0, 0.0))
         + heightAt(cell + vec2(0.0, 1.0)) + heightAt(cell - vec2(0.0, 1.0));
@@ -62,5 +52,5 @@ void main() {
         float d = length(cell - drop.xy) / drop.z;
         if (d < 1.0) height += drop.w * (cos(d * 3.14159) * 0.5 + 0.5);
     }
-    finalColor = vec4(pack(height), pack(speed));
+    finalColor = vec4(packWater(height), packWater(speed));
 }

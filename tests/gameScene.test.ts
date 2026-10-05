@@ -52,7 +52,7 @@ function stubScene(stub: StubLevel = {}): Seen & { scene: GameScene } {
   };
   events.on('invalidSwap', () => seen.said.push('invalidSwap'));
   const deps: GameSceneDeps = {
-    spec: { cols: 7, rows: 9, kinds: 5 },
+    spec: { cols: 7, rows: 9, colorCount: 5 },
     level: {
       moves: stub.moves ?? 10,
       pointsPerPiece: 10,
@@ -95,7 +95,7 @@ function stubAnimator(seen: Seen): TurnAnimator {
     },
     invalidSwap: done,
     swap: done,
-    playStep: done,
+    playRound: done,
     playBooster: done,
   };
 }
@@ -146,14 +146,14 @@ describe('GameScene', () => {
     if (!board) throw new Error('nothing rendered');
     const cells = [...board.cells()].filter((cell) => board.get(cell));
     const a = cells[0];
-    const b = cells.find((cell) => cell !== a && board.get(cell)?.kind === (a && board.get(a)?.kind));
+    const b = cells.find((cell) => cell !== a && board.get(cell)?.color === (a && board.get(a)?.color));
     if (!a || !b) throw new Error('no two koi of one colour');
     const other = board.get(b);
 
-    expect(await scene.useBooster({ type: 'special', at: a, special: { type: 'whirl' } })).toBe(true);
+    expect(await scene.useBooster({ type: 'special', at: a, special: { type: 'whirlpool' } })).toBe(true);
     // the koi trade places but the colours stay put, so nothing matches: the whirlpool just moves
     expect(await scene.useBooster({ type: 'swap', a, b })).toBe(true);
-    expect(board.get(b)?.special).toEqual({ type: 'whirl' });
+    expect(board.get(b)?.special).toEqual({ type: 'whirlpool' });
     expect(board.get(a)).toBe(other);
   });
 
@@ -176,7 +176,7 @@ describe('GameScene', () => {
 
   it('still ends the level, with the score and goals counted, when the last move fails to play', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const failing = { playStep: () => Promise.reject(new Error('a tween broke')) };
+    const failing = { playRound: () => Promise.reject(new Error('a tween broke')) };
     const { scene, board, statuses, outcomes } = stubScene({
       moves: 1,
       goals: [{ type: 'score', target: 1 }],

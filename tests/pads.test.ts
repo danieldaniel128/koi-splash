@@ -5,7 +5,7 @@ import { PadField } from '../src/model/pads';
 import type { Pad } from '../src/model/types';
 import { createBoard, findMove, trySwap } from '../src/model/rules';
 
-const SPEC = { cols: 7, rows: 9, kinds: 5 };
+const SPEC = { cols: 7, rows: 9, colorCount: 5 };
 
 /** A bud on cell col,row: matches in the four cells next to it hit it. */
 function bud(id: number, col: number, row: number, hits = 2): Pad {
@@ -78,10 +78,10 @@ describe('PadField', () => {
         if (mark !== '.') board.set({ col, row }, board.createPiece(Number(mark)));
       }
     });
-    const spec = { cols: 6, rows: 6, kinds: 5 };
+    const spec = { cols: 6, rows: 6, colorCount: 5 };
     const result = trySwap(board, { col: 2, row: 2 }, { col: 2, row: 1 }, spec, seeded(1), field);
     if (!result.valid) throw new Error('refused');
-    const [first] = result.steps;
+    const [first] = result.rounds;
     expect(first?.created.map((made) => made.at)).toEqual([{ col: 2, row: 1 }]);
     expect(first?.padEvents.map((event) => event.type)).toEqual(['hit']);
   });
@@ -94,8 +94,8 @@ describe('PadField', () => {
       const move = findMove(board);
       if (!move) continue;
       const result = trySwap(board, move[0], move[1], SPEC, rng, field);
-      if (!result.valid || !result.steps.some((s) => s.padEvents.some((e) => e.type === 'bloom'))) continue;
-      expect(board.isBlocked({ col: 3, row: 4 })).toBe(false);
+      if (!result.valid || !result.rounds.some((s) => s.padEvents.some((e) => e.type === 'bloom'))) continue;
+      expect(board.hasPad({ col: 3, row: 4 })).toBe(false);
       expect(board.get({ col: 3, row: 4 })).not.toBeNull();
       return;
     }

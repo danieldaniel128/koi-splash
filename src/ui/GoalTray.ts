@@ -51,9 +51,9 @@ export class GoalTray {
     goals.forEach((goal, i) => this.chips[i]?.update(goal));
   }
 
-  /** The icon of the first goal of this kind (a bloomed lotus flies to the lotus chip), or the first chip's. */
-  iconOf(kind: GoalProgress['kind']): HTMLElement {
-    const chip = this.chips.find((c) => c.kind === kind) ?? this.chips[0];
+  /** The icon of the first goal of this type (a bloomed lotus flies to the lotus chip), or the first chip's. */
+  iconOf(type: GoalProgress['type']): HTMLElement {
+    const chip = this.chips.find((c) => c.type === type) ?? this.chips[0];
     return chip?.icon ?? this.element;
   }
 }
@@ -65,10 +65,10 @@ export class GoalTray {
 export function goalPicture(goal: GoalProgress, icons: GoalIcons): string | null {
   const pictures: Readonly<Record<GoalType, () => string | null>> = {
     lotus: () => icons.lotus,
-    koi: () => icons.koi[goal.koi ?? 0] ?? null,
+    koi: () => icons.koi[goal.color ?? 0] ?? null,
     score: () => null,
   };
-  return pictures[goal.kind]();
+  return pictures[goal.type]();
 }
 
 /**
@@ -78,7 +78,7 @@ export function goalPicture(goal: GoalProgress, icons: GoalIcons): string | null
 export class GoalChip {
   readonly element: HTMLElement;
   readonly icon = el('span', 'chip__icon');
-  readonly kind: GoalProgress['kind'];
+  readonly type: GoalProgress['type'];
   private readonly count = el('span', 'number chip__count');
   private readonly name: string;
   private left: number;
@@ -88,9 +88,9 @@ export class GoalChip {
     picture: string | null,
     private readonly bonus: ChipBonus | null = null,
   ) {
-    this.kind = goal.kind;
+    this.type = goal.type;
     this.name = goalName(goal);
-    if (picture) this.icon.append(chipImage(goal.kind, picture));
+    if (picture) this.icon.append(chipImage(goal.type, picture));
     else setIcon(this.icon, STAR);
     this.element = el('div', 'chip', this.icon, this.count);
     this.element.setAttribute('role', 'img');
@@ -146,15 +146,15 @@ function leftOf(goal: GoalProgress): number {
 
 /** What a goal is called out loud: lotuses, red koi, points. */
 export function goalName(goal: GoalProgress): string {
-  if (goal.kind === 'lotus') return 'lotuses';
-  if (goal.kind === 'koi') return `${KOI_NAMES[goal.koi ?? 0] ?? ''} koi`;
+  if (goal.type === 'lotus') return 'lotuses';
+  if (goal.type === 'koi') return `${KOI_NAMES[goal.color ?? 0] ?? ''} koi`;
   return 'points';
 }
 
 /** A goal's picture, in proportion to the chip's icon box as its painting was made for (it spills out of the box). */
-function chipImage(kind: GoalProgress['kind'], src: string): HTMLImageElement {
-  const picture = image(`chip__image chip__image--${kind}`, src);
-  const size = kind === 'koi' ? GOAL_TRAY.koiSize : GOAL_TRAY.lotusSize;
+function chipImage(type: GoalProgress['type'], src: string): HTMLImageElement {
+  const picture = image(`chip__image chip__image--${type}`, src);
+  const size = type === 'koi' ? GOAL_TRAY.koiSize : GOAL_TRAY.lotusSize;
   picture.style.setProperty('--image-scale', `${size / THEME.size.goalIcon}`);
   return picture;
 }

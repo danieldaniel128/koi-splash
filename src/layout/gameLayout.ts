@@ -18,7 +18,7 @@ export interface GameLayout {
   readonly stage: { readonly width: number; readonly height: number; readonly scale: number };
   readonly hud: Rect;
   /** The board: where the grid starts, its size, the distance between cell centres and the size of a piece. */
-  readonly board: Rect & { readonly cell: number; readonly piece: number };
+  readonly board: Rect & { readonly cellSize: number; readonly koiSize: number };
   readonly pond: Rect;
   /** The open ground above the pond and its shore, from the top of the screen (behind the HUD too): the backdrop. */
   readonly scene: Rect;
@@ -88,8 +88,8 @@ function placePond(
     y: bandTop + (bandBottom - bandTop - height) * config.pondAlign,
     width,
     height,
-    cell,
-    piece: cell - config.cellGap,
+    cellSize: cell,
+    koiSize: cell - config.cellGap,
   };
   const pond = {
     x: board.x - margin.left,

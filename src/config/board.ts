@@ -5,5 +5,5 @@ import { KOI_SET } from './koi';
  * while the game boots (see measureScreen), so a slip in the drawing shows the error screen.
  */
 export const BOARD = {
-  kinds: KOI_SET.length,
+  colorCount: KOI_SET.length,
 } as const;

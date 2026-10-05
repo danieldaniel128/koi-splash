@@ -4,10 +4,10 @@ import { Board } from './Board';
 import type { PadField } from './pads';
 import type {
   BoardSpec,
-  CascadeStep,
+  CascadeRound,
   Cell,
   Fall,
-  Kind,
+  PieceColor,
   Match,
   PadEvent,
   Piece,
@@ -32,7 +32,7 @@ const MAX_CASCADE = 50;
 export function createBoard(spec: BoardSpec, rng: RandomSource, blocked: readonly Cell[] = []): Board {
   const board = new Board(spec.cols, spec.rows, spec.holes);
   for (const cell of blocked) board.setBlocked(cell, true);
-  fillSafely(board, spec.kinds, rng);
+  fillSafely(board, spec.colorCount, rng);
   return board;
 }
 
@@ -48,11 +48,11 @@ export function resetBoard(
 ): void {
   for (const cell of board.cells()) board.setBlocked(cell, false);
   for (const cell of blocked) board.setBlocked(cell, true);
-  fillSafely(board, spec.kinds, rng);
+  fillSafely(board, spec.colorCount, rng);
 }
 
 /**
- * Every straight run of 3 or more same-kind pieces (a T or L shape gives one row match and one column match).
+ * Every straight run of 3 or more same-color pieces (a T or L shape gives one row match and one column match).
  * O(N): one pass over the rows and one over the columns.
  */
 export function findMatches(board: Board): Match[] {
@@ -99,7 +99,7 @@ export function hasAnyMove(board: Board): boolean {
 /**
  * Plays a swap. An invalid swap leaves the board untouched: cells not side by side, a cell with no koi (a pad or the
  * bank), or a swap that makes no match and fires no special. A valid one swaps, then settles the board (see settle)
- * and returns every round as data so the view can animate it step by step.
+ * and returns every round as data so the view can animate it round by round.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
 export function trySwap(
@@ -117,13 +117,19 @@ export function trySwap(
 
   board.swap(a, b);
   const firing = triggers.map((t) => ({ ...t, at: sameCell(t.at, a) ? b : a })); // they moved with the swap
-  return { valid: true, ...settle(board, spec, rng, { pads, swap: [b, a], firing }) };
+  return { valid: true, ...settle(board, spec, rng, { pads, preferredSpecialCells: [b, a], firing }) };
+}
+
+/** A settled board: every round of its cascade, and whether the board was dealt again at the end. */
+export interface SettleResult {
+  readonly rounds: CascadeRound[];
+  readonly reshuffled: boolean;
 }
 
 /** What starts a cascade: the cells just swapped (a special appears there first), and specials set to fire. */
 export interface SettleStart {
   readonly pads?: PadField | undefined;
-  readonly swap?: readonly Cell[];
+  readonly preferredSpecialCells?: readonly Cell[];
   readonly firing?: readonly Trigger[];
 }
 
@@ -138,32 +144,37 @@ export function settle(
   spec: BoardSpec,
   rng: RandomSource,
   start: SettleStart = {},
-): { steps: CascadeStep[]; reshuffled: boolean } {
-  const steps: CascadeStep[] = [];
+): SettleResult {
+  const rounds: CascadeRound[] = [];
   let firing: readonly Trigger[] = start.firing ?? [];
   for (
     let matches = findMatches(board);
     matches.length > 0 || firing.length > 0;
     matches = findMatches(board)
   ) {
-    if (steps.length >= MAX_CASCADE) throw new Error('cascade did not settle');
+    if (rounds.length >= MAX_CASCADE) throw new Error('cascade did not settle');
     // the first round puts its special where the player swapped; later rounds in the middle of the shape
-    const round = resolveRound(board, matches, steps.length === 0 ? (start.swap ?? []) : [], firing);
+    const resolution = resolveRound(
+      board,
+      matches,
+      rounds.length === 0 ? (start.preferredSpecialCells ?? []) : [],
+      firing,
+    );
     firing = [];
     const struck = [
-      ...round.cleared.map((c) => c.at),
-      ...round.created.map((c) => c.at),
-      ...round.struckPads,
+      ...resolution.cleared.map((c) => c.at),
+      ...resolution.created.map((c) => c.at),
+      ...resolution.struckPads,
     ];
     const padEvents = hitPads(board, start.pads, struck);
     const falls = applyGravity(board);
-    const spawns = refill(board, spec.kinds, rng);
-    const { created, fired, cleared } = round;
-    steps.push({ matches, created, fired, cleared, padEvents, falls, spawns });
+    const spawns = refill(board, spec.colorCount, rng);
+    const { created, fired, cleared } = resolution;
+    rounds.push({ matches, created, fired, cleared, padEvents, falls, spawns });
   }
   const reshuffled = !hasAnyMove(board);
-  if (reshuffled) fillSafely(board, spec.kinds, rng);
-  return { steps, reshuffled };
+  if (reshuffled) fillSafely(board, spec.colorCount, rng);
+  return { rounds, reshuffled };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -172,24 +183,24 @@ export function settle(
  * Fills every cell with new pieces, avoiding ready-made matches, until the board has at least one move.
  * O(N) per try plus a findMove check. Almost always one try, but there is no fixed upper bound on retries.
  */
-function fillSafely(board: Board, kinds: number, rng: RandomSource): void {
+function fillSafely(board: Board, colorCount: number, rng: RandomSource): void {
   do {
     for (const cell of board.cells()) {
-      if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeKind(board, cell, kinds, rng)));
+      if (!board.isBlocked(cell)) board.set(cell, board.createPiece(safeColor(board, cell, colorCount, rng)));
     }
   } while (!hasAnyMove(board));
 }
 
-/** A kind for `cell` that does not complete a run with the two pieces to its left or the two above. */
-function safeKind(board: Board, cell: Cell, kinds: number, rng: RandomSource): Kind {
-  const banned = new Set<Kind>();
-  const left = board.kindAt({ col: cell.col - 1, row: cell.row });
-  if (left !== null && left === board.kindAt({ col: cell.col - 2, row: cell.row })) banned.add(left);
-  const up = board.kindAt({ col: cell.col, row: cell.row - 1 });
-  if (up !== null && up === board.kindAt({ col: cell.col, row: cell.row - 2 })) banned.add(up);
+/** A color for `cell` that does not complete a run with the two pieces to its left or the two above. */
+function safeColor(board: Board, cell: Cell, colorCount: number, rng: RandomSource): PieceColor {
+  const banned = new Set<PieceColor>();
+  const left = board.colorAt({ col: cell.col - 1, row: cell.row });
+  if (left !== null && left === board.colorAt({ col: cell.col - 2, row: cell.row })) banned.add(left);
+  const up = board.colorAt({ col: cell.col, row: cell.row - 1 });
+  if (up !== null && up === board.colorAt({ col: cell.col, row: cell.row - 2 })) banned.add(up);
 
-  const allowed: Kind[] = [];
-  for (let k = 0; k < kinds; k++) if (!banned.has(k)) allowed.push(k);
+  const allowed: PieceColor[] = [];
+  for (let k = 0; k < colorCount; k++) if (!banned.has(k)) allowed.push(k);
   return pick(rng, allowed);
 }
 
@@ -211,19 +222,19 @@ function lineCells(board: Board, direction: Match['direction'], line: number): C
   );
 }
 
-/** Runs of 3+ same-kind pieces along one line, given its cells in order. */
+/** Runs of 3+ same-color pieces along one line, given its cells in order. */
 function runsInLine(board: Board, cells: readonly Cell[], direction: Match['direction']): Match[] {
-  const kinds = cells.map((cell) => board.kindAt(cell));
+  const colorCount = cells.map((cell) => board.colorAt(cell));
   const matches: Match[] = [];
   let start = 0;
   for (let i = 1; i <= cells.length; i++) {
-    const runKind = kinds[start] ?? null;
-    const runContinues = i < cells.length && runKind !== null && kinds[i] === runKind;
+    const runColor = colorCount[start] ?? null;
+    const runContinues = i < cells.length && runColor !== null && colorCount[i] === runColor;
     if (runContinues) continue;
 
     const runLength = i - start;
-    if (runKind !== null && runLength >= MIN_RUN) {
-      matches.push({ kind: runKind, cells: cells.slice(start, i), direction });
+    if (runColor !== null && runLength >= MIN_RUN) {
+      matches.push({ color: runColor, cells: cells.slice(start, i), direction });
     }
     start = i;
   }
@@ -242,11 +253,11 @@ function neighbours(cell: Cell): Cell[] {
 
 /** True when the piece at `cell` is part of a horizontal or vertical run of 3+. */
 function runThrough(board: Board, cell: Cell): boolean {
-  const kind = board.kindAt(cell);
-  if (kind === null) return false;
+  const color = board.colorAt(cell);
+  if (color === null) return false;
   const reach = (dc: number, dr: number): number => {
     let n = 0;
-    while (board.kindAt({ col: cell.col + dc * (n + 1), row: cell.row + dr * (n + 1) }) === kind) n++;
+    while (board.colorAt({ col: cell.col + dc * (n + 1), row: cell.row + dr * (n + 1) }) === color) n++;
     return n;
   };
   return reach(-1, 0) + reach(1, 0) + 1 >= MIN_RUN || reach(0, -1) + reach(0, 1) + 1 >= MIN_RUN;
@@ -303,13 +314,13 @@ function stretches(board: Board, col: number): number[][] {
 }
 
 /** Fills the empty cells at the top of each stretch of water with new koi rising from the deep, the lowest first. */
-function refill(board: Board, kinds: number, rng: RandomSource): Spawn[] {
+function refill(board: Board, colorCount: number, rng: RandomSource): Spawn[] {
   const spawns: Spawn[] = [];
   for (let col = 0; col < board.cols; col++) {
     for (const slots of stretches(board, col)) {
       const empty = slots.filter((row) => !board.get({ col, row })); // bottom to top
       empty.forEach((row, order) => {
-        const piece = board.createPiece(int(rng, 0, kinds - 1));
+        const piece = board.createPiece(int(rng, 0, colorCount - 1));
         const to = { col, row };
         board.set(to, piece);
         spawns.push({ piece, to, order });

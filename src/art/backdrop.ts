@@ -9,8 +9,7 @@
  */
 
 import { GARDEN_ROOM } from '../config/layout';
-
-type Ctx = CanvasRenderingContext2D;
+import { fillRadial, transparent } from './canvas';
 
 /** The garden's colours and sizes (px), from the theme. */
 export interface BackdropLook {
@@ -36,6 +35,8 @@ export interface BackdropLook {
   readonly mist: string;
   /** The pagoda, the branch and the trunk are one ink colour; the lit windows and the lantern are warm. */
   readonly ink: string;
+  /** The color of the shadows things cast on the ground. */
+  readonly shadow: string;
   readonly window: string;
   readonly leaves: string;
   readonly leavesLight: string;
@@ -77,10 +78,30 @@ export function planBackdrop(frame: BackdropFrame): BackdropPlan {
 const FULL_SKY = 170;
 /** The bottom of the scene fades out over this many px, so the bank shows through and the two meet softly. */
 const FADE = 28;
+/** How dark the shadow under something standing on the ground is at its middle. */
+const GROUND_SHADOW = 0.55;
+/** The pagoda's height at scale 1, from its footing to the tip of its spire (px). */
+const PAGODA_HEIGHT = 72;
+/** The pagoda keeps this far below the top of its sky (px), and is left out rather than shrunk below this scale. */
+const PAGODA_MARGIN = 6;
+const PAGODA_MIN_SCALE = 0.5;
+
+/**
+ * The pagoda's scale standing on `base` (px): as `spot` asks, but small enough that its spire stays this side of the
+ * top of the sky (`spot.top`), so it never loses its upper storey; null when it would have to shrink too far (it is
+ * left out). O(1).
+ */
+export function fitPagoda(
+  spot: { readonly scale: number; readonly top: number },
+  base: number,
+): number | null {
+  const scale = Math.min(spot.scale, (base - spot.top - PAGODA_MARGIN) / PAGODA_HEIGHT);
+  return scale >= PAGODA_MIN_SCALE ? scale : null;
+}
 
 /** Paints the whole scene for a frame (the canvas is already scaled to px). */
 export function paintBackdrop(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   frame: BackdropFrame,
   look: BackdropLook,
   random: () => number,
@@ -106,7 +127,7 @@ function fitHills(hills: BackdropLook['hills'], room: number): BackdropLook['hil
 
 /** The hills from the back, the pagoda on the far one, mist in the valley, trees on the near ones, then the maple. */
 function paintLandscape(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   scene: { width: number; horizon: number; hills: BackdropLook['hills']; spots: Spots },
   look: BackdropLook,
   random: () => number,
@@ -115,7 +136,9 @@ function paintLandscape(
   const [far, ...near] = scene.hills;
   if (far) {
     const ridge = paintHill(ctx, width, horizon, far, random, look.rim);
-    if (spots.garden) paintPagoda(ctx, spots.pagoda.x, ridge(spots.pagoda.x) + 3, look, spots.pagoda.scale);
+    const base = ridge(spots.pagoda.x) + 3;
+    const scale = fitPagoda(spots.pagoda, base);
+    if (spots.garden && scale !== null) paintPagoda(ctx, spots.pagoda.x, base, look, scale);
   }
   paintMist(ctx, width, horizon, look);
   for (const hill of near) {
@@ -129,7 +152,8 @@ function paintLandscape(
 interface Spots {
   readonly garden: boolean;
   readonly moon: readonly [number, number];
-  readonly pagoda: { readonly x: number; readonly scale: number };
+  /** Where the pagoda stands, its scale, and the top of the sky it stands in (px). */
+  readonly pagoda: { readonly x: number; readonly scale: number; readonly top: number };
   /** A maple branch reaching in from the left edge; on a wide screen the maple is a tree on the ground instead. */
   readonly branch: { readonly top: number; readonly reach: number } | null;
 }
@@ -142,7 +166,7 @@ function tallSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
   return {
     garden: horizon - open >= GARDEN_ROOM.sky,
     moon: [width * look.moon.at[0], moonY],
-    pagoda: { x: width * 0.5, scale: Math.min(1.25, (horizon - open) / 140) },
+    pagoda: { x: width * 0.5, scale: Math.min(1.25, (horizon - open) / 140), top: open },
     branch: { top: open + 10, reach: Math.min(width * 0.42, 170) },
   };
 }
@@ -153,7 +177,7 @@ function wideSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
   return {
     garden: horizon >= GARDEN_ROOM.sky,
     moon: [right, Math.max(look.moon.radius + 6, horizon * 0.45)],
-    pagoda: { x: frame.pond.left * 0.62, scale: Math.min(1.1, horizon / 110) },
+    pagoda: { x: frame.pond.left * 0.62, scale: Math.min(1.1, horizon / 110), top: 0 },
     branch: null,
   };
 }
@@ -163,7 +187,7 @@ function wideSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
  * lantern on the right, tufts of grass round them. Each stands on a soft shadow, so it sits on the moss.
  */
 function paintGround(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   frame: BackdropFrame,
   horizon: number,
   look: BackdropLook,
@@ -188,15 +212,26 @@ function paintGround(
 }
 
 /** A soft dark oval on the ground under something standing on it. */
-function groundShadow(ctx: Ctx, x: number, y: number, width: number): void {
+function groundShadow(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  color: string,
+): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(1, 0.28);
-  const shade = ctx.createRadialGradient(0, 0, 0, 0, 0, width);
-  shade.addColorStop(0, 'rgba(2, 8, 18, 0.55)');
-  shade.addColorStop(1, 'rgba(2, 8, 18, 0)');
-  ctx.fillStyle = shade;
-  ctx.fillRect(-width, -width, width * 2, width * 2);
+  ctx.globalAlpha = GROUND_SHADOW;
+  fillRadial(
+    ctx,
+    [0, 0],
+    [0, width],
+    [
+      [0, color],
+      [1, transparent(color)],
+    ],
+  );
   ctx.restore();
 }
 
@@ -205,14 +240,14 @@ function groundShadow(ctx: Ctx, x: number, y: number, width: number): void {
  * round their tips (a few lighter for depth), and a paper lantern hanging from the lowest limb.
  */
 function paintMapleTree(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   x: number,
   base: number,
   height: number,
   theme: BackdropLook,
   random: () => number,
 ): void {
-  groundShadow(ctx, x, base, height * 0.45);
+  groundShadow(ctx, x, base, height * 0.45, theme.shadow);
   const fork: readonly [number, number] = [x + height * 0.06, base - height * 0.45];
   const tips: readonly (readonly [number, number])[] = [
     [x - height * 0.32, base - height * 0.7],
@@ -244,7 +279,7 @@ function paintMapleTree(
  * the lighter ones sit on top.
  */
 function canopy(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   radius: number,
@@ -281,7 +316,7 @@ function canopy(
   }
 }
 
-function paintSky(ctx: Ctx, width: number, horizon: number, look: BackdropLook): void {
+function paintSky(ctx: CanvasRenderingContext2D, width: number, horizon: number, look: BackdropLook): void {
   const sky = ctx.createLinearGradient(0, 0, 0, horizon);
   sky.addColorStop(0, look.sky.top);
   sky.addColorStop(1, look.sky.horizon);
@@ -290,7 +325,13 @@ function paintSky(ctx: Ctx, width: number, horizon: number, look: BackdropLook):
 }
 
 /** Tiny dots, a few brighter ones with a cross of light. */
-function paintStars(ctx: Ctx, width: number, bottom: number, look: BackdropLook, random: () => number): void {
+function paintStars(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  bottom: number,
+  look: BackdropLook,
+  random: () => number,
+): void {
   const count = Math.round(((width * Math.max(bottom, 0)) / 10000) * look.stars.density);
   ctx.fillStyle = look.stars.color;
   for (let i = 0; i < count; i++) {
@@ -308,13 +349,17 @@ function paintStars(ctx: Ctx, width: number, bottom: number, look: BackdropLook,
 }
 
 /** The full moon: a soft glow, the disc, and a few faint seas on it. */
-function paintMoon(ctx: Ctx, x: number, y: number, look: BackdropLook): void {
+function paintMoon(ctx: CanvasRenderingContext2D, x: number, y: number, look: BackdropLook): void {
   const { radius, color, glow } = look.moon;
-  const halo = ctx.createRadialGradient(x, y, radius * 0.8, x, y, radius * 3.2);
-  halo.addColorStop(0, glow);
-  halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = halo;
-  ctx.fillRect(x - radius * 3.2, y - radius * 3.2, radius * 6.4, radius * 6.4);
+  fillRadial(
+    ctx,
+    [x, y],
+    [radius * 0.8, radius * 3.2],
+    [
+      [0, glow],
+      [1, transparent(glow)],
+    ],
+  );
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fillStyle = color;
@@ -336,7 +381,7 @@ function paintMoon(ctx: Ctx, x: number, y: number, look: BackdropLook): void {
  * top's height at any x, so things can stand on it.
  */
 function paintHill(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   width: number,
   horizon: number,
   hill: BackdropLook['hills'][number],
@@ -367,7 +412,7 @@ function paintHill(
 
 /** Round clumps of trees along a hill's ridge, every few dozen px, in silhouette. */
 function paintTrees(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   width: number,
   ridge: (x: number) => number,
   color: string,
@@ -392,17 +437,23 @@ function paintTrees(
 }
 
 /** A pale band of mist lying in the valley between the hills. */
-function paintMist(ctx: Ctx, width: number, horizon: number, theme: BackdropLook): void {
+function paintMist(ctx: CanvasRenderingContext2D, width: number, horizon: number, theme: BackdropLook): void {
   const band = ctx.createLinearGradient(0, horizon - 60, 0, horizon);
-  band.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  band.addColorStop(0, transparent(theme.mist));
   band.addColorStop(0.6, theme.mist);
-  band.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  band.addColorStop(1, transparent(theme.mist));
   ctx.fillStyle = band;
   ctx.fillRect(0, horizon - 60, width, 60);
 }
 
 /** A three-roofed pagoda standing on (x, base): slim storeys under wide roofs whose eaves curl up, two windows lit. */
-function paintPagoda(ctx: Ctx, x: number, base: number, theme: BackdropLook, scale: number): void {
+function paintPagoda(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  base: number,
+  theme: BackdropLook,
+  scale: number,
+): void {
   ctx.save();
   ctx.translate(x, base);
   ctx.scale(scale, scale);
@@ -428,7 +479,7 @@ function paintPagoda(ctx: Ctx, x: number, base: number, theme: BackdropLook, sca
 }
 
 /** One roof sitting on y: a flat underside, eaves curling up at both tips, and a concave top up to the ridge. */
-function roof(ctx: Ctx, y: number, half: number): void {
+function roof(ctx: CanvasRenderingContext2D, y: number, half: number): void {
   ctx.beginPath();
   ctx.moveTo(-half - 4, y - 7);
   ctx.quadraticCurveTo(-half * 0.8, y, -half * 0.55, y);
@@ -443,7 +494,7 @@ function roof(ctx: Ctx, y: number, half: number): void {
 
 /** A maple branch reaching in from the left edge just under `top`, leaves along it, and a paper lantern hanging from it. */
 function paintBranch(
-  ctx: Ctx,
+  ctx: CanvasRenderingContext2D,
   spot: NonNullable<Spots['branch']>,
   theme: BackdropLook,
   random: () => number,
@@ -471,31 +522,95 @@ function paintBranch(
   paintLantern(ctx, reach * 0.78, y + 2, theme);
 }
 
-/** A five-pointed maple leaf. */
-function leaf(ctx: Ctx, x: number, y: number, size: number, turn: number, color: string): void {
+/**
+ * A maple leaf's lobes, round from its lower left: the angle of each point from the leaf's middle line (radians, 0 is
+ * up) and how far it reaches (share of the leaf's size). The middle lobe is the longest, the lowest two the shortest.
+ */
+const MAPLE_LOBES: readonly (readonly [number, number])[] = [
+  [-1.9, 0.7],
+  [-0.95, 1.05],
+  [0, 1.15],
+  [0.95, 1.05],
+  [1.9, 0.7],
+];
+/**
+ * How deep the cuts between the lobes go and where the leaf's shoulders sit beside its stem (angle, reach), as shares
+ * of its size; and each lobe's pair of side teeth: how far round from its point, how far out, and the notch above.
+ */
+const MAPLE_CUT = 0.5;
+const MAPLE_SHOULDER = [2.45, 0.36] as const;
+const MAPLE_TOOTH = { turn: 0.36, reach: 0.75, notch: 0.68 } as const;
+
+/**
+ * A maple leaf reaching about `size` px from its middle (as much leaf as a star that size): five toothed lobes, the
+ * middle one longest, round a broad palm on a short stem, turned by `turn`.
+ */
+function leaf(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  turn: number,
+  color: string,
+): void {
+  /** A point of the leaf: an angle from its middle line (0 is up) and a reach (share of its size). */
+  const at = (angle: number, reach: number): [number, number] => [
+    Math.sin(angle) * reach * size,
+    -Math.cos(angle) * reach * size,
+  ];
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(turn);
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? size : size * 0.45;
-    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-  }
-  ctx.closePath();
+  traceMapleLeaf(ctx, at);
   ctx.fillStyle = color;
   ctx.fill();
+  ctx.beginPath(); // the stem
+  ctx.moveTo(...at(Math.PI, 0.1));
+  ctx.lineTo(...at(Math.PI, 0.65));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size * 0.1;
+  ctx.stroke();
   ctx.restore();
 }
 
+/** Traces a maple leaf's outline, round from its stem: each lobe's teeth and point, with the cuts between them. */
+function traceMapleLeaf(
+  ctx: CanvasRenderingContext2D,
+  at: (angle: number, reach: number) => [number, number],
+): void {
+  const [shoulder, shoulderReach] = MAPLE_SHOULDER;
+  const { turn: side, reach: out, notch } = MAPLE_TOOTH;
+  ctx.beginPath();
+  ctx.moveTo(...at(Math.PI, 0.12)); // where the stem joins
+  ctx.lineTo(...at(-shoulder, shoulderReach));
+  MAPLE_LOBES.forEach(([angle, reach], i) => {
+    const previous = MAPLE_LOBES[i - 1];
+    if (previous) ctx.lineTo(...at((angle + previous[0]) / 2, MAPLE_CUT));
+    const teeth = [
+      [angle - side, out],
+      [angle - side * 0.55, notch],
+      [angle, 1],
+      [angle + side * 0.55, notch],
+      [angle + side, out],
+    ] as const;
+    for (const [a, r] of teeth) ctx.lineTo(...at(a, reach * r));
+  });
+  ctx.lineTo(...at(shoulder, shoulderReach));
+  ctx.closePath();
+}
+
 /** A round paper lantern on a string, glowing warm. */
-function paintLantern(ctx: Ctx, x: number, from: number, theme: BackdropLook): void {
+function paintLantern(ctx: CanvasRenderingContext2D, x: number, from: number, theme: BackdropLook): void {
   const y = from + 26;
-  const glow = ctx.createRadialGradient(x, y, 4, x, y, 46);
-  glow.addColorStop(0, theme.lantern.glow);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - 46, y - 46, 92, 92);
+  fillRadial(
+    ctx,
+    [x, y],
+    [4, 46],
+    [
+      [0, theme.lantern.glow],
+      [1, transparent(theme.lantern.glow)],
+    ],
+  );
   ctx.strokeStyle = theme.ink;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
@@ -522,16 +637,25 @@ function paintLantern(ctx: Ctx, x: number, from: number, theme: BackdropLook): v
  * A stone lantern (a tōrō) standing on (x, base): a footing, a post, the light box with its window glowing warm, a
  * wide cap with turned-up corners and a knob on top.
  */
-function paintStoneLantern(ctx: Ctx, x: number, base: number, theme: BackdropLook): void {
-  groundShadow(ctx, x, base, 46);
+function paintStoneLantern(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  base: number,
+  theme: BackdropLook,
+): void {
+  groundShadow(ctx, x, base, 46, theme.shadow);
   ctx.save();
   ctx.translate(x, base);
   ctx.scale(1.6, 1.6);
-  const glow = ctx.createRadialGradient(0, -44, 3, 0, -44, 50);
-  glow.addColorStop(0, theme.lantern.glow);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(-50, -94, 100, 100);
+  fillRadial(
+    ctx,
+    [0, -44],
+    [3, 50],
+    [
+      [0, theme.lantern.glow],
+      [1, transparent(theme.lantern.glow)],
+    ],
+  );
   ctx.fillStyle = theme.ink;
   ctx.fillRect(-14, -6, 28, 6); // the footing
   ctx.fillRect(-5, -30, 10, 24); // the post
@@ -548,7 +672,13 @@ function paintStoneLantern(ctx: Ctx, x: number, base: number, theme: BackdropLoo
 }
 
 /** A tuft of grass blades fanning up from (x, base). */
-function paintGrass(ctx: Ctx, x: number, base: number, theme: BackdropLook, random: () => number): void {
+function paintGrass(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  base: number,
+  theme: BackdropLook,
+  random: () => number,
+): void {
   ctx.strokeStyle = theme.grass;
   ctx.lineCap = 'round';
   ctx.lineWidth = 2;
@@ -563,7 +693,7 @@ function paintGrass(ctx: Ctx, x: number, base: number, theme: BackdropLook, rand
 }
 
 /** Erases the last stretch above the horizon gradually, so the bank's pattern shows through where they meet. */
-function fadeOut(ctx: Ctx, width: number, horizon: number): void {
+function fadeOut(ctx: CanvasRenderingContext2D, width: number, horizon: number): void {
   const fade = ctx.createLinearGradient(0, horizon - FADE, 0, horizon);
   fade.addColorStop(0, 'rgba(0, 0, 0, 0)');
   fade.addColorStop(1, 'rgba(0, 0, 0, 1)');

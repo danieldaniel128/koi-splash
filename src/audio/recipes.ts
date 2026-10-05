@@ -16,7 +16,7 @@ const rand = (low: number, high: number): number => low + Math.random() * (high 
 /** Two koi swap: a rising sine and a breath of water. */
 export function swap(v: Voice): void {
   v.tone(330, 0.16, 0.1, { glide: 540 });
-  v.noise(0.16, 0.05, 700, { sweepTo: 2200 });
+  v.noise(700, 0.16, 0.05, { sweepTo: 2200 });
 }
 
 /** A swap that makes nothing: two soft knocks, down. */
@@ -43,7 +43,7 @@ export function match(v: Voice, round: number, size: number): void {
   v.pluck(v.note(root + MATCH_SOUND.second), 0.1, 0.06);
   if (size > MIN_RUN) v.pluck(v.note(root + MATCH_SOUND.third), 0.09, 0.12);
   const splash = MATCH_SOUND.splash + Math.min(size, MATCH_SOUND.koiCap) * MATCH_SOUND.perKoi;
-  v.noise(0.3, splash, 1300, { sweepTo: 380 });
+  v.noise(1300, 0.3, splash, { sweepTo: 380 });
   for (let k = 0; k < 3; k++) v.plip(0.04 + k * 0.05 + Math.random() * 0.03);
 }
 
@@ -77,7 +77,7 @@ export function bloom(v: Voice): void {
 /** An empty pad drifts away. */
 export function padDrift(v: Voice): void {
   v.tone(rand(210, 250), 0.32, 0.05, { glide: 150 });
-  v.noise(0.4, 0.035, 700, { delay: 0.03, sweepTo: 260 });
+  v.noise(700, 0.4, 0.035, { delay: 0.03, sweepTo: 260 });
 }
 
 /** The board had no move left and is dealt again: a cascade of plucks down. */
@@ -100,21 +100,21 @@ export function special(v: Voice): void {
 }
 
 /** A rainbow koi is born: the special's sound and a glassy chime. */
-export function rainbowBorn(v: Voice): void {
+export function rainbowCreated(v: Voice): void {
   special(v);
-  prismHit(v, SPECIALS_SOUND.chimeMax);
+  rainbowArcLanded(v, SPECIALS_SOUND.chimeMax);
 }
 
 /** A whirlpool is born: a swirl of water, the special's sound and plips. */
-export function whirlBorn(v: Voice): void {
-  v.noise(0.35, 0.08, 500, { sweepTo: 2400, attack: 0.2 });
+export function whirlpoolCreated(v: Voice): void {
+  v.noise(500, 0.35, 0.08, { sweepTo: 2400, attack: 0.2 });
   special(v);
   for (let k = 0; k < 3; k++) v.plip(0.12 + k * 0.05);
 }
 
 /** A striped koi fires: a rushing sweep and a rising sine. */
 export function current(v: Voice): void {
-  v.noise(0.5, 0.16, 450, { sweepTo: 2800 });
+  v.noise(450, 0.5, 0.16, { sweepTo: 2800 });
   v.tone(180, 0.4, 0.1, { glide: 720 });
 }
 
@@ -124,28 +124,28 @@ export function rainbow(v: Voice): void {
   v.tone(v.note(16), 1, 0.04, { delay: 0.08 });
   v.tone(v.note(16) * 1.006, 1, 0.035, { delay: 0.08 }); // two glasses a hair apart shimmer
   v.tone(v.note(18), 0.8, 0.025, { delay: 0.16 });
-  v.noise(0.6, 0.05, 2400, { sweepTo: 7000, attack: 0.2 });
+  v.noise(2400, 0.6, 0.05, { sweepTo: 7000, attack: 0.2 });
 }
 
-/** A prism beam lands: a glassy chime climbing with every hit. */
-export function prismHit(v: Voice, n: number): void {
+/** A rainbow arc lands: a glassy chime climbing with every hit. */
+export function rainbowArcLanded(v: Voice, n: number): void {
   const f = v.note(6 + Math.min(n, SPECIALS_SOUND.chimeMax));
   v.tone(f, 0.32, 0.055);
   v.tone(f * 2.005, 0.16, 0.02);
 }
 
 /** A whirlpool spins up: a whoosh swelling over a deep slide down the drain and gurgling blips. */
-export function whirl(v: Voice): void {
-  const d = SPECIALS_SOUND.whirl;
-  v.noise(d + 0.1, 0.15, 260, { sweepTo: 2200, attack: d * 0.7 });
+export function whirlpoolFired(v: Voice): void {
+  const d = SPECIALS_SOUND.whirlpool;
+  v.noise(260, d + 0.1, 0.15, { sweepTo: 2200, attack: d * 0.7 });
   v.tone(150, d + 0.1, 0.12, { glide: 50, attack: d * 0.3 });
   for (let k = 0; k < 5; k++)
     v.tone(rand(90, 160), 0.07, 0.055, { delay: 0.05 + (k * d) / 6, glide: rand(220, 340) });
 }
 
-/** The vortex closes: a splash and a deep plunk under a burst of rising bubbly bloops. */
-export function whirlPop(v: Voice): void {
-  v.noise(0.45, 0.15, 1700, { sweepTo: 280 });
+/** The whirlpool closes: a splash and a deep plunk under a burst of rising bubbly bloops. */
+export function whirlpoolPopped(v: Voice): void {
+  v.noise(1700, 0.45, 0.15, { sweepTo: 280 });
   v.tone(115, 0.32, 0.14, { glide: 58 });
   for (let k = 0; k < 6; k++)
     v.tone(rand(300, 540), 0.09, 0.05, { delay: 0.02 + k * 0.035, glide: rand(800, 1350) });
@@ -173,7 +173,7 @@ export function lift(v: Voice): void {
 
 /** Two koi leap: a whoosh as long as the leap. */
 export function whoosh(v: Voice, duration: number): void {
-  v.noise(duration, 0.13, 420, { sweepTo: 2600, attack: duration * 0.45 });
+  v.noise(420, duration, 0.13, { sweepTo: 2600, attack: duration * 0.45 });
   v.tone(200, duration * 0.9, 0.04, { glide: 460, attack: duration * 0.4 });
 }
 
@@ -181,7 +181,7 @@ export function whoosh(v: Voice, duration: number): void {
 export function plop(v: Voice, low: boolean): void {
   const f = low ? 0.82 : 1;
   v.tone(rand(175, 205) * f, 0.18, 0.13, { glide: 68 * f });
-  v.noise(0.24, 0.08, 1500, { sweepTo: 320 });
+  v.noise(1500, 0.24, 0.08, { sweepTo: 320 });
   v.plip(0.05);
   v.plip(0.1);
 }
@@ -207,7 +207,7 @@ export function petals(v: Voice): void {
 /** A koi spins up into a special. */
 export function morph(v: Voice): void {
   const d = SPECIALS_SOUND.morph;
-  v.noise(d + 0.1, 0.07, 600, { sweepTo: 3200, attack: d * 0.7 });
+  v.noise(600, d + 0.1, 0.07, { sweepTo: 3200, attack: d * 0.7 });
   for (let k = 0; k < 5; k++) v.tone(v.note(8 + k), 0.2, 0.03, { delay: (k * d) / 5 });
 }
 
@@ -233,7 +233,7 @@ export function star(v: Voice, k: number): void {
   const f = v.note(9 + k * 2);
   v.pluck(f, 0.12);
   v.tone(f * 2, 0.5, 0.04, { delay: 0.04 });
-  v.noise(0.25, 0.04, 2400, { sweepTo: 600 });
+  v.noise(2400, 0.25, 0.04, { sweepTo: 600 });
 }
 
 /** A button takes (play again, the sound menu). */

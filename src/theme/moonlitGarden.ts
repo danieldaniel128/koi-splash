@@ -4,6 +4,13 @@ import type { BackdropLook } from '../art/backdrop';
 const TYPEFACE = 'Nunito';
 
 /**
+ * The moon's light over the whole scene: the way toward it (to the upper right, a unit vector with y down) and the
+ * color of the shadows it casts. The water's relief, the shadows of the koi, the stones and the pads, and the
+ * highlights all follow it.
+ */
+const MOONLIGHT = { dir: [0.6, -0.8], shadow: '#020a16' } as const;
+
+/**
  * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every color, font, size
  * and timing the UI uses, the boosters' colors (on the bar and on the board), the points' ink, and the look of the
  * scene around the pond (the mossy ground, the moon, the fireflies). Sizes are in stage px (the UI layer is scaled
@@ -110,6 +117,7 @@ export const MOONLIT_GARDEN = {
      * by up to `strength` from `from` to `to` (distance from the centre, in those half sizes).
      */
     vignette: { stretch: [1.2, 1.1], strength: 0.4, from: 0.7, to: 1.5 },
+    light: MOONLIGHT,
     /** The moon's colour, and its reflection's radius on the water (px). */
     moon: '#f7ecc8',
     moonReflection: 19,
@@ -129,6 +137,7 @@ export const MOONLIT_GARDEN = {
       grass: '#2a4f72',
       mist: 'rgba(170, 200, 240, 0.14)',
       ink: '#060d1d',
+      shadow: MOONLIGHT.shadow,
       window: '#ffcf73',
       leaves: '#6a2140',
       leavesLight: '#9a3358',

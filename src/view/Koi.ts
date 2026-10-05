@@ -3,7 +3,7 @@ import type { PointData, Texture } from 'pixi.js';
 import { KOI_SWIM } from '../config/koi';
 import { TIMING } from '../config/timing';
 import { mixColor } from '../core/color';
-import type { Kind } from '../model/types';
+import type { PieceColor } from '../model/types';
 
 const WHITE = 0xffffff;
 /** Koi deep in the water take on this pale water-blue, keeping their own colour (a dark tint turns them muddy). */
@@ -33,7 +33,7 @@ export class Koi extends Sprite {
   private time = 0;
 
   constructor(
-    readonly kind: Kind,
+    readonly color: PieceColor,
     private poses: readonly Texture[],
     size: number,
     random: () => number,
@@ -53,7 +53,12 @@ export class Koi extends Sprite {
 
   /** Which of the baked poses the koi shows now (its place in the tail beat). */
   get pose(): number {
-    return Math.floor(this.tailPhase * this.poses.length) % this.poses.length;
+    return this.poseOf(this.poses.length);
+  }
+
+  /** Its place in the tail beat as one of `count` evenly spaced poses (its contact shapes are fewer than its poses). */
+  poseOf(count: number): number {
+    return Math.floor(this.tailPhase * count) % count;
   }
 
   /** Advances the swim by one frame. `speed` is how fast the animations move it (px/s). O(1). */

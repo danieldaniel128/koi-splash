@@ -18,10 +18,15 @@ export const WATER = {
   shoreBand: 18,
   /** Most surface pushes per step; must match MAX_DROPS in sim.frag. */
   maxDrops: 32,
+  /**
+   * The water's height and speed are stored up to this far either way (see waterCodec): room for the biggest
+   * splashes, at 16 bits across the range. A push past it is capped.
+   */
+  stateRange: 2,
   /** How steep the drawn waves look: scales the refraction and the light on the waves together. */
   waveScale: 5,
 
-  // --- koi disturbing the water (pushes are in water-height units, -1..1; radius in px)
+  // --- koi disturbing the water (pushes are in water-height units, up to stateRange; radius in px)
   /** A moving koi pushes the water at its tail every this many px of travel, so the pushes line up into a wake. */
   wakeSpacing: 7,
   wakePush: 0.05,
@@ -67,8 +72,6 @@ export const WATER = {
   lipWidth: 6,
   /** How far the waves shift the water body (px per unit of slope). */
   refraction: 10,
-  /** Direction the moonlight comes from (toward the upper right), for the relief and the shadows. */
-  lightDir: [0.6, -0.8],
 
   // --- light on the bottom: soft, wide bands (moonlight focused by the surface), glowing in the shallows
   glow: '#7fd6dc',
@@ -81,6 +84,8 @@ export const WATER = {
   glowUnderBoard: 0,
   /** A faint moonlit sheen drifting over the whole pond in broad patches (added light at its brightest). */
   sheen: 0.045,
+  /** How much of the moon's reflection shows under the board (1 = as on open water): soft, so the koi stay clear. */
+  moonUnderBoard: 0.5,
 
   // --- the simulated waves, drawn as soft relief (no lines)
   /** Moonlight colour on the waves. */
@@ -142,11 +147,13 @@ export const WATER = {
   koiTint: 0.07,
   /** Extra room (px) around the board where the koi filter draws, for koi that sway or lift past their cell. */
   koiReach: 14,
-  /** Soft shadow on the bottom: offset away from the moon (px), strength, blur (px), colour. */
-  shadowOffset: [-4, 7],
+  /**
+   * Soft shadow on the bottom, cast away from the moon (THEME.scene.light, which also gives its color): how far (px),
+   * its strength and its blur (px).
+   */
+  shadowDistance: 8,
   shadowAlpha: 0.26,
   shadowBlur: 5,
-  shadowColor: '#020a16',
   /** A koi lifted while swapping casts its shadow further: offset grows by this per unit of lift (scale - 1). */
   shadowLiftReach: 6,
 } as const;

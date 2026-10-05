@@ -4,6 +4,7 @@ import type { KoiInk } from '../art/koiInk';
 import { bakeLotusPad } from '../art/pondProps';
 import { KOI_COLORS, KOI_LOOK, KOI_SET } from '../config/koi';
 import { SCORE } from '../config/level';
+import { BOARD_PADS } from '../config/pond';
 import { GOAL_TRAY } from '../config/ui';
 import { WATER } from '../config/water';
 import type { GameLayout } from '../layout/gameLayout';
@@ -13,7 +14,7 @@ import { KoiTextures } from '../view/KoiTextures';
 import type { KoiBake } from '../view/KoiTextures';
 import { SpecialTextures } from '../view/SpecialTextures';
 import type { BoardSpec } from '../model/types';
-import { BOARD_PADS } from '../config/pond';
+import { propLook } from './pond';
 
 /** A lotus fully open (0 is a closed bud). */
 const FULL_BLOOM = 1;
@@ -25,6 +26,7 @@ export function koiBake(koiSize: number, resolution: number): KoiBake {
     resolution,
     build: KOI_LOOK.build,
     frames: KOI_LOOK.swimFrames,
+    contactFrames: KOI_LOOK.contactFrames,
     tailSwing: KOI_LOOK.tailSwing,
     shadowBlur: WATER.shadowBlur,
     ink: koiInk(),
@@ -48,7 +50,13 @@ export function goalIcons(resolution: number): GoalIcons {
   const pose = { size: GOAL_TRAY.koiSize, resolution, build: KOI_LOOK.build, shadow: false };
   return {
     bonus: SCORE.goalBonus,
-    lotus: bakeLotusPad(GOAL_TRAY.iconRadius, FULL_BLOOM, BOARD_PADS.lotusSeed, resolution).toDataURL(),
+    lotus: bakeLotusPad(
+      GOAL_TRAY.iconRadius,
+      FULL_BLOOM,
+      BOARD_PADS.lotusSeed,
+      resolution,
+      propLook(),
+    ).toDataURL(),
     koi: KOI_SET.map((id) => bakeInkedKoi(getVariety(id), pose, koiInk()).toDataURL()),
   };
 }
@@ -56,11 +64,15 @@ export function goalIcons(resolution: number): GoalIcons {
 /** The koi on the board, placed on the layout's board. */
 export function createBoardView(
   textures: KoiTextures,
-  specials: SpecialTextures,
+  specialTextures: SpecialTextures,
   spec: BoardSpec,
   board: GameLayout['board'],
 ): BoardView {
-  const view = new BoardView(textures, specials, { ...spec, cellSize: board.cell, koiSize: board.piece });
+  const view = new BoardView(textures, specialTextures, {
+    ...spec,
+    cellSize: board.cellSize,
+    koiSize: board.koiSize,
+  });
   view.position.set(board.x, board.y);
   return view;
 }

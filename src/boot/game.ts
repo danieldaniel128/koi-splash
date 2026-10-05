@@ -35,6 +35,7 @@ import { SwipeInput } from '../view/SwipeInput';
 import type { BoardGestures } from '../view/SwipeTracker';
 import type { PondWater } from '../view/water/PondWater';
 import { createBoardView } from './koi';
+import { propLook } from './pond';
 import type { GameScreen } from './screen';
 
 /**
@@ -43,7 +44,7 @@ import type { GameScreen } from './screen';
  */
 export interface GameMaterials {
   readonly koi: KoiTextures;
-  readonly specials: SpecialTextures;
+  readonly specialTextures: SpecialTextures;
   readonly pond: PondWater;
   readonly hud: Hud;
   readonly screenFlow: ScreenFlow;
@@ -58,7 +59,7 @@ export interface GameParts {
   readonly hud: Hud;
   readonly pads: PadView;
   readonly screenFlow: ScreenFlow;
-  readonly specials: { fx: SpecialFx; motions: SpecialMotions };
+  readonly specialEffects: { fx: SpecialFx; motions: SpecialMotions };
   readonly boosters: { motions: BoosterMotions; marks: BoardMarks };
   readonly events: GameEventBus;
   /** The one hit-stop: whatever holds the animations' clock still for a moment shares it. */
@@ -82,19 +83,19 @@ export interface StartedGame {
 export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTMLCanvasElement): StartedGame {
   const { board } = screen.layout;
   const { pond, hud, events } = made;
-  const boardView = createBoardView(made.koi, made.specials, screen.spec, board);
+  const boardView = createBoardView(made.koi, made.specialTextures, screen.spec, board);
   const hitStop = new HitStop();
   const parts: GameParts = {
     boardView,
     pond,
-    popups: createScorePopups(new FlyingPoints(screen.ui, hud), board),
+    popups: createScorePopups(new FlyingPoints(screen.ui, hud), board, screen.resolution.screen),
     hud,
     pads: createPads(pond, hud, board, screen.resolution.art),
     screenFlow: made.screenFlow,
-    specials: createSpecialEffects({ boardView, textures: made.specials, pond, board, events }),
+    specialEffects: createSpecialEffects({ boardView, textures: made.specialTextures, pond, board, events }),
     boosters: createBoosterViews({
       boardView,
-      specials: made.specials,
+      specialTextures: made.specialTextures,
       pond,
       board,
       events,
@@ -109,15 +110,15 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
 
 /** The banner lane: as wide as the board, over its top rows. */
 function bannerRect(board: GameLayout['board']): Rect {
-  const { x, width, cell } = board;
-  return { x, y: board.y + cell * BANNER.top, width, height: cell * BANNER.height };
+  const { x, width, cellSize } = board;
+  return { x, y: board.y + cellSize * BANNER.top, width, height: cellSize * BANNER.height };
 }
 
 /** What the banner lane announces: combos and specials made, a reshuffle, every goal met, the pond won. */
 function announceOnBanner(events: GameEventBus, lane: BannerLane): void {
   const { text } = BANNER;
-  events.on('match', ({ round, made }) => {
-    const banner = comboBanner(round, made);
+  events.on('match', ({ roundIndex, made }) => {
+    const banner = comboBanner(roundIndex, made);
     if (banner) lane.show(banner);
   });
   events.on('reshuffle', () => {
@@ -170,7 +171,7 @@ function startGame(
   const swaps = new SwapControl(scene, parts.boosters.marks);
   listenToPlayer(
     { scene, control, swaps },
-    { bar, screenFlow, boardView, animator, canvas, cell: screen.layout.board.cell },
+    { bar, screenFlow, boardView, animator, canvas, cellSize: screen.layout.board.cellSize },
   );
   return { control, bar };
 }
@@ -194,7 +195,7 @@ function listenToPlayer(
     boardView: BoardView;
     animator: BoardAnimator;
     canvas: HTMLCanvasElement;
-    cell: number;
+    cellSize: number;
   },
 ): void {
   const gestures = (): BoardGestures => (control.armed ? control : swaps);
@@ -203,7 +204,7 @@ function listenToPlayer(
     const cell = on.boardView.pointToCell(on.boardView.toLocal(event.global));
     if (cell && scene.canSwap && scene.hasKoi(cell)) on.animator.touch(cell);
   });
-  new SwipeInput(on.boardView, on.canvas, on.cell * INPUT.swipeThreshold, {
+  new SwipeInput(on.boardView, on.canvas, on.cellSize * INPUT.swipeThreshold, {
     swipe: (from, to) => {
       gestures().swipe(from, to);
     },
@@ -232,13 +233,13 @@ function createAnimator(parts: GameParts, screen: GameScreen, bar: BoosterBar): 
     const at = screen.ui.centreOf(bar.buttonOf('feed') ?? screen.ui.root);
     return { x: at.x - board.x, y: at.y - board.y };
   };
-  const { boardView, pond, popups, specials, boosters, events } = parts;
+  const { boardView, pond, popups, specialEffects, boosters, events } = parts;
   return new BoardAnimator({
     view: boardView,
-    cell: board.cell,
+    cellSize: board.cellSize,
     water: pond,
     popups,
-    specials,
+    specialEffects,
     boosters: { motions: boosters.motions, feedFrom },
     events,
   });
@@ -250,24 +251,24 @@ function createAnimator(parts: GameParts, screen: GameScreen, bar: BoosterBar): 
  */
 function createBoosterViews(on: {
   boardView: BoardView;
-  specials: SpecialTextures;
+  specialTextures: SpecialTextures;
   pond: PondWater;
   board: GameLayout['board'];
   events: GameEventBus;
   hitStop: HitStop;
 }): { motions: BoosterMotions; marks: BoardMarks } {
   const { boardView, events, board } = on;
-  const { cell } = board;
+  const { cellSize } = board;
   const motions = new BoosterMotions({
     view: boardView,
     water: on.pond,
-    cell,
-    sparkle: on.specials.sparkle,
+    cellSize,
+    sparkle: on.specialTextures.sparkle,
     events,
     hitStop: on.hitStop,
     centre: { x: board.width / 2, y: board.height / 2 },
   });
-  const marks = new BoardMarks(boardView, cell);
+  const marks = new BoardMarks(boardView, cellSize);
   for (const layer of [motions, marks]) layer.position.copyFrom(boardView.position);
   return { motions, marks };
 }
@@ -290,18 +291,18 @@ function createBoosterControl(scene: GameScene, views: BoosterViews): BoosterCon
   const pill = new InstructionPill(ui, layout.pill);
   const menuBoard = {
     cellCentre: (cell: Cell) => ({
-      x: board.x + (cell.col + 0.5) * board.cell,
-      y: board.y + (cell.row + 0.5) * board.cell,
+      x: board.x + (cell.col + 0.5) * board.cellSize,
+      y: board.y + (cell.row + 0.5) * board.cellSize,
     }),
     stageWidth: layout.stage.width,
-    preview: (cell: Cell, type: Special['type']) => views.boardView.previewAt(cell, type),
+    preview: (cell: Cell, special: Special) => views.boardView.previewAt(cell, special),
   };
   const control = new BoosterControl({
     game: scene,
     buttons: views.bar,
     pill,
     marks: views.marks,
-    picker: new SpecialMenu(ui, menuBoard, SPECIAL_MENU.choices, board.cell),
+    picker: new SpecialMenu(ui, menuBoard, SPECIAL_MENU.choices, board.cellSize),
     sounds: boosterSounds(events),
     slots: BOOSTERS,
     feedLines: BOOSTER_MOTION.feed.lines,
@@ -347,7 +348,7 @@ function createSpecialEffects(on: {
     board: on.boardView,
     textures: on.textures,
     water: on.pond,
-    cell: board.cell,
+    cellSize: board.cellSize,
     length: Math.max(board.width, board.height),
     events: on.events,
   });
@@ -355,9 +356,12 @@ function createSpecialEffects(on: {
   return { fx, motions: new SpecialMotions() };
 }
 
-/** The points each match earns, over the board; the big ones fly into the score in the HUD. */
-function createScorePopups(flights: FlyingPoints, boardOrigin: PointData): ScorePopups {
-  const popups = new ScorePopups(flights);
+/**
+ * The points each match earns, over the board, drawn at exactly the screen's pixels per stage px (`resolution`); the
+ * big ones fly into the score in the HUD.
+ */
+function createScorePopups(flights: FlyingPoints, boardOrigin: PointData, resolution: number): ScorePopups {
+  const popups = new ScorePopups(flights, resolution);
   popups.position.set(boardOrigin.x, boardOrigin.y);
   return popups;
 }
@@ -366,7 +370,7 @@ function createScorePopups(flights: FlyingPoints, boardOrigin: PointData): Score
 function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resolution: number): PadView {
   const pads = new PadView(
     {
-      cellSize: board.cell,
+      cellSize: board.cellSize,
       goalTarget: () => {
         const goal = hud.goalAnchor();
         return { x: goal.x - board.x, y: goal.y - board.y };
@@ -374,7 +378,7 @@ function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resol
       toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,
-    resolution,
+    { resolution, look: propLook() },
   );
   pads.position.set(board.x, board.y);
   return pads;

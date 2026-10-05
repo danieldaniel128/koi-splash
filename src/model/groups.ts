@@ -1,9 +1,9 @@
 import { sameCell } from './types';
-import type { Cell, Kind, Match } from './types';
+import type { Cell, PieceColor, Match } from './types';
 
 /** Runs that share a cell, as one shape: a line, an L, a T or a cross. What special it makes depends on it. */
 export interface MatchGroup {
-  readonly kind: Kind;
+  readonly color: PieceColor;
   readonly cells: readonly Cell[];
   readonly runs: readonly Match[];
   /** Its longest run: how long, which way, and its middle cell. */
@@ -45,7 +45,7 @@ function describe(runs: readonly Match[]): MatchGroup {
       .flatMap((row) => row.cells)
       .find((cell) => cols.some((col) => col.cells.some((c) => sameCell(c, cell)))) ?? null;
   return {
-    kind: longestRun.kind,
+    color: longestRun.color,
     cells,
     runs,
     longest: longestRun.cells.length,

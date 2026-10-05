@@ -18,9 +18,9 @@ const GOLD = COMBO_COLORS[0] ?? 'var(--color-gold)';
  * that round's colour, a little bigger each round, with the special it made under it; on the first round only a
  * special made gets one (its name). Null for none. Pure.
  */
-export function comboBanner(round: number, made?: Special['type']): Banner | null {
+export function comboBanner(roundIndex: number, made?: Special['type']): Banner | null {
   const name = made ? BANNER.text.made[made] : '';
-  const n = round + 1;
+  const n = roundIndex + 1;
   if (n < 2) return made ? plainBanner(name) : null;
   return {
     text: `${BANNER.text.combo}${n}`,
