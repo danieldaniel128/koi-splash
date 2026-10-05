@@ -30,6 +30,8 @@ export class PadView extends Container implements PadDisplay {
   private readonly sprites = new Map<number, Sprite>();
   /** Every pad sprite still on the water, including ones blooming or drifting away (until they are gone). */
   private readonly floating = new Set<Sprite>();
+  /** The lotuses lifting out of the water to bloom: only they let go of the foam as they grow (not a hit's pop). */
+  private readonly blooming = new Set<Sprite>();
   private readonly budStages: Texture[];
   private readonly emptyPad: Texture;
   /** The pad textures are baked at the screen's resolution; this scales them back to stage px. */
@@ -122,6 +124,7 @@ export class PadView extends Container implements PadDisplay {
   private async bloom(sprite: Sprite, pad: Pad): Promise<void> {
     sprite.texture = this.stageFor(pad);
     this.sprites.delete(pad.id);
+    this.blooming.add(sprite);
     this.push(sprite, BOARD_PADS.bloomPush);
     const lifted = this.scaleOf * BOARD_PADS.bloomLift;
     await gsap.to(sprite.scale, {
@@ -159,10 +162,10 @@ export class PadView extends Container implements PadDisplay {
 
   /**
    * Where a pad meets the water, in stage px. A blooming lotus lifts out (its scale grows past the resting one) and
-   * a drifting pad fades, so the foam closes in on them as they go.
+   * a drifting pad fades, so the foam closes in on them as they go; a hit's pop leaves it as it is.
    */
   private waterline(sprite: Sprite): Circle {
-    const lift = Math.max(0, sprite.scale.x / this.scaleOf - 1);
+    const lift = this.blooming.has(sprite) ? Math.max(0, sprite.scale.x / this.scaleOf - 1) : 0;
     const floats = Math.max(0, 1 - lift * BOARD_PADS.foamLetGo) * sprite.alpha;
     const { x, y } = this.layout.toStage(sprite.position);
     return { x, y, radius: this.layout.cellSize * BOARD_PADS.radius * BOARD_PADS.foamFit * floats };
@@ -170,6 +173,7 @@ export class PadView extends Container implements PadDisplay {
 
   private remove(sprite: Sprite): void {
     this.floating.delete(sprite);
+    this.blooming.delete(sprite);
     sprite.destroy();
   }
 
