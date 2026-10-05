@@ -9,7 +9,7 @@
  */
 
 import { GARDEN_ROOM } from '../config/layout';
-import { transparent } from './canvas';
+import { fillRadial, transparent } from './canvas';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -214,11 +214,15 @@ function groundShadow(ctx: Ctx, x: number, y: number, width: number): void {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(1, 0.28);
-  const shade = ctx.createRadialGradient(0, 0, 0, 0, 0, width);
-  shade.addColorStop(0, 'rgba(2, 8, 18, 0.55)');
-  shade.addColorStop(1, 'rgba(2, 8, 18, 0)');
-  ctx.fillStyle = shade;
-  ctx.fillRect(-width, -width, width * 2, width * 2);
+  fillRadial(
+    ctx,
+    [0, 0],
+    [0, width],
+    [
+      [0, 'rgba(2, 8, 18, 0.55)'],
+      [1, 'rgba(2, 8, 18, 0)'],
+    ],
+  );
   ctx.restore();
 }
 
@@ -332,11 +336,15 @@ function paintStars(ctx: Ctx, width: number, bottom: number, look: BackdropLook,
 /** The full moon: a soft glow, the disc, and a few faint seas on it. */
 function paintMoon(ctx: Ctx, x: number, y: number, look: BackdropLook): void {
   const { radius, color, glow } = look.moon;
-  const halo = ctx.createRadialGradient(x, y, radius * 0.8, x, y, radius * 3.2);
-  halo.addColorStop(0, glow);
-  halo.addColorStop(1, transparent(glow));
-  ctx.fillStyle = halo;
-  ctx.fillRect(x - radius * 3.2, y - radius * 3.2, radius * 6.4, radius * 6.4);
+  fillRadial(
+    ctx,
+    [x, y],
+    [radius * 0.8, radius * 3.2],
+    [
+      [0, glow],
+      [1, transparent(glow)],
+    ],
+  );
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fillStyle = color;
@@ -558,11 +566,15 @@ function leaf(ctx: Ctx, x: number, y: number, size: number, turn: number, color:
 /** A round paper lantern on a string, glowing warm. */
 function paintLantern(ctx: Ctx, x: number, from: number, theme: BackdropLook): void {
   const y = from + 26;
-  const glow = ctx.createRadialGradient(x, y, 4, x, y, 46);
-  glow.addColorStop(0, theme.lantern.glow);
-  glow.addColorStop(1, transparent(theme.lantern.glow));
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - 46, y - 46, 92, 92);
+  fillRadial(
+    ctx,
+    [x, y],
+    [4, 46],
+    [
+      [0, theme.lantern.glow],
+      [1, transparent(theme.lantern.glow)],
+    ],
+  );
   ctx.strokeStyle = theme.ink;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
@@ -594,11 +606,15 @@ function paintStoneLantern(ctx: Ctx, x: number, base: number, theme: BackdropLoo
   ctx.save();
   ctx.translate(x, base);
   ctx.scale(1.6, 1.6);
-  const glow = ctx.createRadialGradient(0, -44, 3, 0, -44, 50);
-  glow.addColorStop(0, theme.lantern.glow);
-  glow.addColorStop(1, transparent(theme.lantern.glow));
-  ctx.fillStyle = glow;
-  ctx.fillRect(-50, -94, 100, 100);
+  fillRadial(
+    ctx,
+    [0, -44],
+    [3, 50],
+    [
+      [0, theme.lantern.glow],
+      [1, transparent(theme.lantern.glow)],
+    ],
+  );
   ctx.fillStyle = theme.ink;
   ctx.fillRect(-14, -6, 28, 6); // the footing
   ctx.fillRect(-5, -30, 10, 24); // the post

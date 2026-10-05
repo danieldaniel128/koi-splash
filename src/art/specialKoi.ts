@@ -7,7 +7,7 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
-import { blank, context, copyCanvas, freshContext, transparent, wash } from './canvas';
+import { blank, context, copyCanvas, fillRadial, freshContext, transparent, wash } from './canvas';
 import { spineOffset } from './koiBank';
 import type { BakeOptions } from './koiBank';
 
@@ -177,13 +177,17 @@ export function paintWhirlpool(size: number, colour: string): HTMLCanvasElement 
   const r = size / 2;
   ctx.translate(r, r);
   ctx.scale(1, -1); // the arms below curl clockwise inward; mirrored, they curl counter-clockwise
-  const eye = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-  eye.addColorStop(0, 'rgba(0, 5, 14, 0.96)');
-  eye.addColorStop(0.22, 'rgba(2, 16, 34, 0.82)');
-  eye.addColorStop(0.6, 'rgba(8, 42, 72, 0.4)');
-  eye.addColorStop(1, 'rgba(12, 56, 90, 0)');
-  ctx.fillStyle = eye;
-  ctx.fillRect(-r, -r, size, size);
+  fillRadial(
+    ctx,
+    [0, 0],
+    [0, r],
+    [
+      [0, 'rgba(0, 5, 14, 0.96)'],
+      [0.22, 'rgba(2, 16, 34, 0.82)'],
+      [0.6, 'rgba(8, 42, 72, 0.4)'],
+      [1, 'rgba(12, 56, 90, 0)'],
+    ],
+  );
   for (let k = 0; k < 3; k++) {
     const start = (k * Math.PI * 2) / 3;
     arm(ctx, { start, reach: 0.97 * r, turn: 3.6, width: 0.34 * r }, colour, 0.6);
@@ -345,12 +349,16 @@ export function paintSparkle(size: number): HTMLCanvasElement {
 }
 
 function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, alpha: number): void {
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  glow.addColorStop(0, colour);
-  glow.addColorStop(1, transparent(colour));
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = glow;
-  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  fillRadial(
+    ctx,
+    [x, y],
+    [0, radius],
+    [
+      [0, colour],
+      [1, transparent(colour)],
+    ],
+  );
   ctx.globalAlpha = 1;
 }
 

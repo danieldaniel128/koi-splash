@@ -55,6 +55,25 @@ export function wash(
   ctx.restore();
 }
 
+/** A gradient's stops: where (0..1) and the color there. */
+export type ColorStops = readonly (readonly [number, string])[];
+
+/**
+ * A radial gradient round (x, y), from `inner` to `outer` px through `stops`, filled over its bounding square (in the
+ * context's own units): a glow, a halo, a soft shadow.
+ */
+export function fillRadial(
+  ctx: CanvasRenderingContext2D,
+  [x, y]: readonly [number, number],
+  [inner, outer]: readonly [number, number],
+  stops: ColorStops,
+): void {
+  const gradient = ctx.createRadialGradient(x, y, inner, x, y, outer);
+  for (const [at, color] of stops) gradient.addColorStop(at, color);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(x - outer, y - outer, outer * 2, outer * 2);
+}
+
 /**
  * `color` ('#rrggbb', 'rgb(...)' or 'rgba(...)') at zero alpha: what a glow fades out to. A canvas gradient blends its
  * stops unpremultiplied, so fading to transparent black would darken the glow's edge into a ring.

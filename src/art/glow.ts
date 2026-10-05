@@ -1,4 +1,5 @@
-import { blank, context } from './canvas';
+import { blank, context, fillRadial } from './canvas';
+import type { ColorStops } from './canvas';
 
 /** Soft glows painted once on a canvas and used as textures (the fireflies), so nothing redraws them per frame. */
 
@@ -12,13 +13,8 @@ export function paintGlow(color: string, size: number, core = 0.12): HTMLCanvasE
   ]);
 }
 
-function paintRadial(size: number, stops: readonly (readonly [number, string])[]): HTMLCanvasElement {
+function paintRadial(size: number, stops: ColorStops): HTMLCanvasElement {
   const canvas = blank(size);
-  const ctx = context(canvas);
-  const half = size / 2;
-  const gradient = ctx.createRadialGradient(half, half, 0, half, half, half);
-  for (const [at, color] of stops) gradient.addColorStop(at, color);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
+  fillRadial(context(canvas), [size / 2, size / 2], [0, size / 2], stops);
   return canvas;
 }
