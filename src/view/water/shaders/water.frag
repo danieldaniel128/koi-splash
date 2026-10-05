@@ -58,7 +58,7 @@ float lightBands(vec2 p) {
 float shallowLight(vec2 p, float fromShore) {
     float reach = uGlowLook.w * (0.6 + 0.8 * noise(p / 70.0 + 3.0));
     float shore = 1.0 - smoothstep(0.0, reach, fromShore);
-    float underBoard = smoothstep(-2.0, -26.0, rectEdge(p, uBoard));
+    float underBoard = smoothstep(2.0, 26.0, -rectEdge(p, uBoard));
     float patches = 0.35 + 0.9 * noise(p / 120.0 + vec2(uTime * 0.03, -uTime * 0.02));
     return shore * shore * patches * mix(1.0, uGlowUnderBoard, underBoard);
 }
