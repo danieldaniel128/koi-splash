@@ -81,6 +81,19 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
   return { clears, blasts, end };
 }
 
+/**
+ * When a round's blast (its index in the round's fired) lands: when it takes its first koi, or when it fires if it
+ * takes none. Its points show then. Pure. O(cleared).
+ */
+export function blastLands(step: CascadeStep, plan: RoundPlan, blast: number): number {
+  let lands = Infinity;
+  for (const cleared of step.cleared) {
+    if (cleared.blast !== blast) continue;
+    lands = Math.min(lands, plan.clears.get(cleared.piece.id)?.delay ?? Infinity);
+  }
+  return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.at ?? 0);
+}
+
 /** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a prism beam. */
 function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing: SpecialTiming): ClearPlan {
   const type = fired.piece.special?.type;

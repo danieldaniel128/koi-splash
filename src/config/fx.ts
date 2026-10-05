@@ -1,19 +1,39 @@
 import { THEME } from '../theme/theme';
 
-/** The points that pop up over a match, then fly to the score. */
+/**
+ * The points that pop up where they were made (after the prototype): small ones pop up, rise and fade there; big ones
+ * (`flyMin` and up) fly into the score with a soft glow, and the score takes them as they land. Their colour is the
+ * cascade round's (THEME.color.combo1..4) and their size grows with the koi they count: `sizeBase` + `sizePerKoi` a
+ * koi, at most `sizeMax` px (the label is drawn at that size and scaled down).
+ */
 export const POINTS = {
-  /** The score's own gold and font, so the points land in it seamlessly. */
-  fill: THEME.color.gold,
-  stroke: '#0a1a2e',
-  fontSize: 24,
+  /** Drawn white and tinted with the round's colour; the stroke stays dark. */
+  fill: '#ffffff',
+  stroke: THEME.color.outline,
   fontWeight: '900',
   font: THEME.font.number,
-  /** Pop in, rise a little and hold (s, px), then fly to the score and shrink into it (s, scale). */
+  sizeBase: 17,
+  sizePerKoi: 1.5,
+  sizeMax: 30,
+  /** Pop in, rise and hold, then fade (s, px). */
   pop: 0.18,
-  rise: 14,
-  hold: 0.08,
-  flight: 0.32,
-  landScale: 0.45,
+  rise: 22,
+  hold: 0.35,
+  fade: 0.3,
+  /** The most labels kept for reuse. */
+  pool: 16,
+  /**
+   * A big gain pops up over `flyPop` s (rising `flyRise` px, `flyScale` big), then flies into the score over
+   * `flyTime`, shrinking by `flyShrink`.
+   */
+  flyMin: 100,
+  flyPop: 0.35,
+  flyRise: 18,
+  flyScale: 1.25,
+  flyTime: 0.65,
+  flyShrink: 0.45,
+  /** How far the flight bows out sideways on its way up (px). */
+  flyBow: 60,
 } as const;
 
 /**

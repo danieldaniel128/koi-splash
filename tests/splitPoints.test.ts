@@ -37,7 +37,7 @@ describe('splitPoints', () => {
     const [first] = result.steps;
     if (!first) throw new Error('no round');
     const points = scoreRound(first, 0, 10); // 3 koi cleared and a striped koi's bonus
-    expect(splitPoints(first, points)).toEqual([{ over: first.matches[0]?.cells, amount: points }]);
+    expect(splitPoints(first, points)).toEqual([{ over: first.matches[0]?.cells, amount: points, size: 4 }]);
   });
 
   it('adds up to the points the scene scored, for every round of every cascade, specials and all', () => {

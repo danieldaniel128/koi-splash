@@ -64,8 +64,8 @@ export interface TurnAnimator {
   /** A koi swiped into the bank, or into a lily pad: it bumps its nose and swims back. */
   bumpBank(koi: PlacedPiece, toward: Cell): Promise<void>;
   bumpPad(koi: PlacedPiece, padCell: Cell): Promise<void>;
-  /** One cascade round, with the points it scored. */
-  playStep(step: CascadeStep, points: number): Promise<void>;
+  /** One cascade round (`round` of its turn, 0 = the swap's own), with the points it scored. */
+  playStep(step: CascadeStep, points: number, round: number): Promise<void>;
   playBooster(use: BoosterUse, change: BoosterChange): Promise<void>;
 }
 
@@ -336,7 +336,10 @@ export class GameScene implements BoosterGame, SwapGame {
    */
   private async playRound({ step, round, points, met, status }: CountedRound): Promise<void> {
     this.announce(step, round, met);
-    await Promise.all([this.deps.animator.playStep(step, points), this.deps.pads.play(step.padEvents)]);
+    await Promise.all([
+      this.deps.animator.playStep(step, points, round),
+      this.deps.pads.play(step.padEvents),
+    ]);
     this.deps.status.update(status);
   }
 

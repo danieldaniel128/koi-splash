@@ -14,6 +14,7 @@ import type { GameLayout, Rect } from '../layout/gameLayout';
 import type { Cell, Special } from '../model/types';
 import { BannerLane } from '../ui/BannerLane';
 import { comboBanner, plainBanner } from '../ui/banners';
+import { FlyingPoints } from '../ui/FlyingPoints';
 import { BoosterBar } from '../ui/BoosterBar';
 import type { Hud } from '../ui/Hud';
 import { InstructionPill } from '../ui/InstructionPill';
@@ -81,7 +82,7 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
   const parts: GameParts = {
     boardView,
     pond,
-    popups: createScorePopups(hud, board),
+    popups: createScorePopups(new FlyingPoints(screen.ui, hud), board),
     hud,
     pads: createPads(pond, hud, board, screen.resolution.art),
     screenFlow: made.screenFlow,
@@ -330,12 +331,9 @@ function createSpecialEffects(on: {
   return { fx, motions: new SpecialMotions() };
 }
 
-/** The points each match earns, over the board; they fly to the score in the HUD. */
-function createScorePopups(hud: Hud, boardOrigin: PointData): ScorePopups {
-  const popups = new ScorePopups(() => {
-    const score = hud.scoreAnchor();
-    return { x: score.x - boardOrigin.x, y: score.y - boardOrigin.y };
-  });
+/** The points each match earns, over the board; the big ones fly into the score in the HUD. */
+function createScorePopups(flights: FlyingPoints, boardOrigin: PointData): ScorePopups {
+  const popups = new ScorePopups(flights);
   popups.position.set(boardOrigin.x, boardOrigin.y);
   return popups;
 }

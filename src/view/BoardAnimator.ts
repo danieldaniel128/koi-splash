@@ -12,8 +12,8 @@ import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
 import { rise, sink } from './motion/koiMotions';
 import { play, wait } from './motion/play';
-import { planRound } from './specialTiming';
-import type { ClearPlan } from './specialTiming';
+import { blastLands, planRound } from './specialTiming';
+import type { ClearPlan, RoundPlan } from './specialTiming';
 import { splitPoints } from './splitPoints';
 import type { SpecialFx } from './SpecialFx';
 import type { SpecialMotions } from './SpecialMotions';
@@ -36,8 +36,15 @@ export interface AnimatorDeps {
 }
 
 /** The match effects over the water, in the board's space (one splash per match, points). */
+/** How a popup looks and when it shows: its cascade round (its colour), the koi it counts (its size), its delay (s). */
+export interface PointsLook {
+  readonly round: number;
+  readonly size: number;
+  readonly delay: number;
+}
+
 export interface MatchEffects {
-  points(at: PointData, amount: number): void;
+  points(at: PointData, amount: number, look: PointsLook): void;
 }
 
 /** How a koi leaves the board around the specials, by the way its round's plan says it goes; null when it dives. */
@@ -153,11 +160,12 @@ export class BoardAnimator implements TurnAnimator {
   /**
    * One cascade round, timed by planRound: matched koi dive (a special's shape spirals into it), specials fire and
    * their blasts take their koi in their own rhythm, then the koi above swim down and new ones rise into the gaps.
-   * `points` is what the scene scored for the round: its popups show exactly that.
+   * `points` is what the scene scored for the round (`round` of its cascade, 0 = the swap's own): its popups show
+   * exactly that.
    */
-  async playStep(step: CascadeStep, points: number): Promise<void> {
+  async playStep(step: CascadeStep, points: number, round: number): Promise<void> {
     const plan = planRound(step, TIMING.specials);
-    this.score(step, points);
+    this.score(step, plan, { points, round });
     for (const blast of plan.blasts) this.specials.fx.fire(blast);
     // the koi above start swimming down while the last ones are still going
     const swimDelay =
@@ -217,10 +225,22 @@ export class BoardAnimator implements TurnAnimator {
     };
   }
 
-  /** The round's points pop up over its matches and over each special that fired (see splitPoints). */
-  private score(step: CascadeStep, points: number): void {
-    for (const { over, amount } of splitPoints(step, points)) {
-      this.fx.points(centreOf(over.map((cell) => this.view.cellToPoint(cell))), amount);
+  /**
+   * The round's points pop up over its matches as they clear and over each special that fired as its blast lands (see
+   * splitPoints), in the round's colour, bigger for bigger matches.
+   */
+  private score(
+    step: CascadeStep,
+    plan: RoundPlan,
+    { points, round }: { points: number; round: number },
+  ): void {
+    for (const { over, amount, size, blast } of splitPoints(step, points)) {
+      const delay = blast === undefined ? 0 : blastLands(step, plan, blast);
+      this.fx.points(centreOf(over.map((cell) => this.view.cellToPoint(cell))), amount, {
+        round,
+        size,
+        delay,
+      });
     }
   }
 

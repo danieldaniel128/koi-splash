@@ -223,3 +223,20 @@
 .banner--sub .banner__sub {
   display: block;
 }
+
+/* Big points flying into the score, over the HUD (positioned by their animation). */
+
+.ui > .score-fly {
+  left: 0;
+  top: 0;
+  font-family: var(--font-number);
+  font-weight: 900;
+  font-size: var(--text-lg);
+  color: var(--fly-color, var(--color-gold));
+  -webkit-text-stroke: 4px var(--color-outline);
+  paint-order: stroke fill;
+  text-shadow: 0 0 12px var(--fly-color, var(--color-gold));
+  white-space: nowrap;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
