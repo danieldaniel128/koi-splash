@@ -101,11 +101,11 @@ the pond, the game, the stage, the sound, the frame loop), so there are no singl
 The game boots behind a loading screen. Its markup is in `index.html`, and the theme's tokens are written into the
 page at build time, so it shows, themed, from the first paint. `src/boot/loading.ts` lists the loading as named
 steps, each weighted by about how long it takes: the font, the goals' icons, the koi, the shore's distance field,
-the water, the garden, the stones, the game itself, and one frame drawn unseen so every shader is compiled before the
-first real one. `BootPipeline` (`src/core`) runs them in order, lets the page paint between them and moves the bar.
-Everything is made once, and playing again reuses it. The special koi aren't needed to start, so they're baked in the
-background once the game shows, one job per idle moment (`runWhenIdle`); one wanted sooner is baked on the spot. If
-boot fails, `main.ts` stops whatever had started and shows a readable error (no WebGL 2, the GPU lost).
+the water, the garden, the stones, the game itself, the koi's in-between tail poses and the special koi, and one frame
+drawn unseen so every shader is compiled before the first real one. `BootPipeline` (`src/core`) runs them in order,
+lets the page paint between them and moves the bar. The last bakes are lists of small jobs (one pose or one color
+each), run back to back with a paint every 50 ms, so the bar keeps moving and nothing is baked while the game is
+played. Everything is made once, and playing again reuses it. If boot fails, `main.ts` stops whatever had started and shows a readable error (no WebGL 2, the GPU lost).
 
 The screens (loading, playing, the end card, playing again) are a state machine (`ScreenFlow`), which also moves the
 keyboard focus. The turn runs on the same small state machine (`src/core/StateMachine.ts`), with guarded transitions
@@ -333,11 +333,11 @@ that throws, and browser APIs that can refuse (audio, storage, vibration). The o
 
 ## Tests
 
-246 Vitest tests in 53 files, in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by
+266 Vitest tests in 56 files, in `tests/`. Most cover the match-3 rules, because that's where a bug is easy to miss by
 playing: a new board with a ready-made match or no move, a swap that should be refused, a cascade that leaves a hole,
 specials that chain, boosters aimed at a pad or the bank. The presenters are tested with stubs for their ports: a
 level won or lost on its last move, a turn whose animation fails, the booster flow, the swap by hand and the screen
-flow. The rest cover the core pieces (state machine, event bus, pool, boot pipeline, idle work), the layout, the
+flow. The rest cover the core pieces (state machine, event bus, pool, boot pipeline), the layout, the
 shore tracer, the distance field and the atlas, the music and the sound board, the shipped level (a playable deal
 for any seed), and the import graph. They run in CI on every pull request, so when I work on the feel I find out
 before merging if I broke the rules.

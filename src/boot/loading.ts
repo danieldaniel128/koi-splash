@@ -40,28 +40,24 @@ export interface GameWiring {
   readonly card: ResultCard;
 }
 
-/** What loading leaves for later: the art the game may want once it's played, to bake in the background. */
-export interface LoadedGame {
-  readonly warmUp: readonly (() => void)[];
-}
-
 /**
  * Loads the game behind the loading screen, step by step, and reports the share done: the font, the goals' icons,
  * the koi, the shore's distance field, the water, the garden, the stones round the pond, then the game built from
  * them, and one frame played unseen so the GPU compiles every shader and takes every texture before the player's
- * first frame. Each step is weighted by about how long it takes (measured in Chrome at phone size; only the ratios
- * matter). The special koi aren't needed to start, so they're left for later (warmUp): loading never waits for
- * them. Everything is made once: nothing is rebuilt for another game.
+ * first frame. Before that frame, the koi's in-between tail poses and the special koi (their tail beats, sheen,
+ * whirlpool curls and the petal menu's pictures) are baked in small jobs, so nothing is baked while the game is
+ * played and the bar keeps moving. Each step is weighted by about how long it takes (measured in Chrome at phone
+ * size; only the ratios matter). Everything is made once: nothing is rebuilt for another game.
  */
 export async function loadGame(
   app: Application,
   screen: GameScreen,
   wiring: GameWiring,
   onProgress: (done: number) => void,
-): Promise<LoadedGame> {
+): Promise<void> {
   const bake = koiBake(screen.layout.board.koiSize, screen.resolution.art);
   const specialTextures = createSpecialKoi(bake);
-  const { koi } = await new BootPipeline()
+  await new BootPipeline()
     .step('fonts', 1, loadFonts)
     .step('goalIcons', 6, () => goalIcons(screen.resolution.art))
     .step('koi', 19, () => bakeKoi(bake))
@@ -72,12 +68,13 @@ export async function loadGame(
     .step('game', 2, (made) => {
       assembleGame(app, screen, { ...made, specialTextures: specialTextures }, wiring);
     })
+    .jobs('inBetweenPoses', 10, ({ koi }) => koi.inBetweenJobs())
+    .jobs('specialKoi', 80, () => specialTextures.warmUpJobs())
     // the GPU draws the koi's canvases as they're first uploaded, here
     .step('firstFrame', 15, () => {
       app.ticker.update();
     })
     .run(onProgress);
-  return { warmUp: [...koi.inBetweenJobs(), ...specialTextures.warmUpJobs()] };
 }
 
 /** The art and the pond the game is put together from. */
