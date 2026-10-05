@@ -289,6 +289,18 @@ export function bakeKoi(variety: KoiVariety, opts: BakeOptions): HTMLCanvasEleme
   return canvas;
 }
 
+/**
+ * How far sideways the spine of a head-up koi is bent at each row of its square, in the square's units (0 all the
+ * way down for the straight pose): lets a painting laid over the baked body, like a special koi's bands, bend with
+ * the tail. Only the size and the tail wag shape the spine.
+ */
+export function spineOffset(opts: PaintOptions): (y: number) => number {
+  const size = opts.size;
+  const body = makeBody({ build: opts.build } as KoiLook, size, clamp(opts.tailWag ?? 0, -1, 1));
+  const top = size / 2 - SNOUT_X * size; // the snout's row; the spine runs down from it
+  return y => body.point(clamp((y - top) / body.L, 0, 1), 0).y;
+}
+
 // ============================================================================
 // Body geometry
 //

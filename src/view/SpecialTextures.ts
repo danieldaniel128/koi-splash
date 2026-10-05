@@ -1,10 +1,12 @@
 import { Texture } from 'pixi.js';
 import { paintGlow } from '../art/glow';
 import { bakeInkedKoi } from '../art/koiInk';
+import type { Dressing } from '../art/koiInk';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import {
   bodySpan,
   curl,
+  inEveryPose,
   paintPrismGlow,
   paintSparkle,
   paintWhirlpool,
@@ -14,7 +16,7 @@ import {
 } from '../art/specialKoi';
 import { SPECIAL_LOOK } from '../config/specials';
 import type { Kind, Special } from '../model/types';
-import { bakeContact, bakePose, bakePoses, bakeShadow, stillPose } from './KoiTextures';
+import { bakeContact, bakePose, bakePoses, bakeShadow, stillPose, tailWag } from './KoiTextures';
 import type { KoiBake } from './KoiTextures';
 import type { KoiMarks } from './KoiWaterline';
 
@@ -127,11 +129,20 @@ export class SpecialTextures {
     return marks;
   }
 
-  /** A striped koi's sheen, frame by frame from tail to head. */
+  /**
+   * A striped koi's sheen, frame by frame from tail to head, cut to the part of the body that every pose covers so
+   * it never spills past a bending tail.
+   */
   sheen(kind: Kind): readonly Texture[] {
     return this.cached(`sheen:${kind}`, () => {
-      const body = bakeKoi(getVariety(this.variety(kind)), { ...stillPose(this.bake), parts: 'body' });
-      return sheenFrames(body, SPECIAL_LOOK.sheen.frames).map((canvas) => Texture.from(canvas));
+      const variety = getVariety(this.variety(kind));
+      const body = { ...stillPose(this.bake), parts: 'body' } as const;
+      const bodies = Array.from({ length: this.bake.frames }, (_, i) =>
+        bakeKoi(variety, { ...body, tailWag: tailWag(i, this.bake) }),
+      );
+      return sheenFrames(inEveryPose(bodies), SPECIAL_LOOK.sheen.frames).map((canvas) =>
+        Texture.from(canvas),
+      );
     });
   }
 
@@ -177,11 +188,11 @@ export class SpecialTextures {
   }
 
   /** How a striped or rainbow koi is dressed before it's inked (see specialKoi). */
-  private dressing(type: 'line' | 'rainbow', kind: Kind): (part: HTMLCanvasElement) => void {
+  private dressing(type: 'line' | 'rainbow', kind: Kind): Dressing {
     if (type === 'rainbow') return rainbow;
     const look = { ...SPECIAL_LOOK.stripes, band: this.color(kind).band, body: this.spanOf(kind) };
-    return (part) => {
-      stripe(part, look);
+    return (part, pose) => {
+      stripe(part, look, pose);
     };
   }
 

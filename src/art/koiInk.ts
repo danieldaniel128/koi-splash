@@ -18,6 +18,12 @@ export interface KoiInk {
   readonly tailUnder: number;
 }
 
+/**
+ * Repaints one baked part of a koi (its fins, its body) before it is inked: a special koi's look. `pose` is how that
+ * part was baked, so the paint can follow its bend.
+ */
+export type Dressing = (part: HTMLCanvasElement, pose: BakeOptions) => void;
+
 /** Directions the silhouette is copied in to grow the outline: enough that its edge stays round. */
 const OUTLINE_STEPS = 16;
 /** A silhouette is drawn over itself this many times, so translucent fins still give a solid outline. */
@@ -35,15 +41,15 @@ export function bakeInkedKoi(
   variety: KoiVariety,
   bake: BakeOptions,
   ink: KoiInk,
-  dress?: (part: HTMLCanvasElement) => void,
+  dress?: Dressing,
 ): HTMLCanvasElement {
   const fins = bakeKoi(variety, { ...bake, parts: 'fins' });
   const body = bakeKoi(variety, { ...bake, parts: 'body' });
   if (dress) {
     // a special koi's look (stripes, rainbow) goes on its paint, under the water's tint and the ink outline; its eyes
     // go back on top
-    dress(fins);
-    dress(body);
+    dress(fins, bake);
+    dress(body, bake);
     const eyes = bakeKoi(variety, { ...bake, parts: 'eyes' });
     const ctx = freshContext(body);
     ctx.drawImage(eyes, 0, 0);

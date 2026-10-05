@@ -3,7 +3,7 @@ import { drawBlurred } from '../art/blur';
 import { bakeKoi, getVariety } from '../art/koiBank';
 import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact } from '../art/koiInk';
-import type { KoiContactShape, KoiInk } from '../art/koiInk';
+import type { Dressing, KoiContactShape, KoiInk } from '../art/koiInk';
 import type { Kind } from '../model/types';
 
 /** How the koi textures are baked. */
@@ -84,7 +84,7 @@ export class KoiTextures {
 export function bakePoses(
   varietyId: string,
   bake: KoiBake,
-  dress?: (part: HTMLCanvasElement) => void,
+  dress?: Dressing,
 ): Texture[] {
   return Array.from({ length: bake.frames }, (_, i) => Texture.from(bakePose(varietyId, bake, i, dress)));
 }
@@ -94,7 +94,7 @@ export function bakePose(
   varietyId: string,
   bake: KoiBake,
   pose: number,
-  dress?: (part: HTMLCanvasElement) => void,
+  dress?: Dressing,
 ): HTMLCanvasElement {
   return bakeInkedKoi(
     getVariety(varietyId),
@@ -117,7 +117,8 @@ export function bakeContact(varietyId: string, bake: KoiBake, wag: number): HTML
   return bakeKoiContact(getVariety(varietyId), pose, bake.contact);
 }
 
-function tailWag(pose: number, bake: KoiBake): number {
+/** How far pose `pose` of a tail beat swings the tail (koiBank's tailWag). */
+export function tailWag(pose: number, bake: KoiBake): number {
   return Math.sin((pose / bake.frames) * Math.PI * 2) * bake.tailSwing;
 }
 

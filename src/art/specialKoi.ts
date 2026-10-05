@@ -7,7 +7,9 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
-import { freshContext } from './canvas';
+import { blank, context, freshContext } from './canvas';
+import { spineOffset } from './koiBank';
+import type { BakeOptions } from './koiBank';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -38,22 +40,40 @@ export const SPECTRUM = [
  * Bands of colour and white running along a head-up koi part (its body, its fins), like the prototype's striped koi:
  * opaque, so the koi's own pattern is gone, `count` of them across the body with the band colour at both edges, the
  * pattern carrying on over the fins, a fine dark line between bands and a light from the moon side for roundness.
- * A dressing for bakeInkedKoi, so the ink outline goes on top.
+ * Each row of bands follows the spine of the pose the part was baked in (`pose`), so they bend with the tail instead
+ * of sliding across it. A dressing for bakeInkedKoi, so the ink outline goes on top.
  */
-export function stripe(part: HTMLCanvasElement, look: StripeLook): void {
+export function stripe(part: HTMLCanvasElement, look: StripeLook, pose: BakeOptions): void {
+  const resolution = pose.resolution ?? 1;
+  const spine = spineOffset(pose);
+  const shifts = Array.from({ length: part.height }, (_, y) => spine((y + 0.5) / resolution) * resolution);
+  const margin = Math.ceil(Math.max(0, ...shifts.map(Math.abs))) + 1; // room to slide the bands either way
+  const bands = straightBands(look, part, margin);
   const ctx = freshContext(part);
-  const band = (look.body.right - look.body.left) / look.count;
-  const first = look.body.left - Math.ceil(look.body.left / band) * band; // the grid, carried out to the edges
   ctx.globalCompositeOperation = 'source-atop';
-  for (let x = first; x < part.width; x += band) {
+  shifts.forEach((shift, y) => {
+    ctx.drawImage(bands, margin - shift, y, part.width, 1, 0, y, part.width, 1);
+  });
+  shade(ctx, part);
+  ctx.restore();
+}
+
+/** The bands as on a straight koi, for a part's canvas, on a canvas `margin` px wider on both sides. */
+function straightBands(look: StripeLook, part: HTMLCanvasElement, margin: number): HTMLCanvasElement {
+  const canvas = blank(part.width + margin * 2, part.height);
+  const ctx = context(canvas);
+  ctx.translate(margin, 0);
+  const band = (look.body.right - look.body.left) / look.count;
+  const first = look.body.left - Math.ceil((look.body.left + margin) / band) * band; // the grid, out to the edges
+  const end = part.width + margin;
+  for (let x = first; x < end; x += band) {
     const index = Math.round((x - look.body.left) / band);
     ctx.fillStyle = ((index % 2) + 2) % 2 === 0 ? look.band : '#ffffff';
     ctx.fillRect(x, 0, band + 0.5, part.height);
   }
   ctx.fillStyle = look.line;
-  for (let x = first; x < part.width; x += band) ctx.fillRect(x - band * 0.07, 0, band * 0.14, part.height);
-  shade(ctx, part);
-  ctx.restore();
+  for (let x = first; x < end; x += band) ctx.fillRect(x - band * 0.07, 0, band * 0.14, part.height);
+  return canvas;
 }
 
 /** Where a head-up koi body spans across its canvas (px), at its widest: what the bands fit. O(pixels), once. */
@@ -91,6 +111,20 @@ export function rainbow(part: HTMLCanvasElement): void {
   ctx.globalCompositeOperation = 'destination-in'; // the blend painted the empty corners too: cut back to the koi
   ctx.drawImage(original, 0, 0);
   ctx.restore();
+}
+
+/**
+ * The part of a koi's body that every pose of its tail beat covers (`bodies`, head up): where a sheen laid over the
+ * koi stays on it however its tail bends.
+ */
+export function inEveryPose(bodies: readonly HTMLCanvasElement[]): HTMLCanvasElement {
+  const [first, ...rest] = bodies;
+  if (!first) throw new Error('specialKoi: no poses to overlap');
+  const canvas = copy(first);
+  const ctx = context(canvas);
+  ctx.globalCompositeOperation = 'destination-in';
+  for (const body of rest) ctx.drawImage(body, 0, 0);
+  return canvas;
 }
 
 /** Where the sheen sweeps, as shares of the koi's square: from past the tail root up to just over the snout. */
@@ -283,25 +317,12 @@ function shade(ctx: Ctx, part: HTMLCanvasElement): void {
   ctx.fillRect(0, 0, part.width, part.height);
 }
 
-function blank(size: number): HTMLCanvasElement {
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(size);
-  canvas.height = Math.ceil(size);
-  return canvas;
-}
-
 function copy(source: HTMLCanvasElement): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = source.width;
   canvas.height = source.height;
   context(canvas).drawImage(source, 0, 0); // a new canvas: its context is plain
   return canvas;
-}
-
-function context(canvas: HTMLCanvasElement): Ctx {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('specialKoi: 2D canvas not available');
-  return ctx;
 }
 
 /**
