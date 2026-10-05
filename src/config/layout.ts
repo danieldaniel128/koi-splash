@@ -1,17 +1,59 @@
-import type { LayoutConfig } from '../layout/gameLayout';
-import { BOARD } from './board';
 import { POND } from './pond';
+
+/** What the layout is built from: the grid, the bands above and below it, and the spacing. Stage px. */
+export interface LayoutConfig {
+  readonly cols: number;
+  readonly rows: number;
+  /** The design size: the stage is never smaller than this, so nothing gets cramped on small screens. */
+  readonly designWidth: number;
+  readonly designHeight: number;
+  /** The HUD band above the pond and the specials bar below it. */
+  readonly hudHeight: number;
+  readonly barHeight: number;
+  /** Space between the screen edges and everything, and between the HUD, the pond's shore and the bar. */
+  readonly sidePadding: number;
+  readonly sectionGap: number;
+  /** Room the shore takes outside the water all round (the stones), so they stay on screen. */
+  readonly shoreWidth: number;
+  /** Water between the board and the pond's shore on each side. The whole pond stays on screen. */
+  readonly pondMargin: {
+    readonly left: number;
+    readonly right: number;
+    readonly top: number;
+    readonly bottom: number;
+  };
+  /** Water between neighbouring cells: koi and pads are drawn inside cell - gap. */
+  readonly cellGap: number;
+  /**
+   * Where the pond sits in the height left over (0 top, 0.5 centred, 1 bottom). Low leaves an open scene above it,
+   * like the art over the board in commercial match-3s.
+   */
+  readonly pondAlign: number;
+  /**
+   * The room the garden needs: `beside` the pond on both sides (a wide screen), or else `sky` of open sky between the
+   * HUD and the pond. To keep that sky the cell gives up size, but never below minCell.
+   */
+  readonly garden: { readonly beside: number; readonly sky: number };
+  readonly minCell: number;
+  /** The instruction pill shown while a booster is armed: its height, and the gap between it and the board under it. */
+  readonly pillHeight: number;
+  readonly pillGap: number;
+}
+
+/**
+ * The room the garden needs (px): with `beside` on both sides of the pond it moves beside it; above the pond it needs
+ * `sky` of open sky under the HUD, or the pagoda, the branch and the lantern are left out (see art/backdrop).
+ */
+export const GARDEN_ROOM = { beside: 120, sky: 70 } as const;
 
 /**
  * How the game is laid out on any screen (see layoutGame), in stage px. The stage is at least 360 x 640 (a common
  * phone viewport in CSS pixels) and grows to cover the whole screen; everything else is placed from these values.
  */
 export const LAYOUT = {
-  cols: BOARD.cols,
-  rows: BOARD.rows,
   designWidth: 360,
   designHeight: 640,
-  hudHeight: 80,
+  hudHeight: 84,
   barHeight: 76,
   sidePadding: 8,
   sectionGap: 6,
@@ -25,6 +67,9 @@ export const LAYOUT = {
    */
   cellGap: 1,
   pondAlign: 1, // all the room left over goes to the garden above the pond
+  /** The garden's room: on a phone too short for it, the cell gives up size, down to minCell. */
+  garden: GARDEN_ROOM,
   minCell: 36,
-  maxCell: 60,
-} as const satisfies LayoutConfig;
+  pillHeight: 40,
+  pillGap: 12,
+} as const satisfies Omit<LayoutConfig, 'cols' | 'rows'>; // the board's size comes from its shape

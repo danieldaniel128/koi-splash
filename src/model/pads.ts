@@ -1,27 +1,7 @@
-import type { Random } from '../core/Random';
-import type { BoardSpec } from './rules';
-import type { Cell } from './types';
-
-/**
- * A lily pad on the board. A pad takes a whole cell: no koi can be in it, and koi fall past it. Matches right next
- * to it (up, down, left, right) hit it.
- */
-export interface Pad {
-  readonly id: number;
-  readonly at: Cell;
-  /** A bud is a lotus waiting to bloom; an empty pad is scenery that drifts off when splashed. */
-  readonly kind: 'bud' | 'empty';
-  /** Hits still needed: a bud blooms at 0, an empty pad drifts away at 0. */
-  readonly hitsLeft: number;
-  /** Hits it took in total, so the view can show how far a bud has opened. */
-  readonly hitsNeeded: number;
-}
-
-/** What happened to a pad when a cascade round cleared koi next to it. */
-export type PadEvent =
-  | { readonly type: 'hit'; readonly pad: Pad }
-  | { readonly type: 'bloom'; readonly pad: Pad }
-  | { readonly type: 'drift'; readonly pad: Pad };
+import type { RandomSource } from '../core/Random';
+import { int } from '../core/Random';
+import type { BoardSpec, Cell, Pad, PadEvent } from './types';
+import { cellKey } from './types';
 
 export interface PadSpec {
   /** Lotus buds on the board (the lotus goal counts their blooms). */
@@ -59,7 +39,7 @@ export class PadField {
    * Scatters the buds and empty pads over random cells at least `spacing` apart. O(N * P) for N cells, P pads.
    * Throws when they don't fit.
    */
-  static scatter(spec: PadSpec, board: BoardSpec, rng: Random): PadField {
+  static scatter(spec: PadSpec, board: BoardSpec, rng: RandomSource): PadField {
     const total = spec.buds + spec.emptyPads;
     const cells = spacedCells(shuffledCells(board, rng), spec.spacing, total);
     if (cells.length < total) throw new RangeError(`${total} pads do not fit ${spec.spacing} cells apart`);
@@ -86,11 +66,11 @@ export class PadField {
    * Bloomed buds and drifted pads leave the field (the caller frees their cells). O(P * 4) lookups, P = pads.
    */
   hit(cleared: readonly Cell[]): PadEvent[] {
-    const hitCells = new Set(cleared.map(key));
+    const hitCells = new Set(cleared.map(cellKey));
     const events: PadEvent[] = [];
     for (const pad of this.field.values()) {
       const touched = AROUND.some((d) =>
-        hitCells.has(key({ col: pad.at.col + d.col, row: pad.at.row + d.row })),
+        hitCells.has(cellKey({ col: pad.at.col + d.col, row: pad.at.row + d.row })),
       );
       if (touched) events.push(this.applyHit(pad));
     }
@@ -108,10 +88,6 @@ export class PadField {
   }
 }
 
-function key(cell: Cell): string {
-  return `${cell.col},${cell.row}`;
-}
-
 /** Picks cells in order, skipping any closer than `spacing` (in either direction) to one already picked. */
 function spacedCells(cells: readonly Cell[], spacing: number, count: number): Cell[] {
   const picked: Cell[] = [];
@@ -126,14 +102,15 @@ function spacedCells(cells: readonly Cell[], spacing: number, count: number): Ce
 }
 
 /** Every cell of the board in random order (Fisher-Yates). */
-function shuffledCells(board: BoardSpec, rng: Random): Cell[] {
-  const holes = new Set((board.holes ?? []).map(key));
+function shuffledCells(board: BoardSpec, rng: RandomSource): Cell[] {
+  const holes = new Set((board.holes ?? []).map(cellKey));
   const cells: Cell[] = [];
   for (let row = 0; row < board.rows; row++) {
-    for (let col = 0; col < board.cols; col++) if (!holes.has(key({ col, row }))) cells.push({ col, row });
+    for (let col = 0; col < board.cols; col++)
+      if (!holes.has(cellKey({ col, row }))) cells.push({ col, row });
   }
   for (let i = cells.length - 1; i > 0; i--) {
-    const j = rng.int(0, i);
+    const j = int(rng, 0, i);
     const swap = cells[i];
     const other = cells[j];
     if (swap && other) [cells[i], cells[j]] = [other, swap];

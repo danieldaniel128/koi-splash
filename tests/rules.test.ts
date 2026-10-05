@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { Board } from '../src/model/Board';
-import { createBoard, findMatches, findMove, resetBoard, swapMakesMatch, trySwap } from '../src/model/rules';
-import type { BoardSpec } from '../src/model/rules';
+import {
+  createBoard,
+  findMatches,
+  findMove,
+  hasAnyMove,
+  resetBoard,
+  swapMakesMatch,
+  trySwap,
+} from '../src/model/rules';
+import type { BoardSpec } from '../src/model/types';
 import { parseShape } from '../src/model/shape';
 
 const SPEC: BoardSpec = { cols: 7, rows: 9, kinds: 5 };
@@ -32,7 +40,7 @@ function kindsOf(board: Board): string[] {
 describe('createBoard', () => {
   it('fills every cell, has no ready-made match and has a move', () => {
     for (let seed = 1; seed <= 200; seed++) {
-      const board = createBoard(SPEC, new Random(seed));
+      const board = createBoard(SPEC, seeded(seed));
       for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
       expect(findMatches(board)).toEqual([]);
       expect(findMove(board)).not.toBeNull();
@@ -40,13 +48,13 @@ describe('createBoard', () => {
   });
 
   it('is reproducible from a seed', () => {
-    expect(kindsOf(createBoard(SPEC, new Random(42)))).toEqual(kindsOf(createBoard(SPEC, new Random(42))));
+    expect(kindsOf(createBoard(SPEC, seeded(42)))).toEqual(kindsOf(createBoard(SPEC, seeded(42))));
   });
 });
 
 describe('resetBoard', () => {
   it('gives a fresh playable layout with new piece ids', () => {
-    const rng = new Random(5);
+    const rng = seeded(5);
     const board = createBoard(SPEC, rng);
     const oldIds = new Set([...board.cells()].map((cell) => board.get(cell)?.id));
     resetBoard(board, SPEC, rng);
@@ -75,6 +83,20 @@ describe('findMatches', () => {
   });
 });
 
+describe('Board.swap', () => {
+  it('trades two pieces, and throws without changing either cell when one cannot take the other', () => {
+    const board = boardFrom(['12']);
+    const [left, right] = [board.get({ col: 0, row: 0 }), board.get({ col: 1, row: 0 })];
+    board.swap({ col: 0, row: 0 }, { col: 1, row: 0 });
+    expect(board.get({ col: 0, row: 0 })).toBe(right);
+    board.setBlocked({ col: 0, row: 0 }, true);
+    expect(() => {
+      board.swap({ col: 1, row: 0 }, { col: 0, row: 0 });
+    }).toThrow(RangeError);
+    expect(board.get({ col: 1, row: 0 })).toBe(left);
+  });
+});
+
 describe('swapMakesMatch', () => {
   const board = boardFrom(['1121', '2334', '4312']);
 
@@ -95,18 +117,54 @@ describe('swapMakesMatch', () => {
   });
 });
 
+describe('hasAnyMove', () => {
+  it('counts a special as a move only when a koi beside it can be swapped with it', () => {
+    // a special between a pad and the bank, with a koi under it on the second board
+    const special = (board: Board): void => {
+      board.setBlocked({ col: 0, row: 0 }, true);
+      board.set({ col: 1, row: 0 }, { ...board.createPiece(1), special: { type: 'whirl' } });
+    };
+    const boxedIn = new Board(3, 1, [{ col: 2, row: 0 }]);
+    special(boxedIn);
+    expect(hasAnyMove(boxedIn)).toBe(false);
+
+    const withKoi = new Board(3, 2, [{ col: 2, row: 0 }]);
+    special(withKoi);
+    withKoi.set({ col: 1, row: 1 }, withKoi.createPiece(2));
+    expect(hasAnyMove(withKoi)).toBe(true);
+  });
+});
+
 describe('trySwap', () => {
   it('refuses an invalid swap and changes nothing', () => {
-    const board = createBoard(SPEC, new Random(7));
+    const board = createBoard(SPEC, seeded(7));
     const before = kindsOf(board);
-    const result = trySwap(board, { col: 0, row: 0 }, { col: 3, row: 3 }, SPEC, new Random(1));
+    const result = trySwap(board, { col: 0, row: 0 }, { col: 3, row: 3 }, SPEC, seeded(1));
     expect(result).toEqual({ valid: false, reason: 'not-adjacent' });
     expect(kindsOf(board)).toEqual(before);
   });
 
+  it('refuses a swap into a lily pad or the bank, even a special, and changes nothing', () => {
+    const board = new Board(3, 1, [{ col: 2, row: 0 }]);
+    board.setBlocked({ col: 0, row: 0 }, true); // a pad on the left, the bank on the right
+    const special = { ...board.createPiece(1), special: { type: 'whirl' as const } };
+    board.set({ col: 1, row: 0 }, special);
+    const spec = { cols: 3, rows: 1, kinds: 5 };
+    for (const into of [
+      { col: 0, row: 0 },
+      { col: 2, row: 0 },
+    ]) {
+      expect(trySwap(board, { col: 1, row: 0 }, into, spec, seeded(1))).toEqual({
+        valid: false,
+        reason: 'blocked',
+      });
+      expect(board.get({ col: 1, row: 0 })).toBe(special);
+    }
+  });
+
   it('clears, drops and refills until the board settles', () => {
     for (let seed = 1; seed <= 100; seed++) {
-      const rng = new Random(seed);
+      const rng = seeded(seed);
       const board = createBoard(SPEC, rng);
       const move = findMove(board);
       if (!move) throw new Error('createBoard gave a stuck board');
@@ -136,7 +194,7 @@ describe('trySwap', () => {
       { col: 1, row: 1 },
       { col: 1, row: 2 },
       { cols: 4, rows: 3, kinds: 5 },
-      new Random(3),
+      seeded(3),
     );
     if (!result.valid) throw new Error('expected a valid swap');
     const first = result.steps[0];
@@ -171,7 +229,7 @@ describe('blocked cells (lily pads)', () => {
 
   it('places the pads first: no koi on a pad, every other cell filled', () => {
     for (let seed = 1; seed <= 50; seed++) {
-      const board = createBoard(SPEC, new Random(seed), pads);
+      const board = createBoard(SPEC, seeded(seed), pads);
       for (const cell of board.cells()) {
         if (pads.some((p) => p.col === cell.col && p.row === cell.row)) expect(board.get(cell)).toBeNull();
         else expect(board.get(cell)).not.toBeNull();
@@ -182,7 +240,7 @@ describe('blocked cells (lily pads)', () => {
 
   it('keeps cascades off the pads: koi fall past them and never land on them', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      const rng = new Random(seed);
+      const rng = seeded(seed);
       const board = createBoard(SPEC, rng, pads);
       const move = findMove(board);
       if (!move) throw new Error('no move');
@@ -209,13 +267,13 @@ describe('a shaped board (holes)', () => {
     holes.some((h) => h.col === cell.col && h.row === cell.row);
 
   it('fills every cell of the shape and none of the holes', () => {
-    const board = createBoard(shaped, new Random(2));
+    const board = createBoard(shaped, seeded(2));
     for (const cell of board.cells()) expect(board.get(cell) === null).toBe(isHole(cell));
   });
 
   it('never moves a koi across a hole: each falls within its own stretch of water', () => {
     for (let seed = 1; seed <= 40; seed++) {
-      const rng = new Random(seed);
+      const rng = seeded(seed);
       const board = createBoard(shaped, rng);
       const move = findMove(board);
       if (!move) throw new Error('no move');

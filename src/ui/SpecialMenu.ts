@@ -1,15 +1,11 @@
 import type { PointData } from 'pixi.js';
 import { SPECIAL_MENU } from '../config/ui';
+import type { PetalChoice } from '../config/ui';
 import type { SpecialPicker } from '../game/BoosterControl';
 import type { Cell, Special } from '../model/types';
+import { THEME } from '../theme/theme';
 import type { UiLayer } from './UiLayer';
-import { el } from './UiLayer';
-
-/** One petal: which special it makes, its name, and a picture of the koi as that special. */
-export interface PetalChoice {
-  readonly type: Special['type'];
-  readonly name: string;
-}
+import { button, el, image, setRect, wantsLessMotion } from './UiLayer';
 
 /** Where the menu finds things: a cell's centre (stage px), the stage's width, and a koi's picture as a special. */
 export interface MenuBoard {
@@ -42,11 +38,17 @@ export function petalSpots(
 /**
  * The special booster's choice (after the prototype's petal menu): three frosted-glass petals bloom round the picked
  * koi, each showing the koi as that special with its name; tapping one chooses it, tapping anywhere else closes
- * them. The pond behind dims.
+ * them. The pond behind dims round the picked koi, fading in, and out again as the petals shrink away.
+ *
+ * The menu opens as the finger lifts off the koi, and on a touch screen the browser sends that tap's click a moment
+ * later, right where the petals start to bloom. So the menu only takes a click whose press began on it once open.
  */
 export class SpecialMenu implements SpecialPicker {
   private readonly root = el('div', 'petals');
   private settle: ((choice: Special['type'] | null) => void) | null = null;
+  private pressed = false;
+  /** The dim fading away after the menu closed, until it's gone or the menu opens again. */
+  private leaving: Animation | null = null;
 
   constructor(
     private readonly layer: UiLayer,
@@ -54,13 +56,20 @@ export class SpecialMenu implements SpecialPicker {
     private readonly choices: readonly PetalChoice[],
     private readonly cell: number,
   ) {
+    this.root.addEventListener('pointerdown', () => {
+      this.pressed = true;
+    });
     this.root.addEventListener('click', (event) => {
-      if (event.target === this.root) this.finish(null); // tapped away from the petals
+      if (event.target === this.root && this.takes(event)) this.finish(null); // tapped away from the petals
     });
   }
 
   pick(at: Cell): Promise<Special['type'] | null> {
     this.finish(null);
+    this.leaving?.cancel();
+    this.leaving = null;
+    this.pressed = false;
+    this.root.inert = false;
     const centre = this.board.cellCentre(at);
     const look = SPECIAL_MENU;
     const spots = petalSpots(centre, at.row < look.topRows, {
@@ -71,7 +80,9 @@ export class SpecialMenu implements SpecialPicker {
     });
     const petals = this.choices.map((choice, k) => this.petal(choice, at, spots[k] ?? centre, centre, k));
     this.root.replaceChildren(...petals);
+    this.root.style.setProperty('--dim-at', `${centre.x}px ${centre.y}px`);
     this.layer.root.append(this.root);
+    this.root.animate([{ opacity: 0 }, { opacity: 1 }], timing(SPECIAL_MENU.fade));
     return new Promise((resolve) => {
       this.settle = resolve;
     });
@@ -83,40 +94,57 @@ export class SpecialMenu implements SpecialPicker {
 
   private petal(choice: PetalChoice, at: Cell, spot: PointData, from: PointData, k: number): HTMLElement {
     const size = SPECIAL_MENU.petal * this.cell;
-    const picture = el('img', 'petal__koi');
-    picture.src = this.board.preview(at, choice.type);
-    picture.alt = '';
-    const petal = el('button', 'petal', picture, el('span', 'petal__name', choice.name));
-    petal.type = 'button';
-    petal.setAttribute('aria-label', choice.name);
-    Object.assign(petal.style, {
-      left: `${spot.x - size / 2}px`,
-      top: `${spot.y - size / 2}px`,
-      width: `${size}px`,
-      height: `${size}px`,
-    });
-    petal.animate(
-      [
-        { transform: `translate(${from.x - spot.x}px, ${from.y - spot.y}px) scale(0.2)`, opacity: 0 },
-        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
-      ],
-      {
-        duration: SPECIAL_MENU.open * 1000,
-        delay: k * SPECIAL_MENU.stagger * 1000,
-        easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-        fill: 'backwards',
-      },
-    );
-    petal.addEventListener('click', () => {
-      this.finish(choice.type);
+    const picture = image('petal__koi', this.board.preview(at, choice.type));
+    picture.draggable = false; // a click that drifts a little still picks the petal
+    const petal = button('control petal', choice.name, picture, el('span', 'petal__name', choice.name));
+    setRect(petal, { x: spot.x - size / 2, y: spot.y - size / 2, width: size, height: size });
+    if (!wantsLessMotion()) {
+      petal.animate(
+        [
+          { transform: `translate(${from.x - spot.x}px, ${from.y - spot.y}px) scale(0.2)`, opacity: 0 },
+          { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        ],
+        {
+          duration: SPECIAL_MENU.open * 1000,
+          delay: k * SPECIAL_MENU.stagger * 1000,
+          easing: THEME.ease.back,
+          fill: 'backwards',
+        },
+      );
+    }
+    petal.addEventListener('click', (event) => {
+      if (this.takes(event)) this.finish(choice.type);
     });
     return petal;
   }
 
+  /** A click the menu answers: its press began on the open menu, or it came from a key (a click with no press). */
+  private takes(click: MouseEvent): boolean {
+    return this.pressed || click.detail === 0;
+  }
+
   private finish(choice: Special['type'] | null): void {
-    this.root.remove();
     const settle = this.settle;
     this.settle = null;
+    if (settle) this.leave();
     settle?.(choice);
   }
+
+  /** The petals shrink and the dim fades away; meanwhile the menu takes no taps, so they go on to the board. */
+  private leave(): void {
+    this.root.inert = true;
+    const time = { ...timing(SPECIAL_MENU.fade), fill: 'forwards' as const };
+    for (const petal of this.root.children)
+      petal.animate([{ scale: 1 }, { scale: SPECIAL_MENU.closeScale }], time);
+    const out = this.root.animate([{ opacity: 1 }, { opacity: 0 }], time);
+    out.onfinish = () => {
+      this.root.remove();
+    };
+    this.leaving = out;
+  }
+}
+
+/** How long a fade of the menu takes: `seconds`, or no time for players who ask for less motion. */
+function timing(seconds: number): KeyframeAnimationOptions {
+  return { duration: wantsLessMotion() ? 0 : seconds * 1000, easing: 'ease' };
 }

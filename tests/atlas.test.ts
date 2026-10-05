@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { packShelves } from '../src/art/atlas';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 
 const overlaps = (
   a: { x: number; y: number; width: number; height: number },
@@ -8,10 +8,10 @@ const overlaps = (
 ): boolean => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 describe('packShelves', () => {
-  const rng = new Random(4);
+  const rng = seeded(4);
   const sizes = Array.from({ length: 60 }, () => ({
-    width: 40 + Math.floor(rng.next() * 60),
-    height: 30 + Math.floor(rng.next() * 50),
+    width: 40 + Math.floor(rng() * 60),
+    height: 30 + Math.floor(rng() * 50),
   }));
 
   it('gives every piece its own slot of its own size, in the input order', () => {

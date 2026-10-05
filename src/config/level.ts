@@ -1,19 +1,25 @@
 import type { GoalDef } from '../model/goals';
 import type { PadSpec } from '../model/pads';
 
+/** Lotuses to bloom: the lotus goal's count, and one bud on the board for each. */
+const LOTUSES = 3;
+
 /**
  * The one level for now. Change any number here: more lotuses, 15 hits to bloom, a score goal instead.
  * Only valid swaps spend a move.
  */
 export const LEVEL = {
   /**
-   * Tuned by simulation (400 boards each): a player who aims at the buds blooms 3 lotuses in a median of 6 moves and
-   * wins about 70% within 15; a player who ignores them wins about 10% even with 20.
+   * Tuned on the earlier plain 7 x 9 board, with lotuses the only goal: there a player who aimed at the buds bloomed 3
+   * lotuses in a median of 6 moves and won about 70% of boards within 15, and one who ignored them about 10% even
+   * with 20.
    */
   moves: 15,
+  /** Moves left at which the level warns it's running out (the HUD warms, the music tenses), then that it's nearly over. */
+  movesWarning: { low: 5, last: 3 },
   /**
-   * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). Keep a notch or
-   * bay at least 2 cells wide, so there is room for the stones on both of its sides.
+   * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). A notch 1 cell
+   * wide is too thin for stones on both its sides, so it gets one stone along it; a wider one gets a row on each side.
    */
   shape: ['..###..', '.#####.', '#######', '#######', '.#####.', '#######', '#######', '.#####.', '..###..'],
   /**
@@ -21,17 +27,17 @@ export const LEVEL = {
    * { type: 'koi', kind, count } to clear that many koi of one colour (kind 0 is the first of KOI_SET).
    */
   goals: [
-    { type: 'lotus', count: 3 },
+    { type: 'lotus', count: LOTUSES },
     { type: 'koi', kind: 0, count: 10 }, // 10 red koi
   ] as readonly GoalDef[],
   /**
-   * The rating: a star at each of these scores (see starsFor). Tuned on whole levels played in a browser by a simple
-   * bot (scores 2340 to 4480, median 3070): a plain win earns one or two stars, a great one three.
+   * The rating: a star at each of these scores (see starsFor). Set from the final scores of whole levels played
+   * through (2340 to 4480, median 3070): a plain win earns one or two stars, a great one three.
    */
   stars: { scores: [1500, 2800, 4000] },
   pads: {
-    /** One bud per lotus in the goal (keep these two equal for a lotus goal). */
-    buds: 3,
+    /** One bud per lotus in the goal (fewer buds than lotuses to bloom fails at startup). */
+    buds: LOTUSES,
     emptyPads: 2,
     /** Matches touching a bud before it blooms, and touching an empty pad before it drifts away. */
     hitsToBloom: 2,

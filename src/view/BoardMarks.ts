@@ -1,6 +1,9 @@
 import { gsap } from 'gsap';
 import { Container, Graphics } from 'pixi.js';
+import type { PointData } from 'pixi.js';
 import { BOOSTER_MARKS } from '../config/specials';
+import type { BoosterMarks } from '../game/BoosterControl';
+import type { PickMark } from '../game/SwapControl';
 import type { Cell } from '../model/types';
 import type { Koi } from './Koi';
 
@@ -9,17 +12,21 @@ export interface MarkedBoard {
   koiAt(cell: Cell): Koi | null;
   koi(): Iterable<Koi>;
   cellOf(koi: Koi): Cell | null;
+  cellToPoint(cell: Cell): PointData;
 }
 
 /**
  * The board's answer while a booster is armed (after the prototype): the koi it can't take dim, the ones it can pulse
  * in a slow wave across the pond, the picked koi lifts out of the water over a gold ring, and a tap it can't take
- * makes that koi wobble. Follows the koi every frame; lives in the board's space, under the koi (the ring).
+ * makes that koi wobble. A koi picked to swap by hand lifts over the same ring. Follows the koi every frame; lives in
+ * the board's space, under the koi (the ring).
  */
-export class BoardMarks extends Container {
+export class BoardMarks extends Container implements BoosterMarks, PickMark {
   private test: ((cell: Cell) => boolean) | null = null;
   private picked: Koi | null = null;
   private readonly ring = new Graphics();
+  /** The koi still dimmed after the marks were cleared: they brighten back over the next frames. */
+  private readonly brightening = new Set<Koi>();
   private dim = 0;
   private time = 0;
 
@@ -32,15 +39,19 @@ export class BoardMarks extends Container {
     this.addChild(this.ring);
   }
 
-  /** Marks the koi a booster can take (`test`), or clears the marks (null): every koi back as it was. */
+  /**
+   * Marks the koi a booster can take (`test`), or clears the marks (null): every koi back to its size, and the dimmed
+   * ones brightening back over a few frames.
+   */
   show(test: ((cell: Cell) => boolean) | null): void {
     this.test = test;
+    this.brightening.clear();
     if (test) return;
     this.lift(null);
     this.dim = 0;
     for (const koi of this.board.koi()) {
-      koi.alpha = 1;
       koi.scale.set(koi.restScale);
+      if (koi.alpha < 1) this.brightening.add(koi);
     }
   }
 
@@ -50,11 +61,12 @@ export class BoardMarks extends Container {
     this.picked = cell ? this.board.koiAt(cell) : null;
   }
 
-  /** A tap the booster can't take: that koi wobbles. */
+  /** A tap the booster can't take: that koi wobbles round its cell (a tap mid-wobble starts it over). */
   shake(cell: Cell): void {
     const koi = this.board.koiAt(cell);
     if (!koi) return;
-    const home = koi.x;
+    const home = this.board.cellToPoint(cell).x;
+    gsap.killTweensOf(koi, 'x');
     gsap
       .timeline()
       .to(koi, { x: home - this.cell * 0.08, duration: 0.06 })
@@ -73,7 +85,20 @@ export class BoardMarks extends Container {
       this.dim += (1 - this.dim) * Math.min(1, deltaSeconds * BOOSTER_MARKS.dimIn);
       for (const koi of this.board.koi()) if (koi !== this.picked) this.mark(koi, test);
     }
+    this.brighten(deltaSeconds);
     this.drawPicked();
+  }
+
+  /** The koi dimmed when the marks were cleared ease back to full brightness, at the rate they dimmed. */
+  private brighten(deltaSeconds: number): void {
+    const share = Math.min(1, deltaSeconds * BOOSTER_MARKS.dimIn);
+    for (const koi of this.brightening) {
+      koi.alpha += (1 - koi.alpha) * share;
+      if (koi.destroyed || koi.alpha > 0.99) {
+        koi.alpha = 1;
+        this.brightening.delete(koi);
+      }
+    }
   }
 
   /** A koi the booster can take pulses in a wave across the pond; one it can't dims. */

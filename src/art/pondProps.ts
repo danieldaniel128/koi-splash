@@ -1,4 +1,5 @@
-import { Random } from '../core/Random';
+import type { PropKind } from '../config/pond';
+import { seeded } from '../core/Random';
 import { drawShadowOnly } from './blur';
 
 /**
@@ -8,8 +9,6 @@ import { drawShadowOnly } from './blur';
  *
  * No framework code: bake a canvas with `bakeProp` and upload it as a texture.
  */
-
-export type PropKind = 'stone' | 'pad';
 
 export interface PropPaint {
   readonly kind: PropKind;
@@ -55,8 +54,7 @@ const LOTUS = { petal: '#f8dbe3', tip: '#e5809f', ink: 'rgba(150, 55, 90, 0.55)'
 
 /** Paints one prop into a fresh canvas, centred; the canvas is padded for the shadow. */
 export function bakeProp(prop: PropPaint, resolution: number): HTMLCanvasElement {
-  const rng = new Random(prop.seed); // the same seed always paints the same prop
-  const random = (): number => rng.next();
+  const random = seeded(prop.seed); // the same seed always paints the same prop
   return bakePiece(prop.radius, resolution, (ctx) => {
     if (prop.kind === 'stone') paintStone(ctx, prop.radius, random);
     else paintPad(ctx, prop.radius[0], random);
@@ -210,8 +208,8 @@ export function bakeLotusPad(
   if (!ctx) throw new Error('pondProps: 2D canvas not available');
   ctx.setTransform(resolution, 0, 0, resolution, canvas.width / 2, canvas.height / 2);
   ctx.lineJoin = 'round';
-  const rng = new Random(seed + 1);
-  paintOpeningLotus(ctx, radius * 0.66, openness, rng.next() * TAU);
+  const rng = seeded(seed + 1);
+  paintOpeningLotus(ctx, radius * 0.66, openness, rng() * TAU);
   return canvas;
 }
 

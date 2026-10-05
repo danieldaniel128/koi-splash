@@ -1,11 +1,8 @@
 import type { BoosterPill } from '../game/BoosterControl';
 import type { Rect } from '../layout/gameLayout';
+import { CROSS, setIcon } from './icons';
 import type { UiLayer } from './UiLayer';
-import { el } from './UiLayer';
-
-/** A cross, for closing. */
-const CROSS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor"
-  stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>`;
+import { button, el, shake } from './UiLayer';
 
 /**
  * The pill over the pond that says what to do while a booster is armed (after the prototype's), with an X that
@@ -13,18 +10,17 @@ const CROSS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3 L13 13 
  */
 export class InstructionPill implements BoosterPill {
   private readonly root: HTMLElement;
-  private readonly text = el('span', 'pill__text');
+  private readonly text = el('span', 'glass pill__text');
   private closed: (() => void) | null = null;
 
   constructor(layer: UiLayer, rect: Rect) {
-    const close = el('button', 'pill__close');
-    close.type = 'button';
-    close.setAttribute('aria-label', 'Cancel booster');
-    close.innerHTML = CROSS; // a fixed string from this file
+    const close = button('control glass pill__close', 'Cancel booster');
+    setIcon(close, CROSS);
     close.addEventListener('click', () => {
       this.closed?.();
     });
-    this.root = el('div', 'pill', this.text, close);
+    this.root = el('div', 'reveal pill', this.text, close);
+    this.setShown(false);
     layer.place(this.root, rect);
   }
 
@@ -35,17 +31,20 @@ export class InstructionPill implements BoosterPill {
 
   show(tip: string): void {
     this.text.textContent = tip;
-    this.root.classList.add('pill--shown');
+    this.setShown(true);
   }
 
   hide(): void {
-    this.root.classList.remove('pill--shown');
+    this.setShown(false);
   }
 
   nope(): void {
-    this.root.animate(
-      [{ translate: '0' }, { translate: '-5px 0' }, { translate: '4px 0' }, { translate: '0' }],
-      { duration: 320, easing: 'ease-out' },
-    );
+    shake(this.root);
+  }
+
+  /** Hidden, the pill is inert: its X can't be tapped or reached with Tab while it fades away. */
+  private setShown(shown: boolean): void {
+    this.root.classList.toggle('reveal--shown', shown);
+    this.root.inert = !shown;
   }
 }

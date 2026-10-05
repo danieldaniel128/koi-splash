@@ -1,4 +1,5 @@
 import type { CascadeStep, Cell, Fired } from '../model/types';
+import { cellKey, stepsApart } from '../model/types';
 
 /** How long a special's parts take (s), after the prototype (see TIMING.specials). */
 export interface SpecialTiming {
@@ -53,11 +54,11 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
   const clears = new Map<number, ClearPlan>();
   const blasts: BlastPlan[] = [];
   const mergeInto = new Map<string, Cell>();
-  for (const made of step.created) for (const cell of made.from) mergeInto.set(key(cell), made.at);
+  for (const made of step.created) for (const cell of made.from) mergeInto.set(cellKey(cell), made.at);
 
   for (const cleared of step.cleared) {
     if (cleared.blast !== undefined) continue;
-    const into = mergeInto.get(key(cleared.at));
+    const into = mergeInto.get(cellKey(cleared.at));
     clears.set(
       cleared.piece.id,
       into
@@ -81,6 +82,19 @@ export function planRound(step: CascadeStep, timing: SpecialTiming): RoundPlan {
   return { clears, blasts, end };
 }
 
+/**
+ * When a round's blast (its index in the round's fired) lands: when it takes its first koi, or when it fires if it
+ * takes none. Its points show then. Pure. O(cleared).
+ */
+export function blastLands(step: CascadeStep, plan: RoundPlan, blast: number): number {
+  let lands = Infinity;
+  for (const cleared of step.cleared) {
+    if (cleared.blast !== blast) continue;
+    lands = Math.min(lands, plan.clears.get(cleared.piece.id)?.delay ?? Infinity);
+  }
+  return Number.isFinite(lands) ? lands : (plan.blasts[blast]?.at ?? 0);
+}
+
 /** When and how a blast's cell is taken: swept in turn, drained into the eddy, or zapped by a prism beam. */
 function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing: SpecialTiming): ClearPlan {
   const type = fired.piece.special?.type;
@@ -93,7 +107,7 @@ function reachedBy(fired: Fired, start: number, at: Cell, order: number, timing:
     const delay = start + timing.rainbowRise + order * timing.rainbowStep + timing.rainbowTravel;
     return { delay, lasts: timing.dive, how: 'zap' };
   }
-  const distance = Math.abs(at.col - fired.at.col) + Math.abs(at.row - fired.at.row);
+  const distance = stepsApart(at, fired.at);
   return { delay: start + distance * timing.sweep, lasts: timing.dive, how: 'dive' };
 }
 
@@ -105,8 +119,4 @@ function firing(fired: Fired, reached: number, timing: SpecialTiming): number {
     return timing.rainbowRise + Math.max(0, reached - 1) * timing.rainbowStep + timing.rainbowTravel;
   }
   return timing.dive;
-}
-
-function key(cell: Cell): string {
-  return `${cell.col},${cell.row}`;
 }

@@ -8,6 +8,8 @@
  * No framework code: the view bakes it into one texture.
  */
 
+import { GARDEN_ROOM } from '../config/layout';
+
 type Ctx = CanvasRenderingContext2D;
 
 /** The garden's colours and sizes (px), from the theme. */
@@ -61,21 +63,16 @@ export interface BackdropPlan {
   readonly height: number;
 }
 
-/** With this much room on both sides of the pond (px), the garden moves beside it. */
-const WIDE_ROOM = 120;
-
 /**
  * Tall or wide, for this frame. Either way the horizon is the top of the pond's shore, so the pond sits on the
  * ground; a wide screen also paints the ground beside it. O(1).
  */
 export function planBackdrop(frame: BackdropFrame): BackdropPlan {
   const room = Math.min(frame.pond.left, frame.width - frame.pond.right);
-  const wide = room >= WIDE_ROOM;
+  const wide = room >= GARDEN_ROOM.beside;
   return { wide, horizon: frame.sceneBottom, height: wide ? frame.height : frame.sceneBottom };
 }
 
-/** Below this much open sky under the HUD (px), the pagoda, the branch and the lantern are left out. */
-const GARDEN_MIN = 70;
 /** The hills are their full height in a sky this tall (px); in a shorter one they shrink with it. */
 const FULL_SKY = 170;
 /** The bottom of the scene fades out over this many px, so the bank shows through and the two meet softly. */
@@ -143,7 +140,7 @@ function tallSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
   // just under the HUD; low in a short sky, it rises from behind the hills
   const moonY = Math.max(open + look.moon.radius + 8, open + (horizon - open) * look.moon.at[1]);
   return {
-    garden: horizon - open >= GARDEN_MIN,
+    garden: horizon - open >= GARDEN_ROOM.sky,
     moon: [width * look.moon.at[0], moonY],
     pagoda: { x: width * 0.5, scale: Math.min(1.25, (horizon - open) / 140) },
     branch: { top: open + 10, reach: Math.min(width * 0.42, 170) },
@@ -154,7 +151,7 @@ function tallSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): S
 function wideSpots(frame: BackdropFrame, horizon: number, look: BackdropLook): Spots {
   const right = frame.pond.right + (frame.width - frame.pond.right) / 2;
   return {
-    garden: horizon >= GARDEN_MIN,
+    garden: horizon >= GARDEN_ROOM.sky,
     moon: [right, Math.max(look.moon.radius + 6, horizon * 0.45)],
     pagoda: { x: frame.pond.left * 0.62, scale: Math.min(1.1, horizon / 110) },
     branch: null,

@@ -1,4 +1,6 @@
-import { AUDIO } from '../config/audio';
+import { AUDIO, MATCH_SOUND } from '../config/audio';
+import { MIN_RUN } from '../model/rules';
+import { LEVEL } from '../config/level';
 import { SPECIALS_SOUND } from '../config/specials';
 import type { Voice } from './Synth';
 
@@ -25,10 +27,10 @@ export function invalid(v: Voice): void {
 
 /** A move spent: a soft water tick, warmer at a few moves left, a gentle double knock on the last ones. */
 export function tick(v: Voice, movesLeft: number): void {
-  if (movesLeft <= AUDIO.lastMoves) {
+  if (movesLeft <= LEVEL.movesWarning.last) {
     v.tone(330, 0.12, 0.08, { glide: 250 });
     v.tone(262, 0.16, 0.07, { delay: 0.13, glide: 200 });
-  } else if (movesLeft <= AUDIO.lowMoves) {
+  } else if (movesLeft <= LEVEL.movesWarning.low) {
     v.pluck(v.note(2), 0.07);
     v.tone(v.note(0), 0.2, 0.03, { type: 'triangle', delay: 0.06 });
   } else v.tone(rand(1100, 1250), 0.06, 0.035, { glide: 800 });
@@ -36,11 +38,12 @@ export function tick(v: Voice, movesLeft: number): void {
 
 /** A match: plucked notes climbing with each round of a cascade, a splash, and plips. */
 export function match(v: Voice, round: number, size: number): void {
-  const b = 4 + Math.min(round, 9);
-  v.pluck(v.note(b), 0.15);
-  v.pluck(v.note(b + 2), 0.1, 0.06);
-  if (size > 3) v.pluck(v.note(b + 4), 0.09, 0.12);
-  v.noise(0.3, 0.07 + Math.min(size, 10) * 0.008, 1300, { sweepTo: 380 });
+  const root = MATCH_SOUND.firstNote + Math.min(round, MATCH_SOUND.maxClimb);
+  v.pluck(v.note(root), 0.15);
+  v.pluck(v.note(root + MATCH_SOUND.second), 0.1, 0.06);
+  if (size > MIN_RUN) v.pluck(v.note(root + MATCH_SOUND.third), 0.09, 0.12);
+  const splash = MATCH_SOUND.splash + Math.min(size, MATCH_SOUND.koiCap) * MATCH_SOUND.perKoi;
+  v.noise(0.3, splash, 1300, { sweepTo: 380 });
   for (let k = 0; k < 3; k++) v.plip(0.04 + k * 0.05 + Math.random() * 0.03);
 }
 
@@ -82,12 +85,6 @@ export function shuffle(v: Voice): void {
   for (let k = 0; k < 6; k++) v.pluck(v.note(12 - k), 0.07, k * 0.05);
 }
 
-/** Points land in the score. */
-export function coin(v: Voice): void {
-  v.pluck(v.note(10), 0.06);
-  v.tone(v.note(15), 0.18, 0.025, { delay: 0.03 });
-}
-
 /** A goal is met: its bonus lands. */
 export function bonus(v: Voice, step: number): void {
   v.pluck(v.note(8 + (step % 8)), 0.09);
@@ -115,11 +112,10 @@ export function whirlBorn(v: Voice): void {
   for (let k = 0; k < 3; k++) v.plip(0.12 + k * 0.05);
 }
 
-/** A striped koi fires: a rushing sweep and a rising sine (`step` semitones up for a run of them). */
-export function current(v: Voice, step = 0): void {
-  const f = Math.pow(2, step / 12);
-  v.noise(0.5, 0.16, 450 * f, { sweepTo: 2800 * f });
-  v.tone(180 * f, 0.4, 0.1, { glide: 720 * f });
+/** A striped koi fires: a rushing sweep and a rising sine. */
+export function current(v: Voice): void {
+  v.noise(0.5, 0.16, 450, { sweepTo: 2800 });
+  v.tone(180, 0.4, 0.1, { glide: 720 });
 }
 
 /** A rainbow koi's beams fly: a harp glissando up the scale over a shimmering glass chord. */
@@ -240,12 +236,7 @@ export function star(v: Voice, k: number): void {
   v.noise(0.25, 0.04, 2400, { sweepTo: 600 });
 }
 
-/** A button is pressed. */
-export function press(v: Voice): void {
-  v.tone(640, 0.07, 0.05, { glide: 500 });
-}
-
-/** A button takes (play again, the sound toggle). */
+/** A button takes (play again, the sound menu). */
 export function click(v: Voice): void {
   v.tone(520, 0.06, 0.06, { type: 'triangle', glide: 720 });
 }

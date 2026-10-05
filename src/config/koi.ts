@@ -4,6 +4,12 @@
  */
 export const KOI_SET = ['m3-red', 'm3-gold', 'dream-rose-gold', 'dream-jade', 'dream-amethyst'] as const;
 
+/** One entry per kind, in KOI_SET order: a list of another length doesn't compile. */
+type OnePerKind<T, Set extends readonly unknown[] = typeof KOI_SET> = { readonly [K in keyof Set]: T };
+
+/** What a player calls each kind, in KOI_SET order: a screen reader says "red koi". */
+export const KOI_NAMES = ['red', 'gold', 'pink', 'green', 'purple'] as const satisfies OnePerKind<string>;
+
 /**
  * Each kind's colours as a special koi, in KOI_SET order: its glow (under a striped koi, a whirlpool's arms, beams)
  * and the band of a striped koi (the other bands are white).
@@ -14,13 +20,18 @@ export const KOI_COLORS = [
   { glow: '#ffa6c9', band: '#ec7fa8' },
   { glow: '#7ff0b0', band: '#3fbf74' },
   { glow: '#c39bff', band: '#9a62e6' },
-] as const satisfies readonly { glow: string; band: string }[];
+] as const satisfies OnePerKind<{ glow: string; band: string }>;
 
 export const KOI_LOOK = {
   /** Body width (0.12 slim .. 0.28 chubby): chubby enough that the colour fills the cell. */
   build: 0.245,
-  /** Bake textures at this multiple of the screen resolution, so they stay sharp when the stage is scaled up. */
-  bakeResolution: 2,
+  /**
+   * The koi, pads and stones are baked at the screen's pixels per stage px times this, so a koi lifted in a swap or
+   * a window grown a little after the start stays sharp; never above maxBakeResolution, so a big screen doesn't bake
+   * huge textures.
+   */
+  bakeHeadroom: 1.25,
+  maxBakeResolution: 4,
   /** Poses in one baked tail beat, and how far the tail swings in them (1 = the painter's widest). */
   swimFrames: 12,
   tailSwing: 0.55,

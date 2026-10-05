@@ -1,7 +1,7 @@
 import { Sprite, Texture } from 'pixi.js';
 import { paintBackdrop, planBackdrop } from '../art/backdrop';
 import type { BackdropFrame, BackdropLook } from '../art/backdrop';
-import { Random } from '../core/Random';
+import { seeded } from '../core/Random';
 
 /** Every WebGL device takes a texture this wide. */
 const MAX_SIZE = 2048;
@@ -25,8 +25,8 @@ export function createBackdrop(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('backdrop: 2D canvas not available');
   ctx.scale(scale, scale);
-  const rng = new Random(seed);
-  paintBackdrop(ctx, frame, look, () => rng.next());
+  const rng = seeded(seed);
+  paintBackdrop(ctx, frame, look, rng);
   const sprite = new Sprite(Texture.from(canvas));
   sprite.scale.set(1 / scale);
   return sprite;

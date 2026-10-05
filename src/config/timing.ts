@@ -2,6 +2,9 @@
  * Motion timings in seconds. These are the main feel dials. Paced on a commercial match-3: a plain match settles in
  * about 0.7 s and a cascade round in about 0.6 s, so the board answers as fast as the player thinks.
  */
+/** How long a koi takes to dive into the deep (s): a plain match and a special's blast alike. */
+const DIVE = 0.32;
+
 export const TIMING = {
   /** Two koi slide past each other; the one the player drags rises toward the surface and passes over. */
   swap: 0.16,
@@ -21,10 +24,21 @@ export const TIMING = {
   bumpOut: 0.3,
   bumpSquash: 0.86,
   /**
+   * A refused move (a swap that makes nothing, a swipe into a pad or the bank): the koi shake their heads, rocking
+   * `angle` rad side to side `times` times over `duration` s.
+   */
+  refuse: { angle: 0.3, times: 2.5, duration: 0.4 },
+  /** A koi under a finger squashes to this size and springs back over this long (s). */
+  touchSquash: 0.88,
+  touchTime: 0.2,
+  /**
    * Matched koi dive: they swim forward and down into the deep (s), gliding this far ahead (share of a cell) and
    * shrinking to this size as they go, tinted toward the pale water.
    */
-  dive: 0.32,
+  dive: DIVE,
+  /** As it goes, a matched koi kicks: it swells this much over this long (s), then sinks for the rest of the dive. */
+  diveKick: 1.14,
+  diveKickTime: 0.07,
   diveGlide: 0.35,
   diveScale: 0.45,
   diveTint: '#a9cfe0',
@@ -53,6 +67,6 @@ export const TIMING = {
     rainbowStep: 0.05,
     rainbowTravel: 0.14,
     chain: 0.1,
-    dive: 0.32,
+    dive: DIVE,
   },
 } as const;

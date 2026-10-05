@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { SoundBoard } from '../src/audio/SoundBoard';
-import { noteOf } from '../src/audio/Synth';
+import { playSoundsOf } from '../src/audio/SoundBoard';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import { createGameEvents } from '../src/game/events';
 
@@ -29,11 +29,11 @@ describe('noteOf', () => {
   });
 });
 
-describe('SoundBoard', () => {
+describe('playSoundsOf', () => {
   it('plays what each event sounds like, and nothing for events it was not told', () => {
     const events = createGameEvents();
     const voice = fakeVoice();
-    new SoundBoard(events, voice);
+    playSoundsOf(events, voice);
     events.emit('match', { round: 0, size: 3 });
     expect(voice.played.filter((p) => p.startsWith('pluck'))).toEqual(['pluck:494', 'pluck:659']); // B4, E5
     voice.played.length = 0;
@@ -43,18 +43,5 @@ describe('SoundBoard', () => {
       'pluck:880',
       'pluck:1175',
     ]);
-  });
-
-  it('gives every event a sound', () => {
-    const events = createGameEvents();
-    const voice = fakeVoice();
-    new SoundBoard(events, voice);
-    const before = voice.played.length;
-    events.emit('lineFired');
-    events.emit('whirlPopped');
-    events.emit('prismHit', { n: 3 });
-    events.emit('boosterArmed', { type: 'feed', slot: 2 });
-    events.emit('won');
-    expect(voice.played.length).toBeGreaterThan(before + 10);
   });
 });

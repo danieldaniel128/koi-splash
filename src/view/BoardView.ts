@@ -1,5 +1,6 @@
 import { Container, Point, Rectangle } from 'pixi.js';
 import type { PointData } from 'pixi.js';
+import type { BoardDisplay } from '../game/GameScene';
 import type { Board } from '../model/Board';
 import type { Cell, Piece, Special } from '../model/types';
 import { Koi } from './Koi';
@@ -20,7 +21,7 @@ export interface BoardViewLayout {
  * cast into the water (shadows on the bottom, their shape at the waterline for the pond's foam) follows them in a
  * KoiWaterline; the shadows sit in their own layer under all the koi.
  */
-export class BoardView extends Container {
+export class BoardView extends Container implements BoardDisplay {
   private readonly pieces = new Map<number, Koi>();
   private readonly waterline: KoiWaterline;
   private readonly looks: SpecialLooks;
@@ -92,6 +93,11 @@ export class BoardView extends Container {
   /** Every koi on the board, for the effects that follow the fish (swimming, wakes). O(K) to walk. */
   *koi(): IterableIterator<Koi> {
     yield* this.pieces.values();
+  }
+
+  /** Shows whether the board takes a move now: the pointer cursor over it while it does. */
+  setPlayable(playable: boolean): void {
+    this.cursor = playable ? 'pointer' : 'default';
   }
 
   /** What the koi cast into the water follows them. Call once per frame after the koi moved, before the pond draws. */

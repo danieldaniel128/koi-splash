@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { Board } from '../src/model/Board';
 import { groupMatches } from '../src/model/groups';
 import { findMatches, trySwap } from '../src/model/rules';
@@ -49,7 +49,7 @@ describe('specials in a cascade', () => {
   it('a matched 4 leaves a striped koi where the player swapped, and clears the other three', () => {
     // shifted diagonals: no ready-made matches; swapping (2, 1) up makes 1111 along row 0
     const board = boardFrom(['110134', '231402', '234012', '340123', '401234', '012340']);
-    const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 0 }, SPEC, new Random(1));
+    const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 0 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const [first] = result.steps;
     expect(first?.created).toHaveLength(1);
@@ -60,7 +60,7 @@ describe('specials in a cascade', () => {
 
   it('a swapped striped koi fires on its own and sweeps its row', () => {
     const board = boardFrom(['232323', '32h232', '232323', '323232', '232323', '323232']);
-    const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, new Random(1));
+    const result = trySwap(board, { col: 2, row: 1 }, { col: 2, row: 2 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const [first] = result.steps;
     expect(first?.fired).toHaveLength(1);
@@ -69,9 +69,9 @@ describe('specials in a cascade', () => {
     expect(swept).toHaveLength(5);
   });
 
-  it('a whirlpool drains the eight round it, and a special it catches fires too', () => {
+  it('a whirlpool drains the eight round it, and leaves a special outside them', () => {
     const board = boardFrom(['232323', '3w2v23', '232323', '323232', '232323', '323232']);
-    const result = trySwap(board, { col: 1, row: 1 }, { col: 1, row: 2 }, SPEC, new Random(1));
+    const result = trySwap(board, { col: 1, row: 1 }, { col: 1, row: 2 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const [first] = result.steps;
     expect(first?.fired.map((f) => f.piece.special?.type)).toEqual(['whirl']);
@@ -82,7 +82,7 @@ describe('specials in a cascade', () => {
 
   it('a rainbow koi swapped with a koi takes every koi of that colour, nearest first', () => {
     const board = boardFrom(['012340', '1r3401', '234012', '340123', '401234', '012340']);
-    const result = trySwap(board, { col: 1, row: 1 }, { col: 2, row: 1 }, SPEC, new Random(1));
+    const result = trySwap(board, { col: 1, row: 1 }, { col: 2, row: 1 }, SPEC, seeded(1));
     if (!result.valid) throw new Error('refused');
     const [first] = result.steps;
     const blast = first?.fired[0];
@@ -98,7 +98,7 @@ describe('specials in a cascade', () => {
   it('never strands a cell: after any cascade every open cell has a piece', () => {
     for (let seed = 1; seed <= 30; seed++) {
       const board = boardFrom(['2h2323', '3w3232', '2r2323', '3v3232', '232323', '323232']);
-      const result = trySwap(board, { col: 1, row: 2 }, { col: 2, row: 2 }, SPEC, new Random(seed));
+      const result = trySwap(board, { col: 1, row: 2 }, { col: 2, row: 2 }, SPEC, seeded(seed));
       if (!result.valid) throw new Error('refused');
       for (const cell of board.cells()) expect(board.get(cell)).not.toBeNull();
     }

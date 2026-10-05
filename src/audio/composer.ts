@@ -20,7 +20,13 @@ export interface MusicNote {
 /** A rhythm: notes at these eighths, this many eighths long. */
 type Rhythm = readonly (readonly [step: number, length: number])[];
 
-const STEPS = 8; // eighths in a bar
+/** Eighths in a bar; a strong beat every `STRONG_BEAT` of them (the bar's two halves). */
+export const STEPS_PER_BAR = 8;
+const STEPS = STEPS_PER_BAR;
+const STRONG_BEAT = 4;
+const PHRASE = 4; // bars in a phrase: it closes on a long chord tone
+/** Bars in one pass through the progression: its last phrase closes on the root. */
+const CYCLE = MUSIC.bars * MUSIC.progression.length;
 const KOTO_RHYTHMS: readonly Rhythm[] = [
   [
     [0, 2],
@@ -96,6 +102,8 @@ export class Composer {
 
   /** The next bar's notes. */
   next(mood: BarMood): MusicNote[] {
+    // the cadence is the first bar of the home chord, so the bars after it go on in that chord
+    if (mood === 'cadence') this.bar = 0;
     const notes = mood === 'cadence' ? cadence() : this.compose(mood);
     this.bar++;
     return notes;
@@ -121,16 +129,16 @@ export class Composer {
   }
 
   private melody(mood: BarMood, tones: readonly number[]): MusicNote[] {
-    const inCycle = this.bar % (MUSIC.bars * MUSIC.progression.length);
+    const inCycle = this.bar % CYCLE;
     if (inCycle === 0) this.fluteAnswers = this.random() < MUSIC.melody.flute;
-    const closing = inCycle % 4 === 3;
+    const closing = inCycle % PHRASE === PHRASE - 1;
     if (!closing && inCycle !== 0 && this.random() < MUSIC.melody.rest) return [];
-    const part = inCycle >= 4 && this.fluteAnswers ? 'flute' : 'koto';
+    const part = inCycle >= PHRASE && this.fluteAnswers ? 'flute' : 'koto';
     const rhythm = closing ? CLOSING : this.pick(this.rhythms(part, mood));
     return rhythm.map(([step, length], k) => {
       const last = closing && k === rhythm.length - 1;
-      const strong = step % 4 === 0;
-      this.degree = this.walk(strong || last ? tones : null, last && inCycle === 7);
+      const strong = step % STRONG_BEAT === 0;
+      this.degree = this.walk(strong || last ? tones : null, last && inCycle === CYCLE - 1);
       return { part, step, length, pitches: [semitonesOf(this.degree)] };
     });
   }
@@ -186,7 +194,7 @@ function arpeggio(pad: readonly number[], steps: readonly number[]): MusicNote[]
   return steps.map((step, k) => ({ part: 'arp', step, length: 2, pitches: [upper[k % upper.length] ?? 0] }));
 }
 
-/** A win: the melody climbs the scale home to D, over the first chord held long. */
+/** A win: the melody climbs the scale home to D, over the first chord (its pad held for the chord's bars, as usual). */
 function cadence(): MusicNote[] {
   const [home] = MUSIC.progression;
   const climb = [5, 7, 8, 10].map((degree, k) => ({
@@ -196,8 +204,8 @@ function cadence(): MusicNote[] {
     pitches: [semitonesOf(degree)],
   }));
   return [
-    { part: 'pad', step: 0, length: STEPS * 2, pitches: home.pad },
-    { part: 'bass', step: 0, length: STEPS * 2, pitches: [home.root] },
+    { part: 'pad', step: 0, length: STEPS * MUSIC.bars, pitches: home.pad },
+    { part: 'bass', step: 0, length: STEPS, pitches: [home.root] },
     ...climb,
   ];
 }

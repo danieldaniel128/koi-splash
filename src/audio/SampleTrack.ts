@@ -1,4 +1,6 @@
-import type { Bus, Mixer, Output } from './Mixer';
+import { runDetached } from '../core/detached';
+import type { Bus } from '../config/audio';
+import type { Mixer, Output } from './Mixer';
 import type { Track } from './Track';
 
 /**
@@ -24,7 +26,7 @@ export class SampleTrack implements Track {
     const output = this.mixer.output(this.bus);
     if (!output) return;
     this.started = true;
-    void this.start(output);
+    runDetached(this.start(output), `the recording ${this.url}`);
   }
 
   private async start({ ctx, out }: Output): Promise<void> {

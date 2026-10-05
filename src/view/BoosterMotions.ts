@@ -2,13 +2,14 @@ import { gsap } from 'gsap';
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { paintPellet } from '../art/pellet';
+import { easeInOutCubic, smoothstep } from '../core/easing';
 import { BOOSTER_MOTION } from '../config/specials';
 import { WATER } from '../config/water';
 import type { Moved } from '../model/boosters';
 import type { Cell, Kind, Piece } from '../model/types';
 import type { BoardView } from './BoardView';
 import type { GameEventBus } from '../game/events';
-import { hitStop } from './hitStop';
+import type { HitStop } from './HitStop';
 import type { Koi } from './Koi';
 import type { WaterSurface } from './water/PondWater';
 
@@ -39,6 +40,8 @@ export class BoosterMotions extends Container {
   private readonly cell: number;
   private readonly sparkle: Texture;
   private readonly events: GameEventBus;
+  private readonly hitStop: HitStop;
+  private readonly centre: PointData;
 
   constructor(deps: {
     readonly view: BoardView;
@@ -48,6 +51,10 @@ export class BoosterMotions extends Container {
     readonly sparkle: Texture;
     /** Where it says when each motion's moments happen (the sounds follow them). */
     readonly events: GameEventBus;
+    /** Holds the animations' clock as the leaping koi cross. */
+    readonly hitStop: HitStop;
+    /** The board's middle (board space): the feed's paths bow toward it. */
+    readonly centre: PointData;
   }) {
     super();
     this.view = deps.view;
@@ -55,6 +62,8 @@ export class BoosterMotions extends Container {
     this.cell = deps.cell;
     this.sparkle = deps.sparkle;
     this.events = deps.events;
+    this.hitStop = deps.hitStop;
+    this.centre = deps.centre;
     this.pellet = Texture.from(paintPellet(Math.ceil(deps.cell * BOOSTER_MOTION.feed.pellet)));
   }
 
@@ -70,15 +79,18 @@ export class BoosterMotions extends Container {
     const headingA = a.heading;
     const headingB = b.heading;
     this.events.emit('koiLeapt', { duration });
+    // the first koi leaps higher: it's drawn over the second where they cross
+    this.view.bringToFront(b);
+    this.view.bringToFront(a);
     gsap.delayedCall(duration * 0.47, () => {
-      hitStop(look.hitStop);
+      this.hitStop.hold(look.hitStop);
     });
     await Promise.all([
       this.arc(a, first, {
         ...this.path(first, look.bend),
         duration,
         height,
-        spin: (k) => headingA + Math.PI * 2 * easeInOut(k),
+        spin: (k) => headingA + Math.PI * 2 * easeInOutCubic(k),
       }),
       this.arc(b, second, {
         ...this.path(second, -look.bend),
@@ -129,7 +141,7 @@ export class BoosterMotions extends Container {
         const up = Math.sin(Math.PI * k.t);
         koi.y = home.y - up * look.rise * this.cell;
         koi.scale.set(rest * (1 + 0.42 * up * look.rise));
-        koi.heading = heading + Math.PI * 2 * look.spinTurns * easeInOut(k.t);
+        koi.heading = heading + Math.PI * 2 * look.spinTurns * easeInOutCubic(k.t);
       },
     });
     koi.position.copyFrom(home);
@@ -150,7 +162,6 @@ export class BoosterMotions extends Container {
     const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
     const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
     const rest = koi.restScale;
-    this.view.bringToFront(koi);
     this.splash(move.from, WATER.bumpPush);
     const k = { t: 0 };
     await gsap.to(k, {
@@ -158,7 +169,7 @@ export class BoosterMotions extends Container {
       duration: leap.duration,
       ease: 'none',
       onUpdate: () => {
-        const along = (k.t + smoothstep(k.t)) / 2; // half eased: it leaves and lands softly
+        const along = (k.t + smoothstep(0, 1, k.t)) / 2; // half eased: it leaves and lands softly
         const up = Math.sin(Math.PI * k.t);
         const bow = leap.bow * length * up;
         koi.x = from.x + (to.x - from.x) * along + normal.x * bow;
@@ -180,12 +191,7 @@ export class BoosterMotions extends Container {
     const to = this.view.cellToPoint(move.to);
     const cells = Math.hypot(move.to.col - move.from.col, move.to.row - move.from.row);
     const duration = Math.min(look.swimMax, look.swim0 + cells * look.swimPer);
-    const side = move.piece.id % 2 === 0 ? 1 : -1;
-    const offset = look.bend * Math.min(cells, 3) * side; // the bow, as a share of the path
-    const control = {
-      x: (from.x + to.x) / 2 - (to.y - from.y) * offset,
-      y: (from.y + to.y) / 2 + (to.x - from.x) * offset,
-    };
+    const control = this.bowInward(from, to, look.bend * Math.min(cells, 3)); // the bow, as a share of the path
     const k = { t: 0 };
     await gsap.to(k, {
       t: 1,
@@ -203,6 +209,20 @@ export class BoosterMotions extends Container {
     if (!food) return;
     this.faceToward(koi, food);
     this.events.emit('koiFed');
+  }
+
+  /**
+   * The control point of a path bowed `share` of its length sideways, at most BOOSTER_MOTION.feed.maxBow cells, on the
+   * side of the board's middle: a koi swimming near the edge never bows out over the bank.
+   */
+  private bowInward(from: PointData, to: PointData, share: number): PointData {
+    const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+    const normal = { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
+    const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const centre = this.centre;
+    const inward = (centre.x - mid.x) * normal.x + (centre.y - mid.y) * normal.y >= 0 ? 1 : -1;
+    const reach = Math.min(share * length, BOOSTER_MOTION.feed.maxBow * this.cell) * inward;
+    return { x: mid.x + normal.x * reach, y: mid.y + normal.y * reach };
   }
 
   /** A handful of pellets thrown in a high lob, landing scattered round the food, floating a while, then gone. */
@@ -297,12 +317,4 @@ function wait(seconds: number): Promise<void> {
   return new Promise((resolve) => {
     gsap.delayedCall(seconds, resolve);
   });
-}
-
-function smoothstep(t: number): number {
-  return t * t * (3 - 2 * t);
-}
-
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }

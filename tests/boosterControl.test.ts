@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { BoosterControl } from '../src/game/BoosterControl';
-import type { BoosterGame } from '../src/game/BoosterControl';
+import { describe, expect, it, vi } from 'vitest';
+import { StateMachine } from '../src/core/StateMachine';
+import { BOOSTER_STEPS, BoosterControl } from '../src/game/BoosterControl';
+import type { Arming, BoosterGame, BoosterStep } from '../src/game/BoosterControl';
 import type { BoosterType, BoosterUse } from '../src/model/boosters';
 import type { Cell, Special } from '../src/model/types';
 
@@ -14,7 +15,11 @@ interface Rig {
 
 /** A control wired to fakes that record what it did. */
 function setup(
-  options: { canTarget?: (type: BoosterType, cell: Cell) => boolean; choice?: Special['type'] | null } = {},
+  options: {
+    canTarget?: (type: BoosterType, cell: Cell) => boolean;
+    choice?: Special['type'] | null;
+    fails?: boolean;
+  } = {},
 ): Rig {
   const log: string[] = [];
   const used: BoosterUse[] = [];
@@ -24,7 +29,7 @@ function setup(
     canTarget: options.canTarget ?? (() => true),
     useBooster: (use) => {
       used.push(use);
-      return Promise.resolve(true);
+      return options.fails ? Promise.reject(new Error('the board broke')) : Promise.resolve(true);
     },
   };
   const control = new BoosterControl({
@@ -53,7 +58,10 @@ function setup(
               };
             })
           : Promise.resolve(options.choice),
-      close: () => closePicker?.(),
+      close: () => {
+        log.push('petals:close');
+        closePicker?.();
+      },
     },
     sounds: {
       arm: () => undefined,
@@ -63,9 +71,9 @@ function setup(
       petals: () => undefined,
     },
     slots: [
-      { type: 'swap', count: 1, tip: 'Pick two koi to swap' },
-      { type: 'special', count: 1, tip: 'Pick a koi to power up' },
-      { type: 'feed', count: 1, tip: 'Tap a colour to feed' },
+      { type: 'swap', name: 'Swap', count: 1, tip: 'Pick two koi to swap' },
+      { type: 'special', name: 'Special', count: 1, tip: 'Pick a koi to power up' },
+      { type: 'feed', name: 'Feed', count: 1, tip: 'Tap a colour to feed' },
     ],
     feedLines: 3,
     random: () => 0.2,
@@ -103,6 +111,20 @@ describe('BoosterControl', () => {
     expect(log.at(-2)).toBe('nope:feed');
   });
 
+  it('a drag while a booster is armed counts as a tap; a drag with the swap picks both koi', async () => {
+    const swap = setup();
+    swap.control.press('swap');
+    swap.control.swipe({ col: 2, row: 2 }, { col: 3, row: 2 });
+    await swap.settle();
+    expect(swap.used).toEqual([{ type: 'swap', a: { col: 2, row: 2 }, b: { col: 3, row: 2 } }]);
+
+    const feed = setup();
+    feed.control.press('feed');
+    feed.control.swipe({ col: 1, row: 1 }, { col: 1, row: 2 });
+    await feed.settle();
+    expect(feed.used).toEqual([{ type: 'feed', at: { col: 1, row: 1 }, lines: 3 }]);
+  });
+
   it('a tap the booster cannot take shakes that koi and the pill, and keeps it armed', () => {
     const { control, log } = setup({ canTarget: () => false });
     control.press('special');
@@ -129,12 +151,69 @@ describe('BoosterControl', () => {
   });
 
   it('cancelling while the petals are open closes them and spends nothing', async () => {
-    const { control, used, settle } = setup();
+    const { control, used, log, settle } = setup();
     control.press('special');
     control.tap({ col: 3, row: 3 });
     control.press('special'); // its button again
     await settle();
+    expect(log).toContain('petals:close');
     expect(used).toEqual([]);
     expect(control.armed).toBe(false);
+  });
+
+  it('Escape closes the open petals first, then cancels the booster', async () => {
+    const { control, log, settle } = setup();
+    control.press('special');
+    control.tap({ col: 3, row: 3 });
+    expect(control.back()).toBe(true);
+    await settle();
+    expect(log).toContain('petals:close');
+    expect(control.armed).toBe(true);
+    expect(control.back()).toBe(true);
+    expect(control.armed).toBe(false);
+    expect(control.back()).toBe(false);
+  });
+
+  it('another booster pressed while the petals are open closes them and takes over', async () => {
+    const { control, used, log, settle } = setup();
+    control.press('special');
+    control.tap({ col: 3, row: 3 });
+    control.press('feed');
+    await settle();
+    expect(log).toContain('petals:close');
+    expect(log.at(-1)).not.toBe('sound:cancel'); // the closed petals don't put the feed away
+    control.tap({ col: 2, row: 2 });
+    await settle();
+    expect(used).toEqual([{ type: 'feed', at: { col: 2, row: 2 }, lines: 3 }]);
+  });
+});
+
+describe('BOOSTER_STEPS', () => {
+  it('lets each booster take only the steps of its own flow', () => {
+    const can = (type: BoosterType, from: BoosterStep, to: BoosterStep): boolean =>
+      new StateMachine<BoosterStep, Arming>(from, BOOSTER_STEPS, { type, picked: null }).can(to);
+    const firstTap = { swap: 'picked', special: 'choosing', feed: 'playing' } as const;
+    for (const type of ['swap', 'special', 'feed'] as const) {
+      for (const to of ['picked', 'choosing', 'playing'] as const) {
+        expect(can(type, 'armed', to), `${type}: armed -> ${to}`).toBe(firstTap[type] === to);
+      }
+    }
+    expect(can('swap', 'picked', 'playing')).toBe(true);
+    expect(can('special', 'picked', 'playing')).toBe(false);
+    expect(can('special', 'choosing', 'playing')).toBe(true);
+    expect(can('swap', 'choosing', 'playing')).toBe(false);
+  });
+
+  it('frees the bar when a booster fails to play, without spending it', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { control, log, settle } = setup({ fails: true });
+    control.press('feed');
+    control.tap({ col: 0, row: 0 });
+    await settle();
+    expect(error).toHaveBeenCalledOnce();
+    expect(log).not.toContain('left:feed=0');
+    control.press('feed'); // the bar takes the next press
+    expect(control.armed).toBe(true);
+    error.mockRestore();
   });
 });

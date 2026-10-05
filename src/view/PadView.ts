@@ -3,8 +3,8 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
-import type { Pad, PadEvent } from '../model/pads';
-import type { Cell } from '../model/types';
+import type { PadDisplay } from '../game/GameScene';
+import type { Cell, Pad, PadEvent } from '../model/types';
 import type { Circle, WaterSurface } from './water/PondWater';
 
 /** The water the pads float on: they push it, and it outlines them with foam (see PondWater.float). */
@@ -15,7 +15,8 @@ export interface PadWater extends WaterSurface {
 /** Where the view sits and where a bloomed lotus flies to, in the view's own space. */
 export interface PadViewLayout {
   readonly cellSize: number;
-  readonly goalTarget: PointData;
+  /** The lotus goal's chip, asked as each lotus takes off (the HUD may have changed since the game started). */
+  readonly goalTarget: () => PointData;
   /** Turns a point in this view's space into a stage point, for pushing the water. */
   readonly toStage: (point: PointData) => PointData;
 }
@@ -25,7 +26,7 @@ export interface PadViewLayout {
  * a hit opens a bud one stage, a bloom lifts the lotus and flies it to the goal, an empty pad drifts away. Every
  * frame it tells the water where the pads float, so the pond's shore foam outlines them like its own pads.
  */
-export class PadView extends Container {
+export class PadView extends Container implements PadDisplay {
   private readonly sprites = new Map<number, Sprite>();
   /** Every pad sprite still on the water, including ones blooming or drifting away (until they are gone). */
   private readonly floating = new Set<Sprite>();
@@ -44,7 +45,7 @@ export class PadView extends Container {
     const radius = layout.cellSize * BOARD_PADS.radius;
     // O(stages) canvas paints, once at startup
     this.budStages = Array.from({ length: BOARD_PADS.stages }, (_, i) =>
-      Texture.from(bakeLotusPad(radius, i / (BOARD_PADS.stages - 1), 7, resolution)),
+      Texture.from(bakeLotusPad(radius, i / (BOARD_PADS.stages - 1), BOARD_PADS.lotusSeed, resolution)),
     );
     this.emptyPad = Texture.from(bakeProp({ kind: 'pad', radius: [radius, radius], seed: 11 }, resolution));
     this.scaleOf = 1 / resolution;
@@ -129,7 +130,7 @@ export class PadView extends Container {
       duration: BOARD_PADS.bloomRise,
       ease: 'back.out(2)',
     });
-    const { x, y } = this.layout.goalTarget;
+    const { x, y } = this.layout.goalTarget();
     await gsap.to(sprite, {
       x,
       y,

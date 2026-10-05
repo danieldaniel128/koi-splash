@@ -1,6 +1,7 @@
 /*
  * The UI kit: small reusable pieces every component is built from. Every value comes from the theme (src/theme,
- * written onto the page as CSS variables), so a new look is a change of tokens, not of components.
+ * written onto the page as CSS variables), so a new look is a change of tokens, not of components. A component mixes
+ * kit classes with its own BEM element (`orb booster__orb`) and adds only what is its own.
  */
 
 .ui {
@@ -9,8 +10,6 @@
   top: 0;
   transform-origin: 0 0;
   pointer-events: none; /* swipes go through to the board; controls opt back in */
-  font-family: var(--font-label);
-  color: var(--color-ink);
 }
 
 .ui > * {
@@ -18,115 +17,226 @@
   box-sizing: border-box;
 }
 
-/* A frosted-glass panel with a thin moonlit rim, lit from the top (the prototype's glass). */
-.panel {
-  background: var(--color-glass);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    inset 0 0 0 var(--line) var(--color-rim),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    var(--shadow);
+/* A control: a real button with the browser's look taken off, so the pieces below can dress it. */
+.control,
+.btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 
-/* A round glass button or counter: lit from the top left, darker underneath, with the same rim. */
+/* Every button takes taps at least a finger wide, however small it is drawn: its tap area reaches past its edges. */
+button {
+  position: relative;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((100% - var(--size-touch)) / 2));
+}
+
+/*
+ * Keyboard focus, on every button alike: a gold ring that follows the button's shape, or its orb's when it has one
+ * (a booster's name sits under its orb). --focus-offset moves the ring in or out.
+ */
+button:focus-visible {
+  outline: none;
+}
+
+button:focus-visible:not(:has(> .orb)),
+button:focus-visible > .orb {
+  outline: var(--line-normal) solid var(--color-gold);
+  outline-offset: var(--focus-offset, calc(2 * var(--line-normal)));
+}
+
+/* Pressed, a control squashes and springs back. */
+.pressable,
+.btn {
+  transition: transform var(--time-fast) var(--ease-spring);
+}
+
+.pressable:active,
+.btn:active {
+  transform: scale(var(--scale-press));
+}
+
+/*
+ * The moonlit rim every glass piece is drawn with, declared on the pieces themselves so that a state sets only its
+ * color, width or glow (--rim-color, --rim-width, --glow) and never restates the whole shadow. --glow is what lies
+ * around the piece: its soft shadow, unless a state lights it up.
+ */
+.glass,
+.panel,
+.orb,
+.chip,
+.switch {
+  --rim: inset 0 0 0 var(--rim-width, var(--line-normal)) var(--rim-color, var(--color-rim));
+}
+
+/* Frosted glass, lit from the top: --lit is a highlight along the top edge. */
+.glass,
+.panel {
+  background: var(--color-glass);
+  box-shadow: var(--rim), var(--lit, 0 0 transparent), var(--glow, var(--shadow));
+}
+
+/* A glass panel with round corners and the top edge catching the moon (the prototype's glass). */
+.panel {
+  --lit: inset 0 1px 0 color-mix(in srgb, var(--color-shine) 14%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+/* A round glass button or counter: lit from the top left, darker underneath, over an --orb-base (none by default). */
 .orb {
   display: grid;
   place-content: center;
   justify-items: center;
   border-radius: 50%;
-  background: var(--color-glassRound);
+  background: var(--color-glassRound), var(--orb-base, transparent);
   box-shadow:
-    inset 0 0 0 var(--line) var(--color-rim),
-    inset 0 2px 1px rgba(255, 255, 255, 0.28),
-    inset 0 -8px 14px rgba(0, 10, 20, 0.45),
-    var(--shadow);
+    var(--rim),
+    inset 0 2px 1px color-mix(in srgb, var(--color-shine) 28%, transparent),
+    inset 0 -8px 14px color-mix(in srgb, var(--color-night) 45%, transparent),
+    var(--glow, var(--shadow));
 }
 
-/* A small dark pill holding an icon and a count. */
+/* A small dark pill holding an icon and a count, with a finer rim. */
 .chip {
+  --rim-width: var(--line-fine);
+  position: relative; /* for what rises out of it */
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
   padding: 2px var(--space-sm) 2px 2px;
   border-radius: var(--radius-round);
-  background: rgba(4, 12, 28, 0.5);
-  box-shadow: inset 0 0 0 1px var(--color-rim);
+  background: color-mix(in srgb, var(--color-night) 50%, transparent);
+  box-shadow: var(--rim), var(--glow, 0 0 transparent);
 }
 
-/* A round gold badge with a count on a control's corner. */
-.badge {
-  position: absolute;
-  right: -5px;
-  top: -5px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 5px;
-  box-sizing: border-box;
+/* Gold, like a coin, with dark brown printed on it: the badges and the big button. */
+.badge,
+.btn {
   border-radius: var(--radius-round);
   background: linear-gradient(180deg, var(--color-goldLight), var(--color-goldDeep));
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-  color: #3a1a00;
-  font: 900 var(--text-sm) / 22px var(--font-number);
+  color: var(--color-goldInk);
+}
+
+/* A round gold badge with a count, on a control's corner. */
+.badge {
+  --badge: 22px;
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  min-width: var(--badge);
+  height: var(--badge);
+  padding: 0 5px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shade) 45%, transparent);
+  font: var(--weight-black) var(--text-sm) / var(--badge) var(--font-number);
   text-align: center;
+}
+
+/* The big gold button. */
+.btn {
+  padding: var(--space-sm) var(--space-xl);
+  box-shadow:
+    inset 0 -3px 0 color-mix(in srgb, var(--color-goldInk) 25%, transparent),
+    inset 0 2px 0 color-mix(in srgb, var(--color-shine) 50%, transparent),
+    0 4px 12px color-mix(in srgb, var(--color-shade) 40%, transparent);
+  font: var(--weight-black) var(--text-lg) var(--font-number);
 }
 
 /* Numbers: the print-like serif with lining, even-width figures, so a counting score doesn't jitter. */
 .number {
   font-family: var(--font-number);
-  font-weight: 900;
+  font-weight: var(--weight-black);
   font-variant-numeric: lining-nums tabular-nums;
   line-height: 1;
-  text-shadow: 0 2px 0 rgba(4, 10, 24, 0.6);
+  text-shadow: 0 2px 0 color-mix(in srgb, var(--color-night) 60%, transparent);
 }
 
+/* A caption: small but readable on a phone, muted, a little spaced out. */
 .label {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--color-muted);
   letter-spacing: 0.06em;
   line-height: 1.2;
 }
 
+/* An icon's svg (see icons.ts): it fills its box, or takes the --icon-size its component gives it. */
+.icon {
+  display: block;
+  width: var(--icon-size, 100%);
+  height: var(--icon-size, 100%);
+}
+
+/* A star of the rating: dark until earned, then gold, its shadow and glow as big as --star-glow. */
+.star {
+  color: var(--color-starOff);
+  filter: drop-shadow(
+    0 calc(var(--star-glow) / 4) calc(var(--star-glow) / 4)
+      color-mix(in srgb, var(--color-shade) 60%, transparent)
+  );
+  transition:
+    color var(--time-normal),
+    filter var(--time-normal);
+}
+
+.star--lit {
+  color: var(--color-gold);
+  filter: drop-shadow(0 0 var(--star-glow) color-mix(in srgb, var(--color-gold) 75%, transparent));
+}
+
 /* A thin rounded track, and the gold fill inside it. */
 .track {
   display: block;
-  height: 6px;
+  height: 7px;
   border-radius: var(--radius-round);
   background: var(--color-track);
   overflow: hidden;
 }
 
-.track > * {
+.track__fill {
   display: block;
   height: 100%;
   width: 0;
   border-radius: inherit;
-  background: var(--color-gold);
+  background: linear-gradient(90deg, var(--color-goldDeep), var(--color-goldLight));
   box-shadow: 0 0 6px var(--color-gold);
   transition: width var(--time-slow) ease-out;
 }
 
 /* An on/off switch: a dark track with a knob that slides right and turns gold when its button is checked. */
 .switch {
+  --switch-width: 34px;
+  --knob: 14px;
+  --knob-inset: 3px;
   position: relative;
   flex: none;
-  width: 34px;
-  height: 20px;
+  width: var(--switch-width);
+  height: calc(var(--knob) + 2 * var(--knob-inset));
   border-radius: var(--radius-round);
   background: var(--color-track);
-  box-shadow: inset 0 0 0 var(--line) var(--color-rim);
+  box-shadow: var(--rim);
   transition: background var(--time-fast) ease;
 }
 
 .switch__knob {
   position: absolute;
-  left: 3px;
-  top: 3px;
-  width: 14px;
-  height: 14px;
+  left: var(--knob-inset);
+  top: var(--knob-inset);
+  width: var(--knob);
+  height: var(--knob);
   border-radius: 50%;
   background: var(--color-muted);
   transition:
-    transform var(--time-normal) cubic-bezier(0.2, 1.5, 0.4, 1),
+    transform var(--time-normal) var(--ease-spring),
     background var(--time-fast) ease;
 }
 
@@ -135,6 +245,35 @@
 }
 
 [aria-checked='true'] > .switch > .switch__knob {
-  transform: translateX(14px);
+  transform: translateX(calc(var(--switch-width) - var(--knob) - 2 * var(--knob-inset)));
   background: var(--color-goldLight);
+}
+
+/*
+ * Less motion, the same feedback, for players who ask for it: transitions snap and the loops hold still (the timings
+ * go to 0). Colors still change, so low moves or an armed booster still show.
+ */
+@media (prefers-reduced-motion: reduce) {
+  body {
+    --time-fast: 0s;
+    --time-normal: 0s;
+    --time-slow: 0s;
+    --time-pulse: 0s;
+    --time-breathe: 0s;
+    --time-tip: 0s;
+  }
+}
+
+/* Something that pops in when shown and fades out when hidden; it comes from --reveal-from. */
+.reveal {
+  opacity: 0;
+  transform: var(--reveal-from);
+  transition:
+    opacity var(--time-fast) ease,
+    transform var(--time-normal) var(--ease-spring);
+}
+
+.reveal--shown {
+  opacity: 1;
+  transform: none;
 }

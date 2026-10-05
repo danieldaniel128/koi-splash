@@ -1,3 +1,4 @@
+import { THEME } from '../theme/theme';
 import { TIMING } from './timing';
 import { SPECIAL_MENU } from './ui';
 /**
@@ -76,6 +77,8 @@ export const BOOSTER_MOTION = {
     hitStop: 0.06,
   },
   feed: {
+    /** A swim's bow puts its curve's control point at most this many cells to the side (the path bulges half that). */
+    maxBow: 1.2,
     pellets: 9,
     pellet: 0.26,
     throw: 0.5,
@@ -106,8 +109,8 @@ export const BOOSTER_MARKS = {
   pulse: 0.05,
   pulseSpeed: 4.2,
   lift: 0.14,
-  gold: '#ffd76a',
-  pink: '#ffb3d1',
+  gold: THEME.color.gold,
+  pink: THEME.booster.pink,
 } as const;
 
 /**

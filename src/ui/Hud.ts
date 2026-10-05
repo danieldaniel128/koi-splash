@@ -1,4 +1,5 @@
 import type { PointData } from 'pixi.js';
+import type { StatusDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
 import type { Rect } from '../layout/gameLayout';
 import type { StarRule } from '../model/stars';
@@ -15,7 +16,7 @@ import { el } from './UiLayer';
  * under them. It shows the status the scene sends (StatusDisplay) and tells the Pixi side where the score and the
  * goal are, so points and lotuses fly to them. Display only.
  */
-export class Hud {
+export class Hud implements StatusDisplay {
   private readonly moves = new MovesCounter();
   private readonly score = new ScoreCounter();
   private readonly goal: GoalTray;
@@ -26,7 +27,7 @@ export class Hud {
     rect: Rect,
     look: { goalIcons: GoalIcons; stars: StarRule },
   ) {
-    this.goal = new GoalTray(look.goalIcons);
+    this.goal = new GoalTray(look.goalIcons, (chip) => this.towardScore(chip));
     this.stars = new StarBar(look.stars);
     const top = el('div', 'hud__row', this.score.element, this.goal.element);
     const panel = el('div', 'panel hud__panel', top, this.stars.element);
@@ -38,16 +39,42 @@ export class Hud {
     return this.layer.centreOf(this.score.value);
   }
 
+  /** Big points are flying to the score: it waits for them. */
+  scoreFlying(amount: number): void {
+    this.score.hold(amount);
+  }
+
+  /** Flying points landed in the score. */
+  scoreLanded(amount: number): void {
+    this.score.land(amount);
+  }
+
   /** Where the lotus goal's icon is, in stage px (a bloomed lotus flies there). */
   goalAnchor(): PointData {
     return this.layer.centreOf(this.goal.iconOf('lotus'));
   }
 
+  reset(status: GameStatus): void {
+    this.moves.reset(status.movesLeft);
+    this.score.reset(status.score);
+    this.goal.reset(status.goals);
+    this.stars.reset(status.score, status.stars);
+  }
+
   update(status: GameStatus): void {
-    this.moves.update(status.movesLeft);
-    if (status.score === 0) this.score.reset();
-    else this.score.update(status.score);
+    this.moves.update(
+      status.movesLeft,
+      status.goals.every((goal) => goal.done >= goal.target),
+    );
+    this.score.update(status.score);
     this.goal.update(status.goals);
     this.stars.update(status.score, status.stars);
+  }
+
+  /** How far the score is from an element, in stage px: a met goal's bonus flies that way. */
+  private towardScore(from: HTMLElement): PointData {
+    const at = this.layer.centreOf(from);
+    const score = this.scoreAnchor();
+    return { x: score.x - at.x, y: score.y - at.y };
   }
 }

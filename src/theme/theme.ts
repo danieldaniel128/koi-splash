@@ -1,23 +1,47 @@
 import { MOONLIT_GARDEN } from './moonlitGarden';
 
 /**
- * The game's theme: one object holds the whole look, the UI's tokens and the scene around the pond. The HTML UI reads
- * the tokens as CSS variables (applyTheme writes them onto the page) and the Pixi code reads the same object, so the
- * two never drift apart. A new look is a new theme file picked here, not changes to components.
+ * The game's theme: one object holds the UI's tokens, the boosters' colors and the scene around the pond. The HTML UI
+ * reads the tokens as CSS variables (see pageTheme) and the Pixi code reads the same object, so the two never drift
+ * apart. A new look is a new theme file picked here, not changes to components. The water, the koi and the specials
+ * keep their own colors in their config (src/config/water.ts, koi.ts and specials.ts).
  */
 export const THEME = MOONLIT_GARDEN;
 
-/** Writes the theme's tokens onto the page as CSS variables (--color-ink, --text-lg, --space-md, ...). */
-export function applyTheme(root: HTMLElement): void {
+/** What the page itself takes from the theme: the style sheet of its tokens, and the browser's colour for it. */
+export interface PageTheme {
+  readonly styleSheet: string;
+  readonly themeColor: string;
+}
+
+/**
+ * The theme for the page: vite.config.ts writes it into index.html, so the page is themed from its first paint,
+ * before any script has run.
+ */
+export function pageTheme(): PageTheme {
+  return { styleSheet: tokenStyleSheet(), themeColor: THEME.color.night };
+}
+
+/** The theme's tokens as CSS variables on the page's root (--color-ink, --text-lg, --ease-spring, ...). */
+function tokenStyleSheet(): string {
+  const tokens: string[] = [];
   const set = (name: string, value: string): void => {
-    root.style.setProperty(`--${name}`, value);
+    tokens.push(`--${name}: ${value};`);
   };
-  for (const [key, value] of Object.entries(THEME.color)) set(`color-${key}`, value);
-  for (const [key, value] of Object.entries(THEME.font)) set(`font-${key}`, value);
-  for (const [key, value] of Object.entries(THEME.text)) set(`text-${key}`, `${value}px`);
-  for (const [key, value] of Object.entries(THEME.space)) set(`space-${key}`, `${value}px`);
-  for (const [key, value] of Object.entries(THEME.radius)) set(`radius-${key}`, `${value}px`);
-  for (const [key, value] of Object.entries(THEME.time)) set(`time-${key}`, `${value}s`);
-  set('line', `${THEME.line}px`);
+  const group = (prefix: string, values: Record<string, string | number>, unit = ''): void => {
+    for (const [key, value] of Object.entries(values)) set(`${prefix}-${key}`, `${value}${unit}`);
+  };
+  group('color', THEME.color);
+  group('font', THEME.font);
+  group('weight', THEME.weight);
+  group('text', THEME.text, 'px');
+  group('space', THEME.space, 'px');
+  group('radius', THEME.radius, 'px');
+  group('size', THEME.size, 'px');
+  group('line', THEME.line, 'px');
+  group('time', THEME.time, 's');
+  group('ease', THEME.ease);
+  group('scale', THEME.scale);
   set('shadow', THEME.shadow);
+  return `:root { ${tokens.join(' ')} }`;
 }

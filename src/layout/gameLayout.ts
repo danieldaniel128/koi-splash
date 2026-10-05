@@ -1,43 +1,10 @@
+import type { LayoutConfig } from '../config/layout';
 /** A rectangle on the stage (stage px). */
 export interface Rect {
   readonly x: number;
   readonly y: number;
   readonly width: number;
   readonly height: number;
-}
-
-/** What the layout is built from: the grid, the bands above and below it, and the spacing. Stage px. */
-export interface LayoutConfig {
-  readonly cols: number;
-  readonly rows: number;
-  /** The design size: the stage is never smaller than this, so nothing gets cramped on small screens. */
-  readonly designWidth: number;
-  readonly designHeight: number;
-  /** The HUD band above the pond and the specials bar below it. */
-  readonly hudHeight: number;
-  readonly barHeight: number;
-  /** Space between the screen edges and everything, and between the HUD, the pond's shore and the bar. */
-  readonly sidePadding: number;
-  readonly sectionGap: number;
-  /** Room the shore takes outside the water all round (the stones), so they stay on screen. */
-  readonly shoreWidth: number;
-  /** Water between the board and the pond's shore on each side. The whole pond stays on screen. */
-  readonly pondMargin: {
-    readonly left: number;
-    readonly right: number;
-    readonly top: number;
-    readonly bottom: number;
-  };
-  /** Water between neighbouring cells: koi and pads are drawn inside cell - gap. */
-  readonly cellGap: number;
-  /**
-   * Where the pond sits in the height left over (0 top, 0.5 centred, 1 bottom). Low leaves an open scene above it,
-   * like the art over the board in commercial match-3s.
-   */
-  readonly pondAlign: number;
-  /** Bounds for a cell's size, so a tablet doesn't get giant koi and a small phone tiny ones. */
-  readonly minCell: number;
-  readonly maxCell: number;
 }
 
 /** The phone's own unsafe edges (notch, home bar), in screen px (CSS env(safe-area-inset-*)). */
@@ -56,13 +23,16 @@ export interface GameLayout {
   /** The open ground above the pond and its shore, from the top of the screen (behind the HUD too): the backdrop. */
   readonly scene: Rect;
   readonly bar: Rect;
+  /** The instruction pill over the board, as wide as the HUD. */
+  readonly pill: Rect;
 }
 
 /**
  * Lays the game out for a screen: the stage is the design size scaled to fit, then grown to cover the whole screen
  * (tall phones get more height, tablets more width, never letterboxing). Top to bottom: the HUD, the pond centred
- * with the board in it and its shore around it, the specials bar. The cell is as big as the space allows, within
- * minCell..maxCell. The HUD and the bar are as wide as the pond with its shore, so they line up on any screen.
+ * with the board in it and its shore around it, the specials bar. The cell is as big as the space allows while the
+ * garden keeps its room (see cellSize). The HUD, the bar and the pill over the board are as wide as the pond with its
+ * shore, so they line up on any screen, and never narrower than on the design screen.
  */
 export function layoutGame(
   screen: { width: number; height: number },
@@ -75,7 +45,12 @@ export function layoutGame(
   const bottom = stage.height - insets.bottom / scale - config.sidePadding;
   const { board, pond } = placePond(stage.width, top + config.hudHeight, bottom - config.barHeight, config);
 
-  const panelWidth = Math.min(pond.width + config.shoreWidth * 2, stage.width - config.sidePadding * 2);
+  // as wide as the pond with its shore, but never narrower than on the design screen: the HUD needs its room
+  const designPanel = config.designWidth - config.sidePadding * 2;
+  const panelWidth = Math.min(
+    Math.max(pond.width + config.shoreWidth * 2, designPanel),
+    stage.width - config.sidePadding * 2,
+  );
   const panelX = (stage.width - panelWidth) / 2;
   return {
     stage,
@@ -84,6 +59,12 @@ export function layoutGame(
     pond,
     scene: { x: 0, y: 0, width: stage.width, height: pond.y - config.shoreWidth },
     bar: { x: panelX, y: bottom - config.barHeight, width: panelWidth, height: config.barHeight },
+    pill: {
+      x: panelX,
+      y: board.y - config.pillGap - config.pillHeight,
+      width: panelWidth,
+      height: config.pillHeight,
+    },
   };
 }
 
@@ -99,7 +80,7 @@ function placePond(
   const bandTop = hudBottom + aroundPond + margin.top;
   const bandBottom = barTop - aroundPond - margin.bottom;
   const roomX = stageWidth - (config.sidePadding + config.shoreWidth) * 2 - margin.left - margin.right;
-  const cell = cellSize(roomX, bandBottom - bandTop, config);
+  const cell = cellSize({ x: roomX, y: bandBottom - bandTop }, stageWidth, config);
   const width = cell * config.cols;
   const height = cell * config.rows;
   const board = {
@@ -119,8 +100,22 @@ function placePond(
   return { board, pond };
 }
 
-/** The biggest cell that fits the board's room, within minCell..maxCell. */
-function cellSize(roomX: number, roomY: number, config: LayoutConfig): number {
-  const fits = Math.min(roomX / config.cols, roomY / config.rows);
-  return Math.min(Math.max(fits, config.minCell), config.maxCell);
+/**
+ * The biggest cell that fits the board's room (px). If the garden can't go beside the pond, the cell gives up size so
+ * the pond leaves the garden's strip of sky above it (a 16:9 phone, an upright tablet), but never below minCell.
+ */
+function cellSize(room: { x: number; y: number }, stageWidth: number, config: LayoutConfig): number {
+  const fits = Math.min(room.x / config.cols, room.y / config.rows);
+  if (gardenBeside(fits, stageWidth, config) || config.pondAlign <= 0) return fits;
+  // the sky above the pond is sectionGap plus pondAlign of the height the board leaves over
+  const skyRows = room.y - (config.garden.sky - config.sectionGap) / config.pondAlign;
+  const keepsSky = Math.floor((skyRows / config.rows) * 100) / 100; // a hair under, so the sky is never just short
+  return Math.min(fits, Math.max(config.minCell, keepsSky));
+}
+
+/** Whether a pond of this cell leaves the garden its room on both sides of it. */
+function gardenBeside(cell: number, stageWidth: number, config: LayoutConfig): boolean {
+  const margin = config.pondMargin;
+  const pondWidth = cell * config.cols + margin.left + margin.right;
+  return (stageWidth - pondWidth) / 2 - config.shoreWidth >= config.garden.beside;
 }

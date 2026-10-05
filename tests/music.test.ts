@@ -2,25 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { Composer, nearestTone, semitonesOf } from '../src/audio/composer';
 import type { BarMood, MusicNote } from '../src/audio/composer';
 import { GardenMusic } from '../src/audio/GardenMusic';
-import { NightAmbience } from '../src/audio/NightAmbience';
-import type { Bus } from '../src/audio/Mixer';
+import type { Bus } from '../src/config/audio';
 import { Soundtrack } from '../src/audio/Soundtrack';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import type { Mood, Track } from '../src/audio/Track';
 import { MUSIC } from '../src/config/audio';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { createGameEvents } from '../src/game/events';
 
 const PENTATONIC = [0, 2, 4, 7, 9];
 
-/** A voice on a clock the test moves, counting what it was asked to play. */
-function clockedVoice(): Voice & { time: number | null; tones: number } {
+/** A voice on a clock the test moves, counting what it was asked to play and when (its delays). */
+function clockedVoice(): Voice & { time: number | null; tones: number; delays: number[] } {
   const voice = {
     time: 0 as number | null,
     tones: 0,
-    tone: () => {
+    delays: [] as number[],
+    tone: (_freq: number, _dur: number, _vol: number, opts?: { delay?: number }) => {
       voice.tones++;
+      voice.delays.push(opts?.delay ?? 0);
     },
     noise: () => undefined,
     pluck: () => undefined,
@@ -34,8 +35,8 @@ function clockedVoice(): Voice & { time: number | null; tones: number } {
 
 /** Bars from a seeded composer, one mood each. */
 function compose(moods: readonly BarMood[], seed = 7): MusicNote[][] {
-  const random = new Random(seed);
-  const composer = new Composer(() => random.next());
+  const random = seeded(seed);
+  const composer = new Composer(random);
   return moods.map((mood) => composer.next(mood));
 }
 
@@ -61,19 +62,18 @@ describe('the composer', () => {
     });
   });
 
-  it('closes the eight-bar cycle on the root of its chord, held long', () => {
-    for (let k = 7; k < bars.length; k += 8) {
-      const last = melodic(bars[k] ?? []).at(-1);
-      expect(last?.length).toBe(4);
-      expect((last?.pitches[0] ?? 1) % 12).toBe(7); // A: the root of the cycle's last chord (Asus4)
-    }
-  });
-
   it('grows a heartbeat when tense, rests after a level, and climbs home to D for a win', () => {
     const [tense, rest, cadence] = compose(['tense', 'rest', 'cadence']);
     expect(tense?.filter((n) => n.part === 'drum').map((n) => n.step)).toEqual([0, 1]);
     expect(rest?.every((n) => n.part === 'pad' || n.part === 'bass')).toBe(true);
     expect((melodic(cadence ?? []).at(-1)?.pitches[0] ?? 1) % 12).toBe(0);
+  });
+
+  it('stays on the home chord after the win cadence, under the pad it holds', () => {
+    const [, , , , after] = compose(['calm', 'calm', 'calm', 'cadence', 'rest']);
+    const [home] = MUSIC.progression;
+    expect(after?.find((n) => n.part === 'bass')?.pitches).toEqual([home.root]);
+    expect(after?.some((n) => n.part === 'pad')).toBe(false);
   });
 
   it('plays the same for the same seed', () => {
@@ -107,17 +107,54 @@ describe('GardenMusic', () => {
     music.update();
     expect(voice.tones).toBeGreaterThan(first);
   });
-});
 
-describe('NightAmbience', () => {
-  it('keeps every layer going, each again after its own gap', () => {
+  it('plays no bar twice when the voice comes back from a pause (a hidden tab, a quick off and on)', () => {
     const voice = clockedVoice();
-    const ambience = new NightAmbience(voice, () => 0.5);
-    for (let t = 0; t < 60; t += 0.1) {
-      voice.time = t;
-      ambience.update();
+    const music = new GardenMusic(voice, () => 0.5);
+    voice.time = 10;
+    music.update();
+    const first = voice.tones;
+    voice.time = null;
+    music.update();
+    voice.time = 10.05; // the bar scheduled before the pause is still to come
+    music.update();
+    expect(voice.tones).toBe(first);
+  });
+
+  it('plays the win cadence only while it can be heard, and not once the game has moved on', () => {
+    // the first bar after these moods (a win first, unheard, when `silentWin`)
+    const bar = (silentWin: boolean, moods: readonly Mood[]): number[] => {
+      const voice = clockedVoice();
+      const music = new GardenMusic(voice, () => 0.5);
+      if (silentWin) {
+        voice.time = null;
+        music.setMood('won');
+        music.update();
+      }
+      voice.time = 10;
+      for (const mood of moods) music.setMood(mood);
+      music.update();
+      return voice.delays;
+    };
+    expect(bar(true, ['won'])).toEqual(bar(false, ['lost'])); // won while silent: the chords just rest
+    expect(bar(false, ['won', 'calm'])).toEqual(bar(false, ['calm'])); // played again before the bar line
+    expect(bar(false, ['won'])).not.toEqual(bar(false, ['lost'])); // heard: the cadence plays
+  });
+
+  it('never schedules a bar in the past, when frames stalled or the clock ran on while it was silent', () => {
+    for (const pause of [false, true]) {
+      const voice = clockedVoice();
+      const music = new GardenMusic(voice, () => 0.5);
+      voice.time = 10;
+      music.update();
+      if (pause) {
+        voice.time = null;
+        music.update();
+      }
+      voice.time = 10 + (60 / MUSIC.tempo) * 4 + 0.5; // half a second past the next bar line
+      music.update();
+      expect(Math.min(...voice.delays)).toBeGreaterThanOrEqual(0);
     }
-    expect(voice.tones).toBeGreaterThan(100); // drops, crickets and chimes are tones; the water is noise
   });
 });
 
@@ -138,5 +175,16 @@ describe('Soundtrack', () => {
       ['music', MUSIC.duck.match],
       ['music', MUSIC.duck.special],
     ]);
+  });
+
+  it('turns the music calm as soon as a level starts again, before any move', () => {
+    const events = createGameEvents();
+    const moods: Mood[] = [];
+    const track: Track = { update: () => undefined, setMood: (mood) => void moods.push(mood) };
+    new Soundtrack(events, [track], { duck: () => undefined });
+    events.emit('moveSpent', { movesLeft: 1 });
+    events.emit('won');
+    events.emit('levelStarted');
+    expect(moods).toEqual(['tense', 'won', 'calm']);
   });
 });

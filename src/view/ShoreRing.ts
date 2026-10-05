@@ -1,7 +1,7 @@
 import { Container, Rectangle, Sprite, Texture } from 'pixi.js';
 import { bakeAtlas } from '../art/atlas';
 import type { ShorePainter } from '../art/shoreStyles';
-import { Random } from '../core/Random';
+import { seeded } from '../core/Random';
 import type { ShorePiece } from '../layout/shore';
 
 /**
@@ -15,11 +15,11 @@ export class ShoreRing extends Container {
     super();
     const atlas = bakeAtlas(
       pieces.map((piece, i) => {
-        const rng = new Random(seed + i); // each piece its own look, the same every time
+        const rng = seeded(seed + i); // each piece its own look, the same every time
         return {
           radius: piece.radius,
           paint: (ctx: CanvasRenderingContext2D) => {
-            paint(ctx, piece.radius, () => rng.next());
+            paint(ctx, piece.radius, rng);
           },
         };
       }),

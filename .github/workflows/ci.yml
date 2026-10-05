@@ -1,15 +1,18 @@
-# Every push to a working branch and every pull request runs the checks, so a PR shows a pass/fail before merging.
+# Every pull request runs the checks, so it shows a pass/fail before merging, and develop runs them again after each
+# merge. A branch with a pull request isn't also checked on push, so each change is checked once.
 name: Checks
 
 on:
   push:
-    branches-ignore: [main]
+    branches: [develop]
   pull_request:
     branches: [develop, main]
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

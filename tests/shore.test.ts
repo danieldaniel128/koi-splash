@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Random } from '../src/core/Random';
+import { seeded } from '../src/core/Random';
 import { traceShore } from '../src/layout/outline';
 import { ringAlongShore } from '../src/layout/shore';
 import type { ShoreLook, ShorePiece } from '../src/layout/shore';
@@ -23,8 +23,8 @@ function shoreDistance([px, py]: readonly [number, number]): number {
 }
 
 const stonesFor = (seed: number): ShorePiece[] => {
-  const rng = new Random(seed);
-  return ringAlongShore(SHORE, LOOK, () => rng.next());
+  const rng = seeded(seed);
+  return ringAlongShore(SHORE, LOOK, rng);
 };
 
 describe('ringAlongShore', () => {
@@ -52,5 +52,25 @@ describe('ringAlongShore', () => {
     expect(stonesFor(3)).toEqual(stones);
     for (let i = 1; i < stones.length; i++)
       expect(stones[i]?.at[1]).toBeGreaterThanOrEqual(stones[i - 1]?.at[1] ?? 0);
+  });
+
+  it('piles no stones on a notch one cell wide: the strip of bank there gets one along it', () => {
+    // a notch in the left side, one row tall: the bank there is a strip much thinner than a stone
+    const shore = traceShore(parseShape(['#####', '#####', '.####', '#####', '#####']), BOARD, {
+      margin: { left: MARGIN, right: MARGIN, top: MARGIN, bottom: MARGIN },
+      cornerRadius: RADIUS,
+    });
+    const notchRow = BOARD.y + 2.5 * BOARD.cell;
+    const sitsOn = (a: ShorePiece, b: ShorePiece): boolean =>
+      Math.abs(a.at[0] - b.at[0]) < b.radius[0] && Math.abs(a.at[1] - b.at[1]) < b.radius[1];
+    for (let seed = 1; seed <= 20; seed++) {
+      const rng = seeded(seed);
+      const stones = ringAlongShore(shore, LOOK, rng);
+      const onNotch = stones.filter(
+        ({ at: [x, y] }) => x < BOARD.x + BOARD.cell && Math.abs(y - notchRow) < BOARD.cell / 2,
+      );
+      expect(onNotch.length).toBeGreaterThan(0);
+      for (const a of onNotch) for (const b of onNotch) if (a !== b) expect(sitsOn(a, b)).toBe(false);
+    }
   });
 });

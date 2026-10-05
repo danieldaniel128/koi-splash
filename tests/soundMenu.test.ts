@@ -3,11 +3,11 @@ import { storedSetting } from '../src/core/storedSetting';
 import { placeSoundMenu } from '../src/layout/soundMenu';
 
 describe('placeSoundMenu', () => {
-  it('puts the button at the bar end, level with its orbs, and the menu right above it', () => {
-    const look = { button: 36, barOrb: 58, width: 176, row: 44, padding: 4, gap: 10 };
+  it('puts the button at the bar end, level with its orbs, and the menu above the bar, clear of it', () => {
+    const look = { button: 36, barOrb: 58, width: 176, row: 44, padding: 4, gap: 20 };
     const { button, menu } = placeSoundMenu({ x: 8, y: 700, width: 374, height: 76 }, 3, look);
     expect(button).toEqual({ x: 346, y: 711, width: 36, height: 36 });
-    expect(menu).toEqual({ x: 206, y: 711 - 10 - 140, width: 176, height: 140 });
+    expect(menu).toEqual({ x: 206, y: 700 - 20 - 140, width: 176, height: 140 });
   });
 });
 
