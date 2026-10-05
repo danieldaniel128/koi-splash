@@ -97,3 +97,55 @@ function sizesAt(pieces: readonly AtlasPiece[], scale: number): { width: number;
     return { width: Math.ceil(width * scale), height: Math.ceil(height * scale) };
   });
 }
+
+/** A slot on one of several sheets (see packSheets). */
+export interface SheetSlot extends AtlasSlot {
+  readonly sheet: number;
+}
+
+/**
+ * Packs pieces on as few sheets as need be, none bigger than `maxSize` square: the shelves of one tall packShelves
+ * strip, cut into sheets between shelves. Slots come back in the input order. O(n log n).
+ */
+export function packSheets(
+  sizes: readonly { width: number; height: number }[],
+  maxSize: number,
+): { slots: SheetSlot[]; sheets: { width: number; height: number }[] } {
+  const strip = packShelves(sizes, maxSize);
+  const cuts = cutIntoSheets(strip.slots, maxSize);
+  const slots = strip.slots.map((slot) => {
+    const cut = cuts.get(slot.y);
+    if (!cut) throw new Error('a slot off every shelf');
+    return { ...slot, y: slot.y - cut.top, sheet: cut.sheet };
+  });
+  const sheets = Array.from({ length: Math.max(...slots.map((slot) => slot.sheet + 1), 0) }, (_, sheet) => {
+    const on = slots.filter((slot) => slot.sheet === sheet);
+    return {
+      width: Math.max(...on.map((slot) => slot.x + slot.width + PADDING)),
+      height: Math.max(...on.map((slot) => slot.y + slot.height + PADDING)),
+    };
+  });
+  return { slots, sheets };
+}
+
+/** Which sheet each shelf of a strip goes on, by the shelf's top, and that sheet's top in the strip. */
+function cutIntoSheets(
+  slots: readonly AtlasSlot[],
+  maxSize: number,
+): Map<number, { sheet: number; top: number }> {
+  const bottoms = new Map<number, number>();
+  for (const slot of slots)
+    bottoms.set(slot.y, Math.max(bottoms.get(slot.y) ?? 0, slot.y + slot.height + PADDING));
+  const cuts = new Map<number, { sheet: number; top: number }>();
+  let sheet = -1;
+  let top = 0;
+  for (const [y, bottom] of [...bottoms].sort(([a], [b]) => a - b)) {
+    if (bottom - (y - PADDING) > maxSize) throw new Error(`a piece taller than a ${maxSize} px sheet`);
+    if (sheet < 0 || bottom - top > maxSize) {
+      sheet++;
+      top = y - PADDING;
+    }
+    cuts.set(y, { sheet, top });
+  }
+  return cuts;
+}
