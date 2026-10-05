@@ -45,7 +45,7 @@ export class PadView extends Container implements PadDisplay {
     const radius = layout.cellSize * BOARD_PADS.radius;
     // O(stages) canvas paints, once at startup
     this.budStages = Array.from({ length: BOARD_PADS.stages }, (_, i) =>
-      Texture.from(bakeLotusPad(radius, i / (BOARD_PADS.stages - 1), 7, resolution)),
+      Texture.from(bakeLotusPad(radius, i / (BOARD_PADS.stages - 1), BOARD_PADS.lotusSeed, resolution)),
     );
     this.emptyPad = Texture.from(bakeProp({ kind: 'pad', radius: [radius, radius], seed: 11 }, resolution));
     this.scaleOf = 1 / resolution;
