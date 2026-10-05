@@ -14,7 +14,6 @@ import { startSound } from './boot/sound';
 import { buildStage, putUnderWater } from './boot/stage';
 import { LEVEL } from './config/level';
 import { createGameEvents } from './game/events';
-import { applyTheme } from './theme/theme';
 import { closeOnEscape } from './ui/escapeKey';
 import { Hud } from './ui/Hud';
 import { ResultCard } from './ui/ResultCard';
@@ -25,7 +24,6 @@ import { RotateNotice } from './ui/RotateNotice';
  * game is put together. Each area is built in its own module under src/boot.
  */
 async function boot(host: HTMLElement): Promise<void> {
-  applyTheme(document.documentElement);
   await loadFonts(); // the Pixi labels are drawn once with whatever font is ready, so make sure it's Nunito
   await new RotateNotice(document.body).upright(); // lay out for the phone held upright
   const app = await createApp(host);

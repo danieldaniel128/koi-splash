@@ -27,6 +27,8 @@ export const MOONLIT_GARDEN = {
     goldLight: '#ffeaa8',
     goldDeep: '#f5b54e',
     coral: '#ff8f9e',
+    /** The night sky at its darkest (the garden's, at the top): the page behind everything, and the browser's bar. */
+    night: '#050b20',
   },
   font: {
     /**
