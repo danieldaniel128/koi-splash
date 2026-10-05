@@ -1,5 +1,6 @@
-import { AMBIENCE, AUDIO } from '../config/audio';
+import { AMBIENCE } from '../config/audio';
 import { AMBIENT } from './instruments';
+import { scheduleAhead } from './lookahead';
 import type { Voice } from './Synth';
 import type { Track } from './Track';
 
@@ -37,11 +38,14 @@ export class NightAmbience implements Track {
   private schedule(layer: Layer, now: number): number {
     let at = this.next.get(layer) ?? now + this.gap(layer) * this.random(); // the layers start staggered
     if (at < now - 1) at = now;
-    while (at < now + AUDIO.lookahead) {
-      AMBIENT[layer](this.voice, Math.max(0, at - now), this.random);
-      at += this.gap(layer);
-    }
-    return at;
+    return scheduleAhead(
+      at,
+      now,
+      (delay) => {
+        AMBIENT[layer](this.voice, delay, this.random);
+      },
+      () => this.gap(layer),
+    );
   }
 
   private gap(layer: Layer): number {

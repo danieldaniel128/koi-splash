@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AMBIENT } from '../src/audio/instruments';
 import { NightAmbience } from '../src/audio/NightAmbience';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import { AMBIENCE, AUDIO } from '../src/config/audio';
 import { seeded } from '../src/core/Random';

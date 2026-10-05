@@ -4,7 +4,7 @@ import type { BarMood, MusicNote } from '../src/audio/composer';
 import { GardenMusic } from '../src/audio/GardenMusic';
 import type { Bus } from '../src/config/audio';
 import { Soundtrack } from '../src/audio/Soundtrack';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import type { Mood, Track } from '../src/audio/Track';
 import { MUSIC } from '../src/config/audio';

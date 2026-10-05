@@ -1,6 +1,7 @@
 import { AUDIO } from '../config/audio';
 import type { Bus } from '../config/audio';
 import type { Mixer, Output } from './Mixer';
+import { noteOf } from './pitch';
 
 /** What a sound recipe plays with: tones, noise bursts and the two small building blocks, on the game's scale. */
 export interface Voice {
@@ -44,14 +45,6 @@ export interface NoiseOptions extends Placed {
   readonly attack?: number;
   /** A bandpass of this sharpness at `freq` instead of the lowpass: a breath on a note, an airy hiss. */
   readonly band?: number;
-}
-
-/** Note `i` of a scale over a base frequency (semitones per octave in `scale`). Pure. */
-export function noteOf(i: number, base: number, scale: readonly number[]): number {
-  const n = scale.length;
-  const octave = Math.floor(i / n);
-  const step = scale[((i % n) + n) % n] ?? 0;
-  return base * Math.pow(2, (step + 12 * octave) / 12);
 }
 
 /**

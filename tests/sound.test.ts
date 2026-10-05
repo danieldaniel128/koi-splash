@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { playSoundsOf } from '../src/audio/SoundBoard';
-import { noteOf } from '../src/audio/Synth';
+import { noteOf } from '../src/audio/pitch';
 import type { Voice } from '../src/audio/Synth';
 import { createGameEvents } from '../src/game/events';
 

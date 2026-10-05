@@ -1,5 +1,6 @@
 import { AMBIENCE, AUDIO, MUSIC } from '../config/audio';
 import type { MusicNote, Part } from './composer';
+import { frequencyOf } from './pitch';
 import type { Voice } from './Synth';
 
 /** When a note sounds: `delay` s from now, lasting `seconds`. */
@@ -47,12 +48,11 @@ const INSTRUMENTS: Readonly<Record<Part, (v: Voice, freqs: readonly number[], at
 
 /** Plays one note of the music on its instrument. */
 export function playNote(v: Voice, note: MusicNote, at: Timing): void {
-  INSTRUMENTS[note.part](v, note.pitches.map(frequencyOf), at);
-}
-
-/** Semitones from D4 in Hz. Pure. */
-export function frequencyOf(semitones: number): number {
-  return AUDIO.base * Math.pow(2, semitones / 12);
+  INSTRUMENTS[note.part](
+    v,
+    note.pitches.map((semitones) => frequencyOf(semitones)),
+    at,
+  );
 }
 
 /** A plucked koto string: a bright triangle softened, its body, and a short glint an octave and a fifth up. */
