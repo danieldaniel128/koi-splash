@@ -493,20 +493,65 @@ function paintBranch(
   paintLantern(ctx, reach * 0.78, y + 2, theme);
 }
 
-/** A five-pointed maple leaf. */
+/**
+ * A maple leaf's lobes, round from its lower left: the angle of each point from the leaf's middle line (radians, 0 is
+ * up) and how far it reaches (share of the leaf's size). The middle lobe is the longest, the lowest two the shortest.
+ */
+const MAPLE_LOBES: readonly (readonly [number, number])[] = [
+  [-1.9, 0.7],
+  [-0.95, 1.05],
+  [0, 1.15],
+  [0.95, 1.05],
+  [1.9, 0.7],
+];
+/**
+ * How deep the cuts between the lobes go and where the leaf's shoulders sit beside its stem (angle, reach), as shares
+ * of its size; and each lobe's pair of side teeth: how far round from its point, how far out, and the notch above.
+ */
+const MAPLE_CUT = 0.5;
+const MAPLE_SHOULDER = [2.45, 0.36] as const;
+const MAPLE_TOOTH = { turn: 0.36, reach: 0.75, notch: 0.68 } as const;
+
+/**
+ * A maple leaf reaching about `size` px from its middle (as much leaf as a star that size): five toothed lobes, the
+ * middle one longest, round a broad palm on a short stem, turned by `turn`.
+ */
 function leaf(ctx: Ctx, x: number, y: number, size: number, turn: number, color: string): void {
+  const at = (angle: number, reach: number): [number, number] => [
+    Math.sin(angle) * reach * size,
+    -Math.cos(angle) * reach * size,
+  ];
+  const [shoulder, shoulderReach] = MAPLE_SHOULDER;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(turn);
   ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const r = i % 2 === 0 ? size : size * 0.45;
-    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-  }
+  ctx.moveTo(...at(Math.PI, 0.12)); // where the stem joins
+  ctx.lineTo(...at(-shoulder, shoulderReach));
+  MAPLE_LOBES.forEach(([angle, reach], i) => {
+    const previous = MAPLE_LOBES[i - 1];
+    if (previous) ctx.lineTo(...at((angle + previous[0]) / 2, MAPLE_CUT));
+    const { turn: side, reach: out, notch } = MAPLE_TOOTH;
+    for (const [a, r] of [
+      [angle - side, out],
+      [angle - side * 0.55, notch],
+      [angle, 1],
+      [angle + side * 0.55, notch],
+      [angle + side, out],
+    ] as const) {
+      ctx.lineTo(...at(a, reach * r));
+    }
+  });
+  ctx.lineTo(...at(shoulder, shoulderReach));
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(...at(Math.PI, 0.1));
+  ctx.lineTo(...at(Math.PI, 0.65));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size * 0.1;
+  ctx.stroke();
   ctx.restore();
 }
 
