@@ -10,12 +10,8 @@ uniform float uTime;
 // device pixels per stage pixel, so lines keep their width on any screen
 uniform float uPixelRatio;
 
-float unpackHeight(vec4 texel) {
-    return (texel.r + texel.g / 255.0) * 2.0 - 1.0;
-}
-
 float heightAt(vec2 uv) {
-    return unpackHeight(texture(uState, uv));
+    return unpackWater(texture(uState, uv).rg);
 }
 
 // The water at a stage point: x = height, yz = slope (dh/dx, dh/dy, scaled by uWaveScale). Smoothly interpolated

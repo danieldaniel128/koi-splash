@@ -1,5 +1,5 @@
-// Small helpers shared by every pond shader: hashing, smooth noise, the pond's outline and constant-width lines.
-// Positions are stage pixels.
+// Small helpers shared by every pond shader: the water state's packing, hashing, smooth noise, the pond's outline
+// and constant-width lines. Positions are stage pixels.
 
 // the pond's shape, as a distance field baked once from its traced shore (see bakeDistanceField): red holds the
 // distance out to 128 px in 1 px steps, green out to 16 px in 1/8 px steps (FIELD_REACH). uShoreArea is where the
@@ -14,6 +14,18 @@ uniform vec2 uShoreBend;
 const int MAX_PROPS = 16;
 uniform vec4 uProps[MAX_PROPS];
 uniform vec2 uPropAxes[MAX_PROPS];
+
+// The water's state: a value in -1..1 packed into two 8-bit channels, a high byte and the remainder at full 8-bit
+// resolution, so the simulation runs on any phone GPU (waterCodec.ts mirrors these two).
+vec2 packWater(float value) {
+    float x = clamp(value * 0.5 + 0.5, 0.0, 1.0) * 255.0;
+    float high = min(floor(x), 254.0);
+    return vec2(high / 255.0, x - high);
+}
+
+float unpackWater(vec2 channels) {
+    return (channels.x + channels.y / 255.0) * 2.0 - 1.0;
+}
 
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);

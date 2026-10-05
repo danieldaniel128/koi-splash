@@ -5,6 +5,7 @@ import common from './shaders/common.glsl?raw';
 import simFragment from './shaders/sim.frag?raw';
 import vertex from './shaders/water.vert?raw';
 import waves from './shaders/waves.glsl?raw';
+import { packWater } from './waterCodec';
 
 /** The stage rectangle the simulation covers (the pond). */
 export interface SimArea {
@@ -14,8 +15,8 @@ export interface SimArea {
   readonly height: number;
 }
 
-/** Packed "flat water" (height 0, speed 0): each value is 127.5 / 255 split into a high and a low byte. */
-const FLAT_WATER: [number, number, number, number] = [127 / 255, 0.5, 127 / 255, 0.5];
+/** Flat water (height 0, speed 0), packed as the simulation stores it. */
+const FLAT_WATER: [number, number, number, number] = [...packWater(0), ...packWater(0)];
 
 /**
  * A height-field water simulation on the GPU. Two textures take turns: each step reads one and writes the other.
@@ -174,10 +175,12 @@ export interface PondShapeResources {
 
 /**
  * A fragment shader with the shared helpers (noise, the pond's outline, lines) in front of it. Marked GLSL ES 3:
- * Pixi compiles anything else as WebGL 1 shaders, which lack fwidth (constant-width lines).
+ * Pixi compiles anything else as WebGL 1 shaders, which lack fwidth (constant-width lines). Its textures are read at
+ * high precision: left undeclared, Pixi makes them lowp, too coarse for the water state's low byte on the phone GPUs
+ * that honour it (the pond would never settle).
  */
 export function withCommon(fragment: string): string {
-  return `#version 300 es\nprecision highp float;\n${common}\n${fragment}`;
+  return `#version 300 es\nprecision highp float;\nprecision highp sampler2D;\n${common}\n${fragment}`;
 }
 
 /** A fragment shader with the shared helpers and the wave-reading code in front of it (high precision for unpacking). */
