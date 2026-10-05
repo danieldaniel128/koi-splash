@@ -11,7 +11,7 @@ import type { BoosterType, BoosterUse } from '../model/boosters';
 import { createBoard, resetBoard, settle, trySwap } from '../model/rules';
 import type { BoardSpec } from '../model/rules';
 import { scoreRound } from '../model/score';
-import { starsFor } from '../model/stars';
+import { starsFor, starsForWin } from '../model/stars';
 import type { StarRule } from '../model/stars';
 import type { CascadeStep, Cell } from '../model/types';
 import type { BoardAnimator, PlacedPiece } from '../view/BoardAnimator';
@@ -114,7 +114,10 @@ export class GameScene {
       },
       won: {
         onEnter: () => {
-          deps.result.show('won', this.status());
+          deps.result.show('won', {
+            ...this.status(),
+            stars: starsForWin(this.level.score, deps.level.stars),
+          });
           deps.events.emit('won');
         },
       },
