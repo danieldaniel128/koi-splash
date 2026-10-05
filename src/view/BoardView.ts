@@ -111,7 +111,7 @@ export class BoardView extends Container implements BoardDisplay {
     if (!piece.special) return;
     const koi = this.spriteOf(piece.id);
     koi.setPoses(this.specials.poses(piece.special, piece.kind));
-    this.looks.add(koi, piece.special);
+    this.dress(koi, piece.special);
   }
 
   /** Adds a koi for a new piece at a cell. */
@@ -157,8 +157,15 @@ export class BoardView extends Container implements BoardDisplay {
     this.pieces.set(id, koi);
     this.koiLayer.addChild(koi);
     this.waterline.add(koi);
-    if (special) this.looks.add(koi, special);
+    if (special) this.dress(koi, special);
     return koi;
+  }
+
+  /** A special koi's look, and what it casts into the water when its shape changed (a whirlpool's curled koi). */
+  private dress(koi: Koi, special: Special): void {
+    this.looks.add(koi, special);
+    const marks = this.specials.marks(special, koi.kind);
+    if (marks) this.waterline.reshape(koi, marks);
   }
 
   private removeSpritesNotIn(ids: ReadonlySet<number>): void {

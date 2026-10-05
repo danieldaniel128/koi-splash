@@ -4,6 +4,12 @@ import { WATER } from '../config/water';
 import type { Koi } from './Koi';
 import type { KoiTextures } from './KoiTextures';
 
+/** What a koi of some shape casts into the water: its shadow, and its contact shapes, one per pose. */
+export interface KoiMarks {
+  readonly shadow: Texture;
+  readonly contacts: readonly Texture[];
+}
+
 /** What one koi casts into the water around it. */
 interface Marks {
   readonly shadow: Sprite;
@@ -37,6 +43,15 @@ export class KoiWaterline {
     this.marks.set(koi, { shadow, contact, contactPoses, last: new Point(NaN, NaN) });
     this.shadows.addChild(shadow);
     this.contacts.addChild(contact);
+  }
+
+  /** A koi changed shape (a whirlpool's koi curls up): what it casts takes the new shape. */
+  reshape(koi: Koi, shape: KoiMarks): void {
+    const marks = this.marks.get(koi);
+    if (!marks) return;
+    marks.shadow.texture = shape.shadow;
+    marks.contact.texture = shape.contacts[0] ?? marks.contact.texture;
+    this.marks.set(koi, { ...marks, contactPoses: shape.contacts });
   }
 
   remove(koi: Koi): void {

@@ -14,8 +14,9 @@ import {
 } from '../art/specialKoi';
 import { SPECIAL_LOOK } from '../config/specials';
 import type { Kind, Special } from '../model/types';
-import { bakePose, bakePoses, stillPose } from './KoiTextures';
+import { bakeContact, bakePose, bakePoses, bakeShadow, stillPose } from './KoiTextures';
 import type { KoiBake } from './KoiTextures';
+import type { KoiMarks } from './KoiWaterline';
 
 /** A special koi's colours: its glow, and a striped koi's band. */
 export interface SpecialColors {
@@ -41,6 +42,7 @@ export class SpecialTextures {
   readonly sparkle: Texture;
   readonly prism: Texture;
   private readonly cache = new Map<string, Texture[]>();
+  private readonly curledMarks = new Map<Kind, KoiMarks>();
   private readonly previews = new Map<string, string>();
   /** Where each colour's koi body spans across its canvas: what a striped koi's bands fit. */
   private readonly spans = new Map<Kind, BodySpan>();
@@ -74,7 +76,9 @@ export class SpecialTextures {
     return [
       ...forEachColour((kind) => this.spanOf(kind)),
       ...forEachColour((kind) => {
-        // the whirlpool's first: curling its koi reads it back, best before the other two are painted
+        // the whirlpool's first: curling its koi (and its shadow and waterline) reads them back, best before the
+        // other two are painted
+        this.marks(specialOf('whirl'), kind);
         for (const type of ['whirl', 'line', 'rainbow'] as const) this.picture(type, kind);
       }),
       () => {
@@ -99,6 +103,28 @@ export class SpecialTextures {
       const straight = bakeInkedKoi(getVariety(id), stillPose(this.bake), this.bake.ink);
       return [Texture.from(curl(straight, straight.width * SPECIAL_LOOK.whirl.curl))];
     });
+  }
+
+  /**
+   * What a special koi casts into the water, when its shape isn't its kind's: a whirlpool's curled koi casts a curled
+   * shadow and meets the water along its curl. Null for the specials that keep the koi's own shape.
+   */
+  marks(special: Special, kind: Kind): KoiMarks | null {
+    if (special.type !== 'whirl') return null;
+    const known = this.curledMarks.get(kind);
+    if (known) return known;
+    const id = this.variety(kind);
+    const curled = (canvas: HTMLCanvasElement, koiPx: number): HTMLCanvasElement =>
+      curl(canvas, Math.ceil(koiPx) * SPECIAL_LOOK.whirl.curl);
+    const { size, resolution, contactResolution } = this.bake;
+    const still = bakeKoi(getVariety(id), stillPose(this.bake));
+    const contact = bakeContact(id, this.bake, 0); // padded round the koi: curled round the same centre
+    const marks = {
+      shadow: bakeShadow(curled(still, size * resolution), this.bake),
+      contacts: [Texture.from(curled(contact, size * contactResolution))],
+    };
+    this.curledMarks.set(kind, marks);
+    return marks;
   }
 
   /** A striped koi's sheen, frame by frame from tail to head. */

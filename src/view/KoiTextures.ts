@@ -53,10 +53,7 @@ export class KoiTextures {
     this.contactScale = bake.resolution / bake.contactResolution;
     this.poses = varietyIds.map((id) => bakePoses(id, bake));
     this.contacts = varietyIds.map((id) => bakeContacts(id, bake));
-    this.shadows = varietyIds.map((id) => {
-      const still = bakeKoi(getVariety(id), stillPose(bake));
-      return Texture.from(bakeShadow(still, bake.shadowBlur * bake.resolution));
-    });
+    this.shadows = varietyIds.map((id) => bakeShadow(bakeKoi(getVariety(id), stillPose(bake)), bake));
   }
 
   /** One tail beat of poses for a kind, in order. */
@@ -109,11 +106,15 @@ export function bakePose(
 
 /** The contact shape of every pose, so the foam follows the body as it bends. */
 function bakeContacts(varietyId: string, bake: KoiBake): Texture[] {
-  const variety = getVariety(varietyId);
-  const pose = { ...stillPose(bake), resolution: bake.contactResolution };
   return Array.from({ length: bake.frames }, (_, i) =>
-    Texture.from(bakeKoiContact(variety, { ...pose, tailWag: tailWag(i, bake) }, bake.contact)),
+    Texture.from(bakeContact(varietyId, bake, tailWag(i, bake))),
   );
+}
+
+/** The contact shape of one pose (see bakeKoiContact), at the contact's own resolution. */
+export function bakeContact(varietyId: string, bake: KoiBake, wag: number): HTMLCanvasElement {
+  const pose = { ...stillPose(bake), resolution: bake.contactResolution, tailWag: wag };
+  return bakeKoiContact(getVariety(varietyId), pose, bake.contact);
 }
 
 function tailWag(pose: number, bake: KoiBake): number {
@@ -125,8 +126,12 @@ export function stillPose(bake: KoiBake): BakeOptions {
   return { size: bake.size, resolution: bake.resolution, build: bake.build, shadow: false };
 }
 
-/** The koi's silhouette in white, blurred, on a canvas padded so the blur isn't cut off. Tinted by the sprite. */
-function bakeShadow(koi: HTMLCanvasElement, blurPx: number): HTMLCanvasElement {
+/**
+ * A painted koi's silhouette in white, blurred, on a canvas padded so the blur isn't cut off: its shadow on the pond
+ * bottom, tinted by the sprite.
+ */
+export function bakeShadow(koi: HTMLCanvasElement, bake: KoiBake): Texture {
+  const blurPx = bake.shadowBlur * bake.resolution;
   const pad = blurPx * 2;
   const canvas = document.createElement('canvas');
   canvas.width = koi.width + pad * 2;
@@ -134,5 +139,5 @@ function bakeShadow(koi: HTMLCanvasElement, blurPx: number): HTMLCanvasElement {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas not available');
   drawBlurred(ctx, koi, [pad, pad], blurPx, '#fff');
-  return canvas;
+  return Texture.from(canvas);
 }
