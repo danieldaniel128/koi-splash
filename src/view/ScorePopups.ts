@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { Container, Text } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { POINTS } from '../config/fx';
+import { runDetached } from '../core/detached';
 import type { MatchEffects } from './BoardAnimator';
 
 /**
@@ -30,7 +31,7 @@ export class ScorePopups extends Container implements MatchEffects {
     label.alpha = 1;
     label.scale.set(0.4);
     this.addChild(label);
-    void this.popAndFly(label, at);
+    runDetached(this.popAndFly(label, at), 'a score popup');
   }
 
   private async popAndFly(label: Text, at: PointData): Promise<void> {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { StateMachine } from '../src/core/StateMachine';
 import { BOOSTER_STEPS, BoosterControl } from '../src/game/BoosterControl';
 import type { Arming, BoosterGame, BoosterStep } from '../src/game/BoosterControl';
@@ -15,7 +15,11 @@ interface Rig {
 
 /** A control wired to fakes that record what it did. */
 function setup(
-  options: { canTarget?: (type: BoosterType, cell: Cell) => boolean; choice?: Special['type'] | null } = {},
+  options: {
+    canTarget?: (type: BoosterType, cell: Cell) => boolean;
+    choice?: Special['type'] | null;
+    fails?: boolean;
+  } = {},
 ): Rig {
   const log: string[] = [];
   const used: BoosterUse[] = [];
@@ -25,7 +29,7 @@ function setup(
     canTarget: options.canTarget ?? (() => true),
     useBooster: (use) => {
       used.push(use);
-      return Promise.resolve(true);
+      return options.fails ? Promise.reject(new Error('the board broke')) : Promise.resolve(true);
     },
   };
   const control = new BoosterControl({
@@ -198,5 +202,18 @@ describe('BOOSTER_STEPS', () => {
     expect(can('special', 'picked', 'playing')).toBe(false);
     expect(can('special', 'choosing', 'playing')).toBe(true);
     expect(can('swap', 'choosing', 'playing')).toBe(false);
+  });
+
+  it('frees the bar when a booster fails to play, without spending it', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { control, log, settle } = setup({ fails: true });
+    control.press('feed');
+    control.tap({ col: 0, row: 0 });
+    await settle();
+    expect(error).toHaveBeenCalledOnce();
+    expect(log).not.toContain('left:feed=0');
+    control.press('feed'); // the bar takes the next press
+    expect(control.armed).toBe(true);
+    error.mockRestore();
   });
 });

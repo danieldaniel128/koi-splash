@@ -1,5 +1,6 @@
 import { StateMachine } from '../core/StateMachine';
 import type { Transition } from '../core/StateMachine';
+import { runDetached } from '../core/detached';
 import type { BoosterType, BoosterUse } from '../model/boosters';
 import type { Cell, Special } from '../model/types';
 import { sameCell } from '../model/types';
@@ -198,8 +199,8 @@ export class BoosterControl {
       return;
     }
     if (type === 'swap') this.swapPick(cell);
-    else if (type === 'feed') void this.use({ type: 'feed', at: cell, lines: this.deps.feedLines });
-    else void this.choose(cell);
+    else if (type === 'feed') this.play(this.use({ type: 'feed', at: cell, lines: this.deps.feedLines }));
+    else this.play(this.choose(cell));
   }
 
   /**
@@ -221,7 +222,14 @@ export class BoosterControl {
       this.deps.sounds.lift();
       return;
     }
-    void this.use({ type: 'swap', a: first, b: cell });
+    this.play(this.use({ type: 'swap', a: first, b: cell }));
+  }
+
+  /** Runs a booster's flow without holding up the tap; if it fails, the booster is put away rather than left armed. */
+  private play(flow: Promise<void>): void {
+    runDetached(flow, 'a booster', () => {
+      if (this.armed) this.disarm();
+    });
   }
 
   /** Special: petals open round the koi; the one chosen is what it becomes. */
@@ -242,28 +250,40 @@ export class BoosterControl {
     await this.use({ type: 'special', at: cell, special });
   }
 
-  /** Spends the armed booster: the marks go, the board plays it, then it's ready for the next. */
+  /**
+   * Spends the armed booster: the marks go, the board plays it, then it's ready for the next. However the play ends,
+   * the bar is free again afterwards; the booster is spent only if the board took it.
+   */
   private async use(use: BoosterUse): Promise<void> {
-    const type = use.type;
     this.step.transition('playing');
-    this.deps.marks.show(null);
-    this.deps.pill.hide();
-    this.deps.buttons.setArmed(null);
-    const used = await this.deps.game.useBooster(use);
-    if (used) {
-      const left = (this.left.get(type) ?? 1) - 1;
-      this.left.set(type, left);
-      this.deps.buttons.setLeft(type, left);
+    this.hideArming();
+    try {
+      if (await this.deps.game.useBooster(use)) this.spend(use.type);
+    } finally {
+      this.clearArming();
+      this.step.transition('idle');
     }
-    this.arming.type = null;
-    this.arming.picked = null;
-    this.step.transition('idle');
+  }
+
+  private spend(type: BoosterType): void {
+    const left = (this.left.get(type) ?? 1) - 1;
+    this.left.set(type, left);
+    this.deps.buttons.setLeft(type, left);
   }
 
   private disarm(): void {
+    this.clearArming();
+    this.step.transition('idle');
+    this.hideArming();
+  }
+
+  private clearArming(): void {
     this.arming.type = null;
     this.arming.picked = null;
-    this.step.transition('idle');
+  }
+
+  /** The bar, the pill and the board's marks stop showing an armed booster. */
+  private hideArming(): void {
     this.deps.buttons.setArmed(null);
     this.deps.pill.hide();
     this.deps.marks.show(null);

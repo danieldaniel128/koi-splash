@@ -1,5 +1,6 @@
 import { StateMachine } from '../core/StateMachine';
 import type { StateHooks, Transition } from '../core/StateMachine';
+import { runDetached } from '../core/detached';
 import type { Random } from '../core/Random';
 import type { Board } from '../model/Board';
 import { checkGoals, createGoals, goalsMet, recordRound } from '../model/goals';
@@ -160,7 +161,7 @@ export class GameScene implements BoosterGame, SwapGame {
   /** Swipe handler for the input. Ignored while a turn is playing or after the level has ended. */
   readonly handleSwipe = (from: Cell, to: Cell): void => {
     if (!this.turn.can('swapping')) return;
-    void this.playTurn(from, to);
+    runDetached(this.playTurn(from, to), 'a turn');
   };
 
   /** True when a booster can be used: the board is still and the level is on. */

@@ -21,6 +21,8 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-magic-numbers': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+      // async work nobody awaits goes through runDetached (src/core/detached.ts), which logs a failure
+      '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: false }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: 'error',
       curly: ['error', 'multi-line'],
