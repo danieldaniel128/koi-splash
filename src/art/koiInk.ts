@@ -79,7 +79,8 @@ export interface KoiContactShape {
  * as a mask for the water: where the foam hugs the koi. Alpha is the cover; the green channel says where the foam
  * shows: it fades from the head (1) to the tail (0), so the foam is strongest where the koi's back breaks the
  * surface, and drops to 0 over the fins so the line breaks around them instead of covering them. Red and blue are
- * left at full for the game to scale per koi. Head up, on a square canvas like bakeKoi.
+ * left at full for the game to scale per koi. Head up, centred like bakeKoi, on a canvas padded by
+ * contactPadding so the mask fades out before its edge.
  */
 export function bakeKoiContact(
   variety: KoiVariety,
@@ -87,19 +88,36 @@ export function bakeKoiContact(
   shape: KoiContactShape,
 ): HTMLCanvasElement {
   const scale = bake.resolution ?? 1;
-  const body = bakeKoi(variety, { ...bake, parts: 'body' });
-  const fins = bakeKoi(variety, { ...bake, parts: 'fins' });
+  const pad = contactPadding(shape, scale);
+  const body = padded(bakeKoi(variety, { ...bake, parts: 'body' }), pad);
+  const fins = padded(bakeKoi(variety, { ...bake, parts: 'fins' }), pad);
   const canvas = softSilhouette(body, '#ffffff', shape.gap * scale, shape.blur * scale);
   const ctx = context(canvas);
   // only recolour from here on: the cover (alpha) must stay as it is, or the waterline would move to trace the fins
   ctx.globalCompositeOperation = 'source-atop';
   const [from, to] = BODY_UNDER; // where the body goes under, so the foam fades with it
-  const fade = ctx.createLinearGradient(0, body.height * from, 0, body.height * to);
+  const koi = body.height - pad * 2;
+  const fade = ctx.createLinearGradient(0, pad + koi * from, 0, pad + koi * to);
   fade.addColorStop(0, '#ffffff');
   fade.addColorStop(1, '#ff00ff');
   ctx.fillStyle = fade;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(softSilhouette(fins, '#ff00ff', shape.finClear * scale, shape.blur * scale), 0, 0);
+  return canvas;
+}
+
+/**
+ * How far (px of the bake) a contact mask reaches past the koi's square: its gap and the blur's tail (three standard
+ * deviations), so it fades to nothing before the canvas edge instead of being cut off in front of the snout.
+ */
+function contactPadding(shape: KoiContactShape, resolution: number): number {
+  return Math.ceil((shape.gap + shape.blur * 3) * resolution);
+}
+
+/** `source` in the middle of a canvas `pad` px bigger on every side. */
+function padded(source: HTMLCanvasElement, pad: number): HTMLCanvasElement {
+  const canvas = blank(source.width + pad * 2);
+  context(canvas).drawImage(source, pad, pad);
   return canvas;
 }
 

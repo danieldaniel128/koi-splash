@@ -25,14 +25,7 @@ export class KoiWaterline {
   readonly shadows = new Container();
   readonly contacts = new Container();
   private readonly marks = new Map<Koi, Marks>();
-  /** Contact shapes are baked coarser than the koi: their scale against the koi's. */
-  private readonly coarse: number;
-
-  constructor(private readonly textures: KoiTextures) {
-    const [pose] = textures.swim(0);
-    const [shape] = textures.contact(0);
-    this.coarse = pose && shape ? pose.width / shape.width : 1;
-  }
+  constructor(private readonly textures: KoiTextures) {}
 
   /** Starts casting a koi's marks into the water. */
   add(koi: Koi): void {
@@ -87,7 +80,8 @@ export class KoiWaterline {
     );
     contact.texture = marks.contactPoses[koi.pose] ?? contact.texture;
     contact.position.copyFrom(koi.position);
-    contact.scale.set(koi.scale.x * this.coarse, koi.scale.y * this.coarse);
+    const coarse = this.textures.contactScale;
+    contact.scale.set(koi.scale.x * coarse, koi.scale.y * coarse);
     contact.rotation = koi.rotation;
     contact.tint = contactTint(koi.alpha * koi.alpha, stir);
   }

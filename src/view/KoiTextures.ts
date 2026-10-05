@@ -35,6 +35,11 @@ export interface KoiBake {
  * during play.
  */
 export class KoiTextures {
+  /**
+   * A contact shape's pixels against its koi's (they are baked coarser, on a padded canvas): a contact sprite takes
+   * its koi's scale times this.
+   */
+  readonly contactScale: number;
   private readonly poses: Texture[][];
   private readonly shadows: Texture[];
   private readonly contacts: Texture[][];
@@ -45,6 +50,7 @@ export class KoiTextures {
    * of the canvases on top, when they're first uploaded.
    */
   constructor(varietyIds: readonly string[], bake: KoiBake) {
+    this.contactScale = bake.resolution / bake.contactResolution;
     this.poses = varietyIds.map((id) => bakePoses(id, bake));
     this.contacts = varietyIds.map((id) => bakeContacts(id, bake));
     this.shadows = varietyIds.map((id) => {
