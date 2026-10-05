@@ -9,6 +9,7 @@
  */
 
 import { GARDEN_ROOM } from '../config/layout';
+import { transparent } from './canvas';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -312,7 +313,7 @@ function paintMoon(ctx: Ctx, x: number, y: number, look: BackdropLook): void {
   const { radius, color, glow } = look.moon;
   const halo = ctx.createRadialGradient(x, y, radius * 0.8, x, y, radius * 3.2);
   halo.addColorStop(0, glow);
-  halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  halo.addColorStop(1, transparent(glow));
   ctx.fillStyle = halo;
   ctx.fillRect(x - radius * 3.2, y - radius * 3.2, radius * 6.4, radius * 6.4);
   ctx.beginPath();
@@ -394,9 +395,9 @@ function paintTrees(
 /** A pale band of mist lying in the valley between the hills. */
 function paintMist(ctx: Ctx, width: number, horizon: number, theme: BackdropLook): void {
   const band = ctx.createLinearGradient(0, horizon - 60, 0, horizon);
-  band.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  band.addColorStop(0, transparent(theme.mist));
   band.addColorStop(0.6, theme.mist);
-  band.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  band.addColorStop(1, transparent(theme.mist));
   ctx.fillStyle = band;
   ctx.fillRect(0, horizon - 60, width, 60);
 }
@@ -493,7 +494,7 @@ function paintLantern(ctx: Ctx, x: number, from: number, theme: BackdropLook): v
   const y = from + 26;
   const glow = ctx.createRadialGradient(x, y, 4, x, y, 46);
   glow.addColorStop(0, theme.lantern.glow);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  glow.addColorStop(1, transparent(theme.lantern.glow));
   ctx.fillStyle = glow;
   ctx.fillRect(x - 46, y - 46, 92, 92);
   ctx.strokeStyle = theme.ink;
@@ -529,7 +530,7 @@ function paintStoneLantern(ctx: Ctx, x: number, base: number, theme: BackdropLoo
   ctx.scale(1.6, 1.6);
   const glow = ctx.createRadialGradient(0, -44, 3, 0, -44, 50);
   glow.addColorStop(0, theme.lantern.glow);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  glow.addColorStop(1, transparent(theme.lantern.glow));
   ctx.fillStyle = glow;
   ctx.fillRect(-50, -94, 100, 100);
   ctx.fillStyle = theme.ink;

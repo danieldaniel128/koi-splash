@@ -7,7 +7,7 @@
  * Pure canvas work, no framework: bake once, never during play.
  */
 
-import { blank, context, freshContext } from './canvas';
+import { blank, context, freshContext, transparent } from './canvas';
 import { spineOffset } from './koiBank';
 import type { BakeOptions } from './koiBank';
 
@@ -364,7 +364,7 @@ export function paintSparkle(size: number): HTMLCanvasElement {
 function glowAt(ctx: Ctx, x: number, y: number, radius: number, colour: string, alpha: number): void {
   const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
   glow.addColorStop(0, colour);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  glow.addColorStop(1, transparent(colour));
   ctx.globalAlpha = alpha;
   ctx.fillStyle = glow;
   ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);

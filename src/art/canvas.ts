@@ -28,3 +28,15 @@ export function freshContext(canvas: HTMLCanvasElement): CanvasRenderingContext2
   ctx.filter = 'none';
   return ctx;
 }
+
+/**
+ * `color` ('#rrggbb', 'rgb(...)' or 'rgba(...)') at zero alpha: what a glow fades out to. A canvas gradient blends its
+ * stops unpremultiplied, so fading to transparent black would darken the glow's edge into a ring.
+ */
+export function transparent(color: string): string {
+  if (/^#[0-9a-f]{6}$/i.test(color)) return `${color}00`;
+  const channels = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i.exec(color);
+  if (!channels) throw new Error(`no transparent form of the color ${color}`);
+  const [, red, green, blue] = channels;
+  return `rgba(${red ?? 0}, ${green ?? 0}, ${blue ?? 0}, 0)`;
+}
