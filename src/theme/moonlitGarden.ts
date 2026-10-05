@@ -1,5 +1,8 @@
 import type { BackdropLook } from '../art/backdrop';
 
+/** The typeface bundled with the game (see main.ts), first in both font stacks. */
+const TYPEFACE = 'Nunito';
+
 /**
  * Moonlit garden: an ink print by moonlight. Deep indigo, pale ink lines, a touch of gold. Every colour, font, size
  * and timing the UI uses, and the look of the scene around the pond (the mossy ground, the moon, the fireflies).
@@ -52,15 +55,17 @@ export const MOONLIT_GARDEN = {
   },
   /** The boosters' own colors: their icons on the bar, and the pink arcs round a picked koi on the board. */
   booster: { pink: '#ffb3d1', cream: '#ffe6a6', amber: '#ffd27a', water: '#9fdcff' },
+  /** The bundled typeface: loaded before the game draws its first label, in the weights below. */
+  typeface: TYPEFACE,
   font: {
     /**
-     * Chunky rounded figures and titles, like the HUDs of casual mobile games: Nunito, bundled with the game (see
-     * main.ts) so it looks the same on every device, then the system's own rounded faces.
+     * Chunky rounded figures and titles, like the HUDs of casual mobile games: the bundled typeface, so it looks the
+     * same on every device, then the system's own rounded faces.
      */
-    number: 'Nunito, ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif',
-    label: 'Nunito, system-ui, -apple-system, "Segoe UI", sans-serif',
+    number: `${TYPEFACE}, ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif`,
+    label: `${TYPEFACE}, system-ui, -apple-system, "Segoe UI", sans-serif`,
   },
-  /** The two weights of the bundled font: bold for labels and names, black for numbers and titles. */
+  /** The two weights of the bundled typeface: bold for labels and names, black for numbers and titles. */
   weight: { bold: 700, black: 900 },
   /** Type scale (px): `sm` is the smallest a phone shows readably (captions), `display` the big numbers. */
   text: { sm: 11, md: 14, lg: 21, xl: 26, title: 30, display: 34 },
