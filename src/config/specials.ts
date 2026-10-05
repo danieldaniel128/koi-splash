@@ -1,3 +1,4 @@
+import { THEME } from '../theme/theme';
 import { TIMING } from './timing';
 import { SPECIAL_MENU } from './ui';
 /**
@@ -108,7 +109,7 @@ export const BOOSTER_MARKS = {
   pulse: 0.05,
   pulseSpeed: 4.2,
   lift: 0.14,
-  gold: '#ffd76a',
+  gold: THEME.color.gold,
   pink: '#ffb3d1',
 } as const;
 

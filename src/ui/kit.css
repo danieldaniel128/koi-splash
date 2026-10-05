@@ -24,7 +24,7 @@
   border-radius: var(--radius-lg);
   box-shadow:
     inset 0 0 0 var(--line) var(--color-rim),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 1px 0 color-mix(in srgb, var(--color-shine) 14%, transparent),
     var(--shadow);
 }
 
@@ -37,8 +37,8 @@
   background: var(--color-glassRound);
   box-shadow:
     inset 0 0 0 var(--line) var(--color-rim),
-    inset 0 2px 1px rgba(255, 255, 255, 0.28),
-    inset 0 -8px 14px rgba(0, 10, 20, 0.45),
+    inset 0 2px 1px color-mix(in srgb, var(--color-shine) 28%, transparent),
+    inset 0 -8px 14px color-mix(in srgb, var(--color-night) 45%, transparent),
     var(--shadow);
 }
 
@@ -49,7 +49,7 @@
   gap: var(--space-xs);
   padding: 2px var(--space-sm) 2px 2px;
   border-radius: var(--radius-round);
-  background: rgba(4, 12, 28, 0.5);
+  background: color-mix(in srgb, var(--color-night) 50%, transparent);
   box-shadow: inset 0 0 0 1px var(--color-rim);
 }
 
@@ -64,19 +64,19 @@
   box-sizing: border-box;
   border-radius: var(--radius-round);
   background: linear-gradient(180deg, var(--color-goldLight), var(--color-goldDeep));
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
-  color: #3a1a00;
-  font: 900 var(--text-sm) / 22px var(--font-number);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shade) 45%, transparent);
+  color: var(--color-goldInk);
+  font: var(--weight-black) var(--text-sm) / 22px var(--font-number);
   text-align: center;
 }
 
 /* Numbers: the print-like serif with lining, even-width figures, so a counting score doesn't jitter. */
 .number {
   font-family: var(--font-number);
-  font-weight: 900;
+  font-weight: var(--weight-black);
   font-variant-numeric: lining-nums tabular-nums;
   line-height: 1;
-  text-shadow: 0 2px 0 rgba(4, 10, 24, 0.6);
+  text-shadow: 0 2px 0 color-mix(in srgb, var(--color-night) 60%, transparent);
 }
 
 .label {
@@ -126,7 +126,7 @@
   border-radius: 50%;
   background: var(--color-muted);
   transition:
-    transform var(--time-normal) cubic-bezier(0.2, 1.5, 0.4, 1),
+    transform var(--time-normal) var(--ease-spring),
     background var(--time-fast) ease;
 }
 

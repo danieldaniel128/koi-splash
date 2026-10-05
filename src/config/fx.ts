@@ -10,7 +10,7 @@ export const POINTS = {
   /** Drawn white and tinted with the round's colour; the stroke stays dark. */
   fill: '#ffffff',
   stroke: THEME.color.outline,
-  fontWeight: '900',
+  fontWeight: `${THEME.weight.black}` as const,
   font: THEME.font.number,
   sizeBase: 17,
   sizePerKoi: 1.5,

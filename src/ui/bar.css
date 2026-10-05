@@ -9,7 +9,7 @@
 
 .booster {
   position: relative;
-  width: 58px;
+  width: var(--size-boosterOrb);
   padding: 0;
   border: 0;
   background: none;
@@ -19,18 +19,18 @@
   pointer-events: auto;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: transform var(--time-fast) cubic-bezier(0.2, 1.6, 0.4, 1);
+  transition: transform var(--time-fast) var(--ease-spring);
 }
 
 .booster__orb {
-  width: 58px;
-  height: 58px;
+  width: var(--size-boosterOrb);
+  height: var(--size-boosterOrb);
 }
 
 .booster__orb svg {
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 0 3px rgba(255, 220, 160, 0.35));
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--color-goldLight) 35%, transparent));
 }
 
 .booster .badge {
@@ -42,10 +42,10 @@
   display: block;
   margin-top: 3px;
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--color-ink);
   text-align: center;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--color-shade) 80%, transparent);
 }
 
 @media (hover: hover) {
@@ -64,22 +64,22 @@
 }
 
 .booster--armed .booster__orb {
-  animation: arm-glow 1.5s ease-in-out infinite;
+  animation: arm-glow var(--time-breathe) ease-in-out infinite;
 }
 
 @keyframes arm-glow {
   0%,
   100% {
     box-shadow:
-      inset 0 0 0 1.5px rgba(255, 236, 180, 0.85),
-      0 0 0 3px rgba(255, 216, 115, 0.7),
-      0 0 22px 4px rgba(255, 150, 200, 0.5);
+      inset 0 0 0 var(--line) color-mix(in srgb, var(--color-goldLight) 85%, transparent),
+      0 0 0 3px color-mix(in srgb, var(--color-gold) 70%, transparent),
+      0 0 22px 4px color-mix(in srgb, var(--color-glowPink) 50%, transparent);
   }
   50% {
     box-shadow:
-      inset 0 0 0 1.5px rgba(255, 236, 180, 0.95),
-      0 0 0 4px rgba(255, 216, 115, 0.85),
-      0 0 30px 8px rgba(255, 150, 200, 0.62);
+      inset 0 0 0 var(--line) color-mix(in srgb, var(--color-goldLight) 95%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--color-gold) 85%, transparent),
+      0 0 30px 8px color-mix(in srgb, var(--color-glowPink) 62%, transparent);
   }
 }
 
@@ -94,12 +94,12 @@
   margin: auto;
   width: 30px;
   height: 30px;
-  color: #cfe9ff;
+  color: var(--color-ice);
   opacity: 0;
   transform: scale(0.5);
   transition:
     opacity var(--time-normal) ease,
-    transform var(--time-normal) cubic-bezier(0.2, 1.6, 0.4, 1);
+    transform var(--time-normal) var(--ease-spring);
 }
 
 .booster__check svg {
@@ -189,10 +189,10 @@
   background: var(--color-glass);
   box-shadow:
     inset 0 0 0 var(--line) var(--color-rim),
-    0 0 18px rgba(255, 150, 200, 0.18),
+    0 0 18px color-mix(in srgb, var(--color-glowPink) 18%, transparent),
     var(--shadow);
   color: var(--color-goldLight);
-  font: 900 var(--text-md) var(--font-number);
+  font: var(--weight-black) var(--text-md) var(--font-number);
   white-space: nowrap;
 }
 
@@ -206,7 +206,7 @@
   box-shadow:
     inset 0 0 0 var(--line) var(--color-rim),
     var(--shadow);
-  color: #dff2ff;
+  color: var(--color-ice);
   cursor: pointer;
   pointer-events: auto;
 }
@@ -232,7 +232,11 @@
   position: absolute;
   inset: 0;
   pointer-events: auto;
-  background: radial-gradient(circle at 50% 50%, rgba(4, 12, 28, 0.25), rgba(4, 12, 28, 0.45));
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--color-night) 25%, transparent),
+    color-mix(in srgb, var(--color-night) 45%, transparent)
+  );
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
 }
@@ -246,9 +250,9 @@
   border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
   background: var(--color-glassRound);
   box-shadow:
-    inset 0 0 0 1.5px rgba(225, 246, 255, 0.8),
-    inset 0 -10px 14px rgba(255, 150, 200, 0.25),
-    0 6px 16px rgba(0, 0, 0, 0.45);
+    inset 0 0 0 var(--line) color-mix(in srgb, var(--color-ice) 80%, transparent),
+    inset 0 -10px 14px color-mix(in srgb, var(--color-glowPink) 25%, transparent),
+    0 6px 16px color-mix(in srgb, var(--color-shade) 45%, transparent);
   cursor: pointer;
 }
 
@@ -266,9 +270,9 @@
   transform: translateX(-50%);
   padding: 2px 8px;
   border-radius: var(--radius-round);
-  background: rgba(4, 14, 30, 0.85);
+  background: color-mix(in srgb, var(--color-night) 85%, transparent);
   color: var(--color-goldLight);
-  font: 700 var(--text-sm) var(--font-label);
+  font: var(--weight-bold) var(--text-sm) var(--font-label);
   white-space: nowrap;
 }
 
@@ -307,13 +311,13 @@
   z-index: 3;
   display: flex;
   flex-direction: column;
-  padding: var(--space-xs); /* SOUND_MENU.look.padding: the layout sizes the panel by it */
+  padding: var(--space-xs); /* the same token as SOUND_MENU.look.padding: the layout sizes the panel by it */
   opacity: 0;
   transform: translateY(6px) scale(0.92);
   transform-origin: 100% 100%;
   transition:
     opacity var(--time-fast) ease,
-    transform var(--time-normal) cubic-bezier(0.2, 1.5, 0.4, 1);
+    transform var(--time-normal) var(--ease-spring);
 }
 
 .sound-menu--open {
@@ -332,7 +336,7 @@
   border-radius: var(--radius-sm);
   background: none;
   color: var(--color-muted);
-  font: 700 var(--text-md) var(--font-label);
+  font: var(--weight-bold) var(--text-md) var(--font-label);
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

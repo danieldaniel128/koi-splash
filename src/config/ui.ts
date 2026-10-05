@@ -1,5 +1,6 @@
 import type { BoosterSlot } from '../model/boosters';
 import type { SpecialType } from '../model/types';
+import { THEME } from '../theme/theme';
 import type { Bus } from './audio';
 
 /** One petal of the special booster's menu: which special it makes, and its name. */
@@ -97,7 +98,14 @@ export const PORTRAIT_LOCK = {
  * small panel above it with a switch per channel, top to bottom.
  */
 export const SOUND_MENU = {
-  look: { button: 36, barOrb: 58, width: 176, row: 44, padding: 4, gap: 10 } satisfies SoundMenuLook,
+  look: {
+    button: 36,
+    barOrb: THEME.size.boosterOrb,
+    width: 176,
+    row: 44,
+    padding: THEME.space.xs,
+    gap: 10,
+  } satisfies SoundMenuLook,
   channels: [
     { id: 'music', name: 'Music' },
     { id: 'ambience', name: 'Ambience' },
