@@ -14,6 +14,8 @@ import { KoiTextures } from '../view/KoiTextures';
 import type { KoiBake } from '../view/KoiTextures';
 import { SpecialTextures } from '../view/SpecialTextures';
 import type { BoardSpec } from '../model/types';
+import type { ArtBook } from '../view/ArtBook';
+import type { ArtSet } from './art';
 import { propLook } from './pond';
 
 /** A lotus fully open (0 is a closed bud). */
@@ -35,29 +37,29 @@ export function koiBake(koiSize: number, resolution: number): KoiBake {
   };
 }
 
-/** The koi of every colour in play, baked once. */
-export function bakeKoi(bake: KoiBake): KoiTextures {
-  return new KoiTextures(KOI_SET, bake);
+/** The koi of every colour in play, from the art book (baked once). */
+export function bakeKoi(bake: KoiBake, art: ArtBook): KoiTextures {
+  return new KoiTextures(KOI_SET, bake, art);
 }
 
 /** The special koi of every colour in play, ready to be baked (see SpecialTextures). */
-export function createSpecialKoi(bake: KoiBake): SpecialTextures {
-  return new SpecialTextures(KOI_SET, bake, KOI_COLORS);
+export function createSpecialKoi(bake: KoiBake, art: ArtBook): SpecialTextures {
+  return new SpecialTextures(KOI_SET, bake, KOI_COLORS, art);
 }
 
-/** The goals' icons, painted by the same painters as the board: the lotus, and an inked koi of each colour. */
-export function goalIcons(resolution: number): GoalIcons {
+/** The goals' icons, by the same painters as the board: the lotus, and an inked koi of each colour. */
+export function goalIcons({ book, resolution }: ArtSet): GoalIcons {
   const pose = { size: GOAL_TRAY.koiSize, resolution, build: KOI_LOOK.build, shadow: false };
   return {
     bonus: SCORE.goalBonus,
-    lotus: bakeLotusPad(
-      GOAL_TRAY.iconRadius,
-      FULL_BLOOM,
-      BOARD_PADS.lotusSeed,
-      resolution,
-      propLook(),
-    ).toDataURL(),
-    koi: KOI_SET.map((id) => bakeInkedKoi(getVariety(id), pose, koiInk()).toDataURL()),
+    lotus: book
+      .canvas('ui/goal/lotus', () =>
+        bakeLotusPad(GOAL_TRAY.iconRadius, FULL_BLOOM, BOARD_PADS.lotusSeed, resolution, propLook()),
+      )
+      .toDataURL(),
+    koi: KOI_SET.map((id) =>
+      book.canvas(`ui/goal/koi/${id}`, () => bakeInkedKoi(getVariety(id), pose, koiInk())).toDataURL(),
+    ),
   };
 }
 

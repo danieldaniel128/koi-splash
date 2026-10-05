@@ -1,11 +1,13 @@
 import { gsap } from 'gsap';
-import { Container, Sprite, Texture } from 'pixi.js';
-import type { PointData } from 'pixi.js';
+import { Container, Sprite } from 'pixi.js';
+import type { PointData, Texture } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
 import type { PropLook } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
 import type { PadDisplay } from '../game/GameScene';
 import type { Cell, Pad, PadEvent } from '../model/types';
+import { frameName } from './ArtBook';
+import type { ArtScale } from './ArtBook';
 import type { Circle, WaterSurface } from './water/PondWater';
 
 /** The water the pads float on: they push it, and it outlines them with foam (see PondWater.float). */
@@ -36,21 +38,18 @@ export class PadView extends Container implements PadDisplay {
   private readonly looks: readonly PadLook[];
   /** Each pad's look, by pad id. */
   private readonly lookOf = new Map<number, PadLook>();
-  /** The pad textures are baked at the screen's resolution; this scales them back to stage px. */
+  /** The pad textures are made for `art`'s cell at its resolution; this scales them to this board's stage px. */
   private readonly scaleOf: number;
   private time = 0;
 
   constructor(
     private readonly layout: PadViewLayout,
     private readonly water: PadWater,
-    paint: { readonly resolution: number; readonly look: PropLook },
+    art: PadArt,
   ) {
     super();
-    const { resolution, look } = paint;
-    this.looks = Array.from({ length: BOARD_PADS.looks }, (_, k) =>
-      bakePadLook(layout.cellSize * BOARD_PADS.radius, k, resolution, look),
-    );
-    this.scaleOf = 1 / resolution;
+    this.looks = Array.from({ length: BOARD_PADS.looks }, (_, k) => padLook(art, k));
+    this.scaleOf = layout.cellSize / (art.cellSize * art.resolution);
   }
 
   /** Puts the level's pads on the board, replacing any from a previous game. */
@@ -218,22 +217,30 @@ export class PadView extends Container implements PadDisplay {
 }
 
 /** One look of a lily pad: a bud's opening stages, closed to full bloom, and the pad on its own. */
-interface PadLook {
+export interface PadLook {
   readonly stages: readonly Texture[];
   readonly empty: Texture;
 }
 
+/** Where the pads' textures come from (see ArtScale), and how they are lit. */
+export interface PadArt extends ArtScale {
+  readonly look: PropLook;
+}
+
 /**
- * Look `k` of a lily pad of this radius: its own seed turns the leaf's notch and the lotus, while the shadow and the
- * moonlit rim stay where the moon puts them. O(stages) canvas paints, once at startup.
+ * Look `k` of a lily pad: its own seed turns the leaf's notch and the lotus, while the shadow and the moonlit rim stay
+ * where the moon puts them. When painted, O(stages) canvas paints, once at startup.
  */
-function bakePadLook(radius: number, k: number, resolution: number, look: PropLook): PadLook {
+export function padLook({ book, cellSize, resolution, look }: PadArt, k: number): PadLook {
   const { stages, lotusSeed, emptySeed } = BOARD_PADS;
+  const radius = cellSize * BOARD_PADS.radius;
   return {
     stages: Array.from({ length: stages }, (_, i) =>
-      Texture.from(bakeLotusPad(radius, i / (stages - 1), lotusSeed + k, resolution, look)),
+      book.texture(frameName(`pad/${k}/bloom`, i), () =>
+        bakeLotusPad(radius, i / (stages - 1), lotusSeed + k, resolution, look),
+      ),
     ),
-    empty: Texture.from(
+    empty: book.texture(`pad/${k}/leaf`, () =>
       bakeProp({ kind: 'pad', radius: [radius, radius], seed: emptySeed + k }, resolution, look),
     ),
   };

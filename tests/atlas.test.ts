@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { packShelves } from '../src/art/atlas';
+import { packSheets, packShelves } from '../src/art/atlas';
 import { seeded } from '../src/core/Random';
 
 const overlaps = (
@@ -37,5 +37,33 @@ describe('packShelves', () => {
     const { width, height } = packShelves(sizes, 512);
     const used = sizes.reduce((sum, size) => sum + size.width * size.height, 0);
     expect(used / (width * height)).toBeGreaterThan(0.7);
+  });
+});
+
+describe('packSheets', () => {
+  const rng = seeded(9);
+  const sizes = Array.from({ length: 120 }, () => ({
+    width: 40 + Math.floor(rng() * 80),
+    height: 30 + Math.floor(rng() * 70),
+  }));
+
+  it('spreads the pieces over sheets no bigger than asked, without overlaps', () => {
+    const { slots, sheets } = packSheets(sizes, 256);
+    expect(sheets.length).toBeGreaterThan(1);
+    for (const sheet of sheets) {
+      expect(sheet.width).toBeLessThanOrEqual(256);
+      expect(sheet.height).toBeLessThanOrEqual(256);
+    }
+    for (const [i, a] of slots.entries()) {
+      expect(a.width).toBe(sizes[i]?.width);
+      expect(a.y).toBeGreaterThanOrEqual(0);
+      for (const b of slots.slice(i + 1)) if (a.sheet === b.sheet) expect(overlaps(a, b)).toBe(false);
+    }
+  });
+
+  it('keeps everything on one sheet when it fits', () => {
+    const { slots, sheets } = packSheets(sizes.slice(0, 4), 1024);
+    expect(sheets).toHaveLength(1);
+    expect(slots.every((slot) => slot.sheet === 0)).toBe(true);
   });
 });

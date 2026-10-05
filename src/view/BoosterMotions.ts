@@ -1,6 +1,6 @@
 import { gsap } from 'gsap';
-import { Container, Sprite, Texture } from 'pixi.js';
-import type { PointData } from 'pixi.js';
+import { Container, Sprite } from 'pixi.js';
+import type { PointData, Texture } from 'pixi.js';
 import { paintPellet } from '../art/pellet';
 import { easeInOutCubic, smoothstep } from '../core/easing';
 import { BOOSTER_MOTION } from '../config/specials';
@@ -8,6 +8,7 @@ import { WATER } from '../config/water';
 import { THEME } from '../theme/theme';
 import type { Moved } from '../model/boosters';
 import type { Cell, PieceColor, Piece } from '../model/types';
+import type { ArtScale } from './ArtBook';
 import type { BoardView } from './BoardView';
 import type { GameEventBus } from '../game/events';
 import type { HitStop } from './HitStop';
@@ -35,6 +36,8 @@ interface Leap {
  */
 export class BoosterMotions extends Container {
   private readonly pellet: Texture;
+  /** A pellet sprite's scale for its size on this board (the texture is made for the art's cell). */
+  private readonly pelletScale: number;
 
   private readonly view: BoardView;
   private readonly water: WaterSurface;
@@ -48,7 +51,8 @@ export class BoosterMotions extends Container {
     readonly view: BoardView;
     readonly water: WaterSurface;
     readonly cellSize: number;
-    /** The sparkle the special booster swirls in. */
+    /** The feed's pellet (see pelletTexture), and the sparkle the special booster swirls in. */
+    readonly pellet: Texture;
     readonly sparkle: Texture;
     /** Where it says when each motion's moments happen (the sounds follow them). */
     readonly events: GameEventBus;
@@ -65,8 +69,8 @@ export class BoosterMotions extends Container {
     this.events = deps.events;
     this.hitStop = deps.hitStop;
     this.centre = deps.centre;
-    const size = Math.ceil(deps.cellSize * BOOSTER_MOTION.feed.pellet);
-    this.pellet = Texture.from(paintPellet(size, THEME.scene.light.dir));
+    this.pellet = deps.pellet;
+    this.pelletScale = Math.ceil(deps.cellSize * BOOSTER_MOTION.feed.pellet) / deps.pellet.width;
   }
 
   /** Two koi leap out of the water and land in each other's cells, crossing in the air. */
@@ -238,6 +242,7 @@ export class BoosterMotions extends Container {
       const land = { x: food.x + Math.cos(angle) * reach, y: food.y + Math.sin(angle) * reach };
       const pellet = new Sprite(this.pellet);
       pellet.anchor.set(0.5);
+      pellet.scale.set(this.pelletScale);
       this.addChild(pellet);
       const k = { t: 0 };
       gsap
@@ -253,7 +258,7 @@ export class BoosterMotions extends Container {
           onUpdate: () => {
             const z = Math.sin(Math.PI * k.t) * look.lob * this.cellSize; // the lob's height
             pellet.position.set(from.x + (land.x - from.x) * k.t, from.y + (land.y - from.y) * k.t - z);
-            pellet.scale.set(1 + z / (this.cellSize * 3));
+            pellet.scale.set(this.pelletScale * (1 + z / (this.cellSize * 3)));
           },
           onComplete: () => {
             this.water.push(this.onStage(land), WATER.surfacePush, WATER.diveRadius);
@@ -321,4 +326,11 @@ function wait(seconds: number): Promise<void> {
   return new Promise((resolve) => {
     gsap.delayedCall(seconds, resolve);
   });
+}
+
+/** The feed's pellet, from the art book: made for the art's cell, lit by the moon. */
+export function pelletTexture({ book, cellSize, resolution }: ArtScale): Texture {
+  return book.texture('fx/pellet', () =>
+    paintPellet(Math.ceil(cellSize * BOOSTER_MOTION.feed.pellet * resolution), THEME.scene.light.dir),
+  );
 }

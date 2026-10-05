@@ -23,7 +23,7 @@ import { SpecialMenu } from '../ui/SpecialMenu';
 import { BoardAnimator } from '../view/BoardAnimator';
 import { BoardMarks } from '../view/BoardMarks';
 import type { BoardView } from '../view/BoardView';
-import { BoosterMotions } from '../view/BoosterMotions';
+import { BoosterMotions, pelletTexture } from '../view/BoosterMotions';
 import { HitStop } from '../view/HitStop';
 import type { KoiTextures } from '../view/KoiTextures';
 import { PadView } from '../view/PadView';
@@ -34,15 +34,17 @@ import type { SpecialTextures } from '../view/SpecialTextures';
 import { SwipeInput } from '../view/SwipeInput';
 import type { BoardGestures } from '../view/SwipeTracker';
 import type { PondWater } from '../view/water/PondWater';
+import type { ArtSet } from './art';
 import { createBoardView } from './koi';
 import { propLook } from './pond';
 import type { GameScreen } from './screen';
 
 /**
- * What the game is played with: the koi baked for it, the pond, the HUD, the screen flow (which opens the end card
+ * What the game is played with: its art and the koi made from it, the pond, the HUD, the screen flow (which opens the end card
  * and plays again) and the events bus.
  */
 export interface GameMaterials {
+  readonly art: ArtSet;
   readonly koi: KoiTextures;
   readonly specialTextures: SpecialTextures;
   readonly pond: PondWater;
@@ -90,11 +92,12 @@ export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTML
     pond,
     popups: createScorePopups(new FlyingPoints(screen.ui, hud), board, screen.resolution.screen),
     hud,
-    pads: createPads(pond, hud, board, screen.resolution.art),
+    pads: createPads(pond, hud, board, made.art),
     screenFlow: made.screenFlow,
     specialEffects: createSpecialEffects({ boardView, textures: made.specialTextures, pond, board, events }),
     boosters: createBoosterViews({
       boardView,
+      art: made.art,
       specialTextures: made.specialTextures,
       pond,
       board,
@@ -251,6 +254,7 @@ function createAnimator(parts: GameParts, screen: GameScreen, bar: BoosterBar): 
  */
 function createBoosterViews(on: {
   boardView: BoardView;
+  art: ArtSet;
   specialTextures: SpecialTextures;
   pond: PondWater;
   board: GameLayout['board'];
@@ -263,6 +267,7 @@ function createBoosterViews(on: {
     view: boardView,
     water: on.pond,
     cellSize,
+    pellet: pelletTexture(on.art),
     sparkle: on.specialTextures.sparkle,
     events,
     hitStop: on.hitStop,
@@ -367,7 +372,7 @@ function createScorePopups(flights: FlyingPoints, boardOrigin: PointData, resolu
 }
 
 /** The lily pads on the board, floating over the koi layer; a bloomed lotus flies to the goal in the HUD. */
-function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resolution: number): PadView {
+function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], art: ArtSet): PadView {
   const pads = new PadView(
     {
       cellSize: board.cellSize,
@@ -378,7 +383,7 @@ function createPads(pond: PondWater, hud: Hud, board: GameLayout['board'], resol
       toStage: (point) => ({ x: board.x + point.x, y: board.y + point.y }),
     },
     pond,
-    { resolution, look: propLook() },
+    { ...art, look: propLook() },
   );
   pads.position.set(board.x, board.y);
   return pads;

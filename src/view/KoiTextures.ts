@@ -1,4 +1,4 @@
-import { Texture } from 'pixi.js';
+import type { Texture } from 'pixi.js';
 import { drawBlurred } from '../art/blur';
 import { blank, context } from '../art/canvas';
 import { bakeKoi, getVariety } from '../art/koiBank';
@@ -6,6 +6,8 @@ import type { BakeOptions } from '../art/koiBank';
 import { bakeInkedKoi, bakeKoiContact } from '../art/koiInk';
 import type { Dressing, KoiContactShape, KoiInk } from '../art/koiInk';
 import type { PieceColor } from '../model/types';
+import { frameName } from './ArtBook';
+import type { ArtBook } from './ArtBook';
 
 /** How the koi textures are baked. */
 export interface KoiBake {
@@ -32,10 +34,10 @@ export interface KoiBake {
 }
 
 /**
- * Textures per koi color, painted once at startup and shared by every sprite of that color: one tail beat of inked
+ * Textures per koi color, made once at startup and shared by every sprite of that color: one tail beat of inked
  * poses (the koi swim in place by stepping through them), a soft shadow for the pond bottom and the shape where the
- * koi meets the water (for the foam at the waterline). Painting is expensive canvas work, so it must never happen
- * during play.
+ * koi meets the water (for the foam at the waterline). They come from the art book (the shipped atlases), or are
+ * painted when it has none. Painting is expensive canvas work, so it must never happen during play.
  */
 export class KoiTextures {
   /**
@@ -48,20 +50,24 @@ export class KoiTextures {
   private readonly contacts: Texture[][];
 
   /**
-   * O(colors x frames) canvas paints: every other pose of the tail beat (a whole beat on its own, the poses between
-   * come later: see inBetweenJobs), their blurred contact masks and one shadow per color, then GPU uploads. Done once
-   * while the game loads, with the GPU's drawing of the canvases on top, when they're first uploaded.
+   * When painted, O(colors x frames) canvas paints: every other pose of the tail beat (a whole beat on its own, the
+   * poses between come later: see inBetweenJobs), their blurred contact masks and one shadow per color, then GPU
+   * uploads. Done once while the game loads, with the GPU's drawing of the canvases on top, when they're first
+   * uploaded.
    */
   constructor(
     private readonly varietyIds: readonly string[],
     private readonly bake: KoiBake,
+    private readonly art: ArtBook,
   ) {
     this.contactScale = bake.resolution / bake.contactResolution;
     this.poses = varietyIds.map((id) =>
-      Array.from({ length: bake.frames / 2 }, (_, i) => Texture.from(bakePose(id, bake, i * 2))),
+      Array.from({ length: bake.frames / 2 }, (_, i) => this.pose(id, i * 2)),
     );
-    this.contacts = varietyIds.map((id) => bakeContacts(id, bake));
-    this.shadows = varietyIds.map((id) => bakeShadow(bakeKoi(getVariety(id), stillPose(bake)), bake));
+    this.contacts = varietyIds.map((id) => bakeContacts(id, bake, art));
+    this.shadows = varietyIds.map((id) =>
+      art.texture(`koi/${id}/shadow`, () => paintShadow(bakeKoi(getVariety(id), stillPose(bake)), bake)),
+    );
   }
 
   /**
@@ -74,7 +80,7 @@ export class KoiTextures {
     return this.varietyIds.flatMap((id, color) => {
       const between: Texture[] = [];
       return Array.from({ length: count }, (_, k) => () => {
-        between.push(Texture.from(bakePose(id, this.bake, k * 2 + 1)));
+        between.push(this.pose(id, k * 2 + 1));
         if (between.length === count) this.interleave(color, between);
       });
     });
@@ -105,6 +111,13 @@ export class KoiTextures {
     return [...this.poses.flat(), ...this.shadows, ...this.contacts.flat()];
   }
 
+  /** Pose `pose` of a variety's tail beat. */
+  private pose(varietyId: string, pose: number): Texture {
+    return this.art.texture(frameName(`koi/${varietyId}/swim`, pose), () =>
+      bakePose(varietyId, this.bake, pose),
+    );
+  }
+
   /** A color's beat, every other pose, with the poses between them put in their places. */
   private interleave(color: PieceColor, between: readonly Texture[]): void {
     const poses = this.poses[color];
@@ -133,9 +146,11 @@ export function bakePose(
 }
 
 /** Contact shapes through the tail beat, so the foam follows the body as it bends. */
-function bakeContacts(varietyId: string, bake: KoiBake): Texture[] {
+function bakeContacts(varietyId: string, bake: KoiBake, art: ArtBook): Texture[] {
   return Array.from({ length: bake.contactFrames }, (_, i) =>
-    Texture.from(bakeContact(varietyId, bake, tailWag(i / bake.contactFrames, bake))),
+    art.texture(frameName(`koi/${varietyId}/contact`, i), () =>
+      bakeContact(varietyId, bake, tailWag(i / bake.contactFrames, bake)),
+    ),
   );
 }
 
@@ -159,10 +174,10 @@ export function stillPose(bake: KoiBake): BakeOptions {
  * A painted koi's silhouette in white, blurred, on a canvas padded so the blur isn't cut off: its shadow on the pond
  * bottom, tinted by the sprite.
  */
-export function bakeShadow(koi: HTMLCanvasElement, bake: KoiBake): Texture {
+export function paintShadow(koi: HTMLCanvasElement, bake: KoiBake): HTMLCanvasElement {
   const blurPx = bake.shadowBlur * bake.resolution;
   const pad = blurPx * 2;
   const canvas = blank(koi.width + pad * 2, koi.height + pad * 2);
   drawBlurred(context(canvas), koi, [pad, pad], blurPx, '#fff');
-  return Texture.from(canvas);
+  return canvas;
 }
