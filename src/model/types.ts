@@ -85,7 +85,7 @@ export interface CascadeStep {
 }
 
 export type SwapResult =
-  | { readonly valid: false; readonly reason: 'not-adjacent' | 'no-match' }
+  | { readonly valid: false; readonly reason: 'not-adjacent' | 'blocked' | 'no-match' }
   | { readonly valid: true; readonly steps: readonly CascadeStep[]; readonly reshuffled: boolean };
 
 export const sameCell = (a: Cell, b: Cell): boolean => a.col === b.col && a.row === b.row;

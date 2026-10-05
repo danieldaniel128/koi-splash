@@ -83,7 +83,8 @@ export function hasAnyMove(board: Board): boolean {
 }
 
 /**
- * Plays a swap. An invalid swap leaves the board untouched. A valid one swaps, then settles the board (see settle)
+ * Plays a swap. An invalid swap leaves the board untouched: cells not side by side, a cell with no koi (a pad or the
+ * bank), or a swap that makes no match and fires no special. A valid one swaps, then settles the board (see settle)
  * and returns every round as data so the view can animate it step by step.
  * O(S * N), S = cascade rounds (usually 1 to 3, capped at MAX_CASCADE).
  */
@@ -96,6 +97,7 @@ export function trySwap(
   pads?: PadField,
 ): SwapResult {
   if (!isAdjacent(a, b)) return { valid: false, reason: 'not-adjacent' };
+  if (!board.get(a) || !board.get(b)) return { valid: false, reason: 'blocked' };
   const triggers = swapTriggers(board, a, b); // a swapped special fires even without a match
   if (!swapMakesMatch(board, a, b) && triggers.length === 0) return { valid: false, reason: 'no-match' };
 
