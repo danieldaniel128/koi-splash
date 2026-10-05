@@ -9,12 +9,14 @@ export default defineConfig({
   build: {
     target: 'es2022',
     outDir: 'dist',
+    // PixiJS's chunk with its asset loader (for the art atlases) is about 520 kB, a little over Vite's 500 kB default
+    chunkSizeWarningLimit: 560,
     rolldownOptions: {
       output: {
         // The libraries get chunks of their own, so the game's chunk stays small and a new build of the game doesn't
         // make the browser download them again. Each group takes only what loads at startup ('$initial'), not what
         // that pulls in, so the setup PixiJS loads on its own (browserAll, init) stays lazy and PixiJS's chunk stays
-        // under the 500 kB warning.
+        // small (see chunkSizeWarningLimit).
         codeSplitting: {
           groups: [
             {

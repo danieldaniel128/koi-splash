@@ -1,7 +1,7 @@
 import { gsap } from 'gsap';
-import { Container, Graphics, Sprite, Texture } from 'pixi.js';
-import type { PointData } from 'pixi.js';
-import { paintBeam, SPECTRUM } from '../art/specialKoi';
+import { Container, Graphics, Sprite } from 'pixi.js';
+import type { PointData, Texture } from 'pixi.js';
+import { SPECTRUM } from '../art/specialKoi';
 import { easeInOutCubic, easeOutBack, easeOutCubic } from '../core/easing';
 import { SPECIAL_FX } from '../config/specials';
 import { TIMING } from '../config/timing';
@@ -26,8 +26,6 @@ export interface FxBoard {
  * forget: every effect removes itself when done.
  */
 export class SpecialFx extends Container {
-  private readonly beamTexture = Texture.from(paintBeam(128, 32));
-
   private readonly board: FxBoard;
   private readonly textures: SpecialTextures;
   private readonly water: WaterSurface;
@@ -100,7 +98,7 @@ export class SpecialFx extends Container {
   /** A beam of the koi's colour races along its row or column, and the water ripples as the sweep passes. */
   private fireStriped({ fired, delay }: BlastPlan): void {
     const look = SPECIAL_FX.striped;
-    const beam = this.additive(this.beamTexture, this.textures.tintsOf(fired.piece.color).glow);
+    const beam = this.additive(this.textures.beam, this.textures.tintsOf(fired.piece.color).glow);
     beam.position.copyFrom(this.board.cellToPoint(fired.at));
     beam.rotation =
       fired.piece.special?.type === 'striped' && fired.piece.special.along === 'col' ? Math.PI / 2 : 0;

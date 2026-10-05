@@ -20,6 +20,8 @@ import type { SpecialTextures } from '../view/SpecialTextures';
 import { bakeShoreField } from '../view/water/PondWater';
 import type { PondWater } from '../view/water/PondWater';
 import { keepFitted, restoreAfterContextLoss } from './app';
+import { loadArt } from './art';
+import type { ArtSet } from './art';
 import { addFrameLoop } from './frameLoop';
 import { createGame } from './game';
 import { gpuWarmUpJobs, spriteTextures } from './gpuWarmUp';
@@ -43,14 +45,15 @@ export interface GameWiring {
 }
 
 /**
- * Loads the game behind the loading screen, step by step, and reports the share done: the font, the goals' icons,
- * the koi, the shore's distance field, the water, the garden, the stones round the pond, then the game built from
- * them, and one frame played unseen so the GPU compiles the scene's shaders before the player's first frame. Before
- * that frame, the koi's in-between tail poses and the special koi (their tail beats, sheen, whirlpool curls and the
- * petal menu's pictures) are baked in small jobs, then every texture baked goes to the GPU, one job each, with the
- * rainbow koi's shader (see gpuWarmUpJobs), so nothing is baked or uploaded while the game is played and the bar
- * keeps moving. Each step is weighted by about how long it takes (measured in Chrome at phone
- * size; only the ratios matter). Everything is made once: nothing is rebuilt for another game.
+ * Loads the game behind the loading screen, step by step, and reports the share done: the font, the art (the shipped
+ * atlases, see loadArt), the goals' icons, the koi, the shore's distance field, the water, the garden, the stones
+ * round the pond, then the game built from them, and one frame played unseen so the GPU compiles the scene's shaders
+ * before the player's first frame. Before that frame, the koi's in-between tail poses and the special koi (their tail
+ * beats, sheen, whirlpool curls and the petal menu's pictures) are taken from the atlases (or painted, without them)
+ * in small jobs, then every texture goes to the GPU, one job each, with the rainbow koi's shader (see
+ * gpuWarmUpJobs), so nothing is made or uploaded while the game is played and the bar keeps moving. Each step is
+ * weighted by about how long it takes when the art is painted (measured in Chrome at phone size; only the ratios
+ * matter). Everything is made once: nothing is rebuilt for another game.
  */
 export async function loadGame(
   app: Application,
@@ -58,22 +61,20 @@ export async function loadGame(
   wiring: GameWiring,
   onProgress: (done: number) => void,
 ): Promise<void> {
-  const bake = koiBake(screen.layout.board.koiSize, screen.resolution.art);
-  const specialTextures = createSpecialKoi(bake);
   await new BootPipeline()
     .step('fonts', 1, loadFonts)
-    .step('goalIcons', 6, () => goalIcons(screen.resolution.art))
-    .step('koi', 19, () => bakeKoi(bake))
+    .step('art', 10, (_made, progress) => loadArt(screen, progress))
+    .step('goalIcons', 6, ({ art }) => goalIcons(art))
+    .step('koi', 19, ({ art }) => bakeKoi(koiBake(art.koiSize, art.resolution), art.book))
+    .step('specialTextures', 0, ({ art }) => createSpecialKoi(koiBake(art.koiSize, art.resolution), art.book))
     .step('shoreField', 3, () => bakeShoreField(screen.layout.pond, screen.shore))
     .step('pond', 1, ({ shoreField }) => createPond(app.renderer, screen, shoreField))
     .step('garden', 1, () => createGarden(screen))
-    .step('scenery', 1, () => createScenery(screen))
-    .step('game', 2, (made) =>
-      assembleGame(app, screen, { ...made, specialTextures: specialTextures }, wiring),
-    )
+    .step('scenery', 1, ({ art }) => createScenery(screen, art))
+    .step('game', 2, (made) => assembleGame(app, screen, made, wiring))
     .jobs('inBetweenPoses', 10, ({ koi }) => koi.inBetweenJobs())
-    .jobs('specialKoi', 80, () => specialTextures.warmUpJobs())
-    .jobs('gpuWarmUp', 15, ({ koi, game }) =>
+    .jobs('specialKoi', 80, ({ specialTextures }) => specialTextures.warmUpJobs())
+    .jobs('gpuWarmUp', 15, ({ koi, specialTextures, game }) =>
       gpuWarmUpJobs(app.renderer, [
         ...koi.allTextures(),
         ...specialTextures.allTextures(),
@@ -87,8 +88,9 @@ export async function loadGame(
     .run(onProgress);
 }
 
-/** The art and the pond the game is put together from. */
+/** The art, the textures made from it and the pond the game is put together from. */
 interface Loaded {
+  readonly art: ArtSet;
   readonly goalIcons: GoalIcons;
   readonly koi: KoiTextures;
   readonly specialTextures: SpecialTextures;
@@ -108,17 +110,10 @@ interface Assembled {
  */
 function assembleGame(app: Application, screen: GameScreen, made: Loaded, wiring: GameWiring): Assembled {
   const { layout, ui } = screen;
-  const { pond, scenery } = made;
+  const { pond, scenery, art, koi, specialTextures } = made;
   const { events, sound } = wiring;
   const hud = new Hud(ui, layout.hud, { goalIcons: made.goalIcons, stars: LEVEL.stars });
-  const materials = {
-    koi: made.koi,
-    specialTextures: made.specialTextures,
-    pond,
-    hud,
-    screenFlow: wiring.screenFlow,
-    events,
-  };
+  const materials = { art, koi, specialTextures, pond, hud, screenFlow: wiring.screenFlow, events };
   const { parts: game, control, bar } = createGame(screen, materials, app.canvas);
   wiring.card.setGame({ goalIcons: made.goalIcons, boostersLeft: () => bar.unused() });
   const menu = addSoundMenu(screen, sound, events); // after the booster bar it ends, for the keyboard too
