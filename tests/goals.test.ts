@@ -3,7 +3,7 @@ import { BOARD } from '../src/config/board';
 import { LEVEL } from '../src/config/level';
 import { checkGoals, createGoal, createGoals, goalsMet, recordRound } from '../src/model/goals';
 import type { RoundOutcome } from '../src/model/goals';
-import type { PadEvent } from '../src/model/pads';
+import type { PadEvent } from '../src/model/types';
 
 const bloom: PadEvent = {
   type: 'bloom',

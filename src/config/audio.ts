@@ -7,6 +7,10 @@
  * - landGap, diveGap: the closest two landings or dives may sound (s), so a school stays gentle
  * - bell: the partials of the struck bell (frequency ratios)
  */
+/** The sound's channels: each has its own volume and switch, and they all meet in the master. */
+export const BUSES = ['music', 'ambience', 'sfx'] as const;
+export type Bus = (typeof BUSES)[number];
+
 export const AUDIO = {
   master: 0.5,
   buses: { sfx: 1, music: 0.6, ambience: 0.8 },
@@ -16,9 +20,6 @@ export const AUDIO = {
   diveGap: 0.055,
   countGap: 0.05,
   bell: [1, 2.76, 5.4, 8.93],
-  /** Moves left at which the move tick warms (and the music grows a heartbeat), then turns into a double knock. */
-  lowMoves: 5,
-  lastMoves: 3,
   /** How far ahead the music and ambience are scheduled on the audio clock (s): steady even when a frame is late. */
   lookahead: 0.25,
   /** Where the player's choices are kept between visits (one key per channel under it). */

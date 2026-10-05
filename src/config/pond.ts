@@ -1,6 +1,17 @@
-import type { PropKind } from '../art/pondProps';
-import type { ShoreStyle } from '../art/shoreStyles';
-import type { Anchor } from '../layout/anchor';
+export type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+/** A spot pinned to a corner of a rectangle (the pond, the stage), so it moves with that corner on any screen. */
+export interface Anchor {
+  readonly corner: Corner;
+  /** px from the corner: +x is right, +y is down. */
+  readonly offset: readonly [number, number];
+}
+
+/** What a prop on the water is: a stone, or a lily pad. */
+export type PropKind = 'stone' | 'pad';
+
+/** The looks the pond's border can have (each one a painter in SHORE_STYLES, src/art/shoreStyles.ts). */
+export type ShoreStyle = 'stones';
 
 /** A thing at the pond's edge or on the water: centre (stage px), half size (px), rotation (radians), paint seed. */
 export interface PondProp {
@@ -32,7 +43,7 @@ export const POND = {
    * pieces are, and the seed that shapes them. LAYOUT.shoreWidth keeps room for it on screen.
    */
   shore: {
-    style: 'stones' satisfies ShoreStyle as ShoreStyle,
+    style: 'stones' satisfies ShoreStyle,
     length: [11, 17],
     depth: [9, 12],
     gap: 1.5,
@@ -45,26 +56,27 @@ export const POND = {
   wetBand: 16,
 
   /** Where the moon's reflection sits on the water, under the koi (from the pond's corner). */
-  moonSpot: { corner: 'bottom-right', offset: [-100, -40] } satisfies Anchor as Anchor,
+  moonSpot: { corner: 'bottom-right', offset: [-100, -40] } satisfies Anchor,
 
   /**
    * Stones standing in the water, never over the board (none in this pond: the shore stones frame it). They shape
    * the water: ripples stop at them and the foam outlines them. Together with the lily pads on the board they share
-   * MAX_PROPS (16) slots in the water shaders. Each is pinned to a corner of the pond (offset in px).
+   * MAX_PROPS (16) slots in the water shaders. Each is pinned to a corner of the pond (offset in px). Kept as a level
+   * knob although this pond has none: the water already handles them, so a pond with rocks is config only.
    */
-  props: [] satisfies readonly PondPropSpot[] as readonly PondPropSpot[],
+  props: [] satisfies readonly PondPropSpot[],
 
   /** Fireflies over the bank, where each one hovers: at the top of the screen, and on the bank below the pond. */
   fireflies: {
     top: [
       { corner: 'top-left', offset: [34, 12] },
       { corner: 'top-right', offset: [-64, 8] },
-    ] satisfies readonly Anchor[] as readonly Anchor[],
+    ] satisfies readonly Anchor[],
     belowPond: [
       { corner: 'bottom-left', offset: [157, 40] },
       { corner: 'bottom-right', offset: [-29, 28] },
       { corner: 'bottom-left', offset: [91, 88] },
-    ] satisfies readonly Anchor[] as readonly Anchor[],
+    ] satisfies readonly Anchor[],
   },
   /** How far a firefly wanders from its spot (px), and its glow's size (px). Its colour is in the theme. */
   fireflyRoam: 22,

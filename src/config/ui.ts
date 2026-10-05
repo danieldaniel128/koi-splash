@@ -1,18 +1,31 @@
-import type { Bus } from '../audio/Mixer';
-import type { SoundMenuLook } from '../layout/soundMenu';
-import type { BoosterSlot } from '../ui/BoosterBar';
-import type { PetalChoice } from '../ui/SpecialMenu';
+import type { BoosterSlot } from '../model/boosters';
+import type { SpecialType } from '../model/types';
+import type { Bus } from './audio';
+
+/** One petal of the special booster's menu: which special it makes, and its name. */
+export interface PetalChoice {
+  readonly type: SpecialType;
+  readonly name: string;
+}
+
+/** The sound menu's sizes (stage px): the button, a booster orb to line up with, the panel, a row, its padding and gap. */
+export interface SoundMenuLook {
+  readonly button: number;
+  readonly barOrb: number;
+  readonly width: number;
+  readonly row: number;
+  readonly padding: number;
+  readonly gap: number;
+}
 
 /** How the HUD moves (s, scale). Its look is in the theme (src/theme). */
 export const HUD_MOTION = {
   /** The score counts up to a new value in this long, and swells while it does. */
   countUp: 0.35,
   scoreBump: 1.18,
-  /** The moves counter pops when a move is spent, warns at `lowMoves` left and pulses at `lastMoves`. */
+  /** The moves counter pops when a move is spent, warns when moves are low and pulses on the last few (LEVEL.movesWarning). */
   movesBump: 1.3,
   movesSettle: 0.3,
-  lowMoves: 5,
-  lastMoves: 3,
   /** The goal chip pops when its count ticks down, and a star pops as it's lost. */
   goalBump: 1.3,
   goalSettle: 0.4,
@@ -65,6 +78,11 @@ export const RESULT_CARD = {
   firstStar: 0.4,
   starStep: 0.35,
   starPop: 0.4,
+} as const;
+
+/** A lost graphics context that hasn't come back after this long (s) is given up on: the error screen shows. */
+export const GPU_LOSS = {
+  giveUpAfter: 5,
 } as const;
 
 /** Phones play upright: this media query is a phone (touch, short) held sideways. */

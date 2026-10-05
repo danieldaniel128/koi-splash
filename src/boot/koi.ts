@@ -2,7 +2,6 @@ import { getVariety } from '../art/koiBank';
 import { bakeInkedKoi } from '../art/koiInk';
 import type { KoiInk } from '../art/koiInk';
 import { bakeLotusPad } from '../art/pondProps';
-import { BOARD } from '../config/board';
 import { KOI_COLORS, KOI_LOOK, KOI_SET } from '../config/koi';
 import { SCORE } from '../config/level';
 import { GOAL_TRAY } from '../config/ui';
@@ -13,6 +12,7 @@ import { BoardView } from '../view/BoardView';
 import { KoiTextures } from '../view/KoiTextures';
 import type { KoiBake } from '../view/KoiTextures';
 import { SpecialTextures } from '../view/SpecialTextures';
+import type { BoardSpec } from '../model/types';
 
 /** How the koi are baked: their size, the resolution, their build, tail beat, shadow, ink and waterline. */
 export function koiBake(koiSize: number, resolution: number): KoiBake {
@@ -53,9 +53,10 @@ export function goalIcons(resolution: number): GoalIcons {
 export function createBoardView(
   textures: KoiTextures,
   specials: SpecialTextures,
+  spec: BoardSpec,
   board: GameLayout['board'],
 ): BoardView {
-  const view = new BoardView(textures, specials, { ...BOARD, cellSize: board.cell, koiSize: board.piece });
+  const view = new BoardView(textures, specials, { ...spec, cellSize: board.cell, koiSize: board.piece });
   view.position.set(board.x, board.y);
   return view;
 }

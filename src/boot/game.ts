@@ -1,5 +1,4 @@
 import type { PointData } from 'pixi.js';
-import { BOARD } from '../config/board';
 import { INPUT } from '../config/input';
 import { LEVEL, SCORE } from '../config/level';
 import { BOOSTER_MOTION } from '../config/specials';
@@ -72,7 +71,7 @@ export interface StartedGame {
 export function createGame(screen: GameScreen, made: GameMaterials, canvas: HTMLCanvasElement): StartedGame {
   const { board } = screen.layout;
   const { pond, hud, events } = made;
-  const boardView = createBoardView(made.koi, made.specials, board);
+  const boardView = createBoardView(made.koi, made.specials, screen.spec, board);
   const parts: GameParts = {
     boardView,
     pond,
@@ -99,7 +98,7 @@ function startGame(parts: GameParts, screen: GameScreen, canvas: HTMLCanvasEleme
   const animator = createAnimator(parts, screen, bar);
   const view = boardView;
   const scene = new GameScene({
-    spec: BOARD,
+    spec: screen.spec,
     level,
     rng: new Random(),
     view,

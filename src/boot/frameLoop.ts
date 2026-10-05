@@ -1,3 +1,4 @@
+import { gsap } from 'gsap';
 import { UPDATE_PRIORITY } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import type { Soundtrack } from '../audio/Soundtrack';
@@ -30,6 +31,15 @@ const AFTER_MOTION = UPDATE_PRIORITY.NORMAL - 1;
  */
 export function addFrameLoop(ticker: Ticker, parts: FrameParts): void {
   const { soundtrack, pond, pads, marks, koiLife, fireflies, boardView } = parts;
+  // the tweens move on the app's clock, first in each frame, so a tween and the frame that draws it never drift apart
+  gsap.ticker.remove(gsap.updateRoot);
+  ticker.add(
+    () => {
+      gsap.updateRoot(performance.now() / 1000);
+    },
+    undefined,
+    UPDATE_PRIORITY.HIGH,
+  );
   ticker.add(({ deltaMS }) => {
     const seconds = deltaMS / 1000;
     soundtrack.update();

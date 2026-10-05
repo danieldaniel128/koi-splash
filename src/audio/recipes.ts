@@ -1,4 +1,5 @@
 import { AUDIO } from '../config/audio';
+import { LEVEL } from '../config/level';
 import { SPECIALS_SOUND } from '../config/specials';
 import type { Voice } from './Synth';
 
@@ -25,10 +26,10 @@ export function invalid(v: Voice): void {
 
 /** A move spent: a soft water tick, warmer at a few moves left, a gentle double knock on the last ones. */
 export function tick(v: Voice, movesLeft: number): void {
-  if (movesLeft <= AUDIO.lastMoves) {
+  if (movesLeft <= LEVEL.movesWarning.last) {
     v.tone(330, 0.12, 0.08, { glide: 250 });
     v.tone(262, 0.16, 0.07, { delay: 0.13, glide: 200 });
-  } else if (movesLeft <= AUDIO.lowMoves) {
+  } else if (movesLeft <= LEVEL.movesWarning.low) {
     v.pluck(v.note(2), 0.07);
     v.tone(v.note(0), 0.2, 0.03, { type: 'triangle', delay: 0.06 });
   } else v.tone(rand(1100, 1250), 0.06, 0.035, { glide: 800 });

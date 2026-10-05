@@ -1,14 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Random } from '../src/core/Random';
 import { createGameEvents } from '../src/game/events';
 import { GameScene } from '../src/game/GameScene';
-import type { GameSceneDeps } from '../src/game/GameScene';
+import type { GameSceneDeps, TurnAnimator } from '../src/game/GameScene';
 import type { GameStatus } from '../src/game/GameStatus';
 import type { GameEventBus } from '../src/game/events';
 import type { Board } from '../src/model/Board';
-import type { Pad } from '../src/model/pads';
+import type { GoalDef } from '../src/model/goals';
 import { findMove } from '../src/model/rules';
-import type { Cell } from '../src/model/types';
+import type { Cell, Pad } from '../src/model/types';
 
 const done = (): Promise<void> => Promise.resolve();
 /** Lets a turn played through the stubs (which finish at once) run to its end. */
@@ -19,75 +19,102 @@ interface Seen {
   board: Board | null;
   events: GameEventBus;
   statuses: GameStatus[];
+  resets: GameStatus[];
   pads: Pad[];
   nudged: Cell[];
   bumped: Cell[];
   said: string[];
   playable: boolean[];
+  outcomes: ('won' | 'lost')[];
+}
+
+/** The level the stubbed scene plays, and an animator to swap in (one that fails, say). */
+interface StubLevel {
+  readonly moves?: number;
+  readonly goals?: readonly GoalDef[];
+  readonly animator?: Partial<TurnAnimator>;
 }
 
 /** A scene with every display stubbed out, recording what it was told and what it said. */
-function stubScene(): Seen & { scene: GameScene } {
+function stubScene(stub: StubLevel = {}): Seen & { scene: GameScene } {
   const events = createGameEvents();
   const seen: Seen = {
     board: null,
     events,
     statuses: [],
+    resets: [],
     pads: [],
     nudged: [],
     bumped: [],
     said: [],
     playable: [],
+    outcomes: [],
   };
-  const { statuses, pads, nudged, bumped, said, playable } = seen;
-  events.on('invalidSwap', () => said.push('invalidSwap'));
-  const deps = {
+  events.on('invalidSwap', () => seen.said.push('invalidSwap'));
+  const deps: GameSceneDeps = {
     spec: { cols: 7, rows: 9, kinds: 5 },
     level: {
-      moves: 10,
+      moves: stub.moves ?? 10,
       pointsPerPiece: 10,
       goalBonus: 500,
-      goals: [{ type: 'lotus', count: 1 }],
+      goals: stub.goals ?? [{ type: 'lotus', count: 1 }],
       pads: { buds: 1, emptyPads: 0, hitsToBloom: 2, hitsToDrift: 1, spacing: 2 },
       stars: { scores: [100, 200, 300] },
     },
     rng: new Random(3),
     view: {
-      render: (board: Board) => {
+      render: (board) => {
         seen.board = board;
       },
-      setPlayable: (on: boolean) => playable.push(on),
+      setPlayable: (on) => seen.playable.push(on),
     },
-    animator: {
-      bumpPad: done,
-      bumpBank: (_koi: unknown, bank: Cell) => {
-        bumped.push(bank);
-        return done();
-      },
-      invalidSwap: done,
-      swap: done,
-      playStep: done,
-      playBooster: done,
-    },
-    status: { update: (status: GameStatus) => statuses.push(status) },
+    animator: { ...stubAnimator(seen), ...stub.animator },
+    status: { reset: (status) => seen.resets.push(status), update: (status) => seen.statuses.push(status) },
     pads: {
-      reset: (placed: readonly Pad[]) => pads.push(...placed),
+      reset: (placed) => seen.pads.push(...placed),
       play: done,
-      nudge: (cell: Cell) => {
-        nudged.push(cell);
+      nudge: (cell) => {
+        seen.nudged.push(cell);
         return done();
       },
     },
-    result: { show: () => undefined, hide: () => undefined },
+    result: { show: (outcome) => seen.outcomes.push(outcome), hide: () => undefined },
     events,
-  } as unknown as GameSceneDeps;
+  };
   const scene = new GameScene(deps);
   return { scene, ...seen };
 }
 
+/** An animator whose every motion ends at once; a bump into the bank is noted. */
+function stubAnimator(seen: Seen): TurnAnimator {
+  return {
+    bumpPad: done,
+    bumpBank: (_koi, bank) => {
+      seen.bumped.push(bank);
+      return done();
+    },
+    invalidSwap: done,
+    swap: done,
+    playStep: done,
+    playBooster: done,
+  };
+}
+
+/** Plays the board's first move. */
+async function playAMove(scene: GameScene, board: Board | null): Promise<void> {
+  const move = board && findMove(board);
+  if (!move) throw new Error('no move on the board');
+  scene.handleSwipe(move[0], move[1]);
+  await turnPlayed();
+}
+
 describe('GameScene', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('a koi swiped into a lily pad bumps it and spends no move', async () => {
-    const { scene, statuses, pads, nudged } = stubScene();
+    const { scene, resets, statuses, pads, nudged } = stubScene();
     const pad = pads[0];
     if (!pad) throw new Error('no pad placed');
     // the koi next to the pad, on whichever side is on the board
@@ -98,18 +125,18 @@ describe('GameScene', () => {
     await turnPlayed();
 
     expect(nudged).toEqual([pad.at]);
-    expect(statuses.at(-1)?.movesLeft).toBe(10);
+    expect((statuses.at(-1) ?? resets.at(-1))?.movesLeft).toBe(10);
   });
 
   it('a koi swiped into the bank is refused like a bad swap and spends no move', async () => {
-    const { scene, statuses, pads, bumped, said, playable } = stubScene();
+    const { scene, resets, statuses, pads, bumped, said, playable } = stubScene();
     const row = [0, 1, 2].find((r) => !pads.some((pad) => pad.at.col === 0 && pad.at.row === r)) ?? 0;
     scene.handleSwipe({ col: 0, row }, { col: -1, row }); // a koi on the left edge, swiped left
     await turnPlayed();
 
     expect(bumped).toEqual([{ col: -1, row }]);
     expect(said).toEqual(['invalidSwap']);
-    expect(statuses.at(-1)?.movesLeft).toBe(10);
+    expect((statuses.at(-1) ?? resets.at(-1))?.movesLeft).toBe(10);
     expect(scene.canSwap).toBe(true); // the board takes the next move
     expect(playable).toEqual([true, false, true]); // and shows it only between turns
   });
@@ -130,20 +157,47 @@ describe('GameScene', () => {
     expect(board.get(a)).toBe(other);
   });
 
-  it('announces a new level start on Play again, so the music and the rest can start over', async () => {
-    const { scene, board, events, statuses } = stubScene();
-    if (!board) throw new Error('nothing rendered');
+  it('is won on the last move when every goal is met by then', async () => {
+    const { scene, board, outcomes } = stubScene({ moves: 1, goals: [{ type: 'score', target: 1 }] });
+    await playAMove(scene, board);
+    expect(outcomes).toEqual(['won']);
+    expect(scene.canSwap).toBe(false);
+  });
+
+  it('is lost on the last move when a goal is still open', async () => {
+    const { scene, board, outcomes } = stubScene({ moves: 1, goals: [{ type: 'score', target: 1_000_000 }] });
+    await playAMove(scene, board);
+    expect(outcomes).toEqual(['lost']);
+  });
+
+  it('still ends the level, with the score and goals counted, when the last move fails to play', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const failing = { playStep: () => Promise.reject(new Error('a tween broke')) };
+    const { scene, board, statuses, outcomes } = stubScene({
+      moves: 1,
+      goals: [{ type: 'score', target: 1 }],
+      animator: failing,
+    });
+    await playAMove(scene, board);
+    expect(outcomes).toEqual(['won']);
+    const last = statuses.at(-1);
+    expect(last?.score).toBeGreaterThan(0);
+    expect(last?.goals[0]?.done).toBeGreaterThanOrEqual(1);
+  });
+
+  it('starts over on Play again: announced once, and the HUD reset to the full moves and no score', async () => {
+    const { scene, board, events, resets, outcomes } = stubScene({ moves: 1 });
     let starts = 0;
     events.on('levelStarted', () => {
       starts++;
     });
-    for (let move = findMove(board); move && statuses.at(-1)?.movesLeft !== 0; move = findMove(board)) {
-      scene.handleSwipe(move[0], move[1]);
-      await turnPlayed();
-    }
+    await playAMove(scene, board);
+    expect(outcomes).toHaveLength(1);
     expect(starts).toBe(0);
     scene.restart();
     expect(starts).toBe(1);
-    expect(statuses.at(-1)?.movesLeft).toBe(10);
+    expect(resets).toHaveLength(2); // the first level, and this one
+    expect(resets.at(-1)).toMatchObject({ movesLeft: 1, score: 0 });
+    expect(scene.canSwap).toBe(true);
   });
 });

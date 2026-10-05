@@ -3,7 +3,8 @@ import * as sounds from './recipes';
 import type { Voice } from './Synth';
 
 /** What each game event sounds like (a recipe per event, with its payload): the game's whole soundtrack, in one map. */
-const SOUND_OF: { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents[K]) => void } = {
+type SoundMap = { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents[K]) => void };
+const SOUND_OF: SoundMap = {
   swap: (v) => {
     sounds.swap(v);
   },
@@ -110,22 +111,26 @@ const SOUND_OF: { readonly [K in keyof GameEvents]: (v: Voice, event: GameEvents
 };
 
 /**
- * The game's sound effects: it listens to the game's events and plays what each one sounds like on the voice (the
- * effects channel). It knows nothing of the game beyond its events.
+ * The game's sound effects: plays what each of the game's events sounds like on the voice (the effects channel), and
+ * knows nothing of the game beyond its events. Returns a function that stops it.
  */
-export class SoundBoard {
-  constructor(
-    events: GameEventBus,
-    private readonly voice: Voice,
-  ) {
-    for (const type of Object.keys(SOUND_OF) as (keyof GameEvents)[]) this.listen(events, type);
-  }
+export function playSoundsOf(events: GameEventBus, voice: Voice): () => void {
+  const stops = (Object.keys(SOUND_OF) as (keyof GameEvents)[]).map((type) =>
+    playOn(events, type, SOUND_OF[type], voice),
+  );
+  return () => {
+    for (const stop of stops) stop();
+  };
+}
 
-  /** Plays an event's recipe whenever it happens (the map pairs each event with a recipe for its own payload). */
-  private listen(events: GameEventBus, type: keyof GameEvents): void {
-    const play = SOUND_OF[type] as (v: Voice, event: unknown) => void;
-    events.on(type, (event) => {
-      play(this.voice, event);
-    });
-  }
+/** Plays an event's recipe whenever it happens (the map pairs each event with a recipe for its own payload). */
+function playOn<K extends keyof GameEvents>(
+  events: GameEventBus,
+  type: K,
+  play: SoundMap[K],
+  voice: Voice,
+): () => void {
+  return events.on(type, (event) => {
+    play(voice, event);
+  });
 }

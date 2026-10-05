@@ -1,15 +1,10 @@
 import type { PointData } from 'pixi.js';
 import { SPECIAL_MENU } from '../config/ui';
+import type { PetalChoice } from '../config/ui';
 import type { SpecialPicker } from '../game/BoosterControl';
 import type { Cell, Special } from '../model/types';
 import type { UiLayer } from './UiLayer';
 import { el } from './UiLayer';
-
-/** One petal: which special it makes, its name, and a picture of the koi as that special. */
-export interface PetalChoice {
-  readonly type: Special['type'];
-  readonly name: string;
-}
 
 /** Where the menu finds things: a cell's centre (stage px), the stage's width, and a koi's picture as a special. */
 export interface MenuBoard {

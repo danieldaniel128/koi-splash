@@ -4,9 +4,10 @@ import type { PointData } from 'pixi.js';
 import { TIMING } from '../config/timing';
 import { WATER } from '../config/water';
 import type { BoosterChange, BoosterUse } from '../model/boosters';
-import type { CascadeStep, Cell, Cleared, Created, Piece, Spawn } from '../model/types';
+import type { CascadeStep, Cell, Cleared, Created, Piece, PlacedPiece, Spawn } from '../model/types';
 import type { BoosterMotions } from './BoosterMotions';
 import type { GameEventBus } from '../game/events';
+import type { TurnAnimator } from '../game/GameScene';
 import type { BoardView } from './BoardView';
 import type { Koi } from './Koi';
 import { planRound } from './specialTiming';
@@ -15,12 +16,6 @@ import { splitPoints } from './splitPoints';
 import type { SpecialFx } from './SpecialFx';
 import type { SpecialMotions } from './SpecialMotions';
 import type { WaterSurface } from './water/PondWater';
-
-/** A piece and the cell it sits in when an animation starts. */
-export interface PlacedPiece {
-  readonly piece: Piece;
-  readonly at: Cell;
-}
 
 /** What the animator plays with: the board, the water, the effects and motions, and the game's events. */
 export interface AnimatorDeps {
@@ -53,7 +48,7 @@ const UNDERWATER = new Color(TIMING.diveTint).toNumber();
  * the deep into the gaps. Every method returns a promise that resolves when the motion ends, so the scene can await
  * the turn step by step instead of chaining callbacks.
  */
-export class BoardAnimator {
+export class BoardAnimator implements TurnAnimator {
   private readonly view: BoardView;
   private readonly cellSize: number;
   private readonly water: WaterSurface;

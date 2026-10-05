@@ -1,13 +1,13 @@
 import { GardenMusic } from '../audio/GardenMusic';
-import { BUSES, byBus, Mixer } from '../audio/Mixer';
-import type { Bus } from '../audio/Mixer';
+import { byBus, Mixer } from '../audio/Mixer';
 import { NightAmbience } from '../audio/NightAmbience';
 import { SampleTrack } from '../audio/SampleTrack';
-import { SoundBoard } from '../audio/SoundBoard';
+import { playSoundsOf } from '../audio/SoundBoard';
 import { Soundtrack } from '../audio/Soundtrack';
 import { Synth } from '../audio/Synth';
 import type { Track } from '../audio/Track';
-import { AMBIENCE, AUDIO, MUSIC } from '../config/audio';
+import { AMBIENCE, AUDIO, BUSES, MUSIC } from '../config/audio';
+import type { Bus } from '../config/audio';
 import { SOUND_MENU } from '../config/ui';
 import { storedSetting } from '../core/storedSetting';
 import type { StoredSetting } from '../core/storedSetting';
@@ -36,7 +36,7 @@ export interface Sound {
 export function startSound(events: GameEventBus): Sound {
   const settings = byBus((bus) => storedSetting(`${AUDIO.storageKey}.${bus}`));
   const mixer = new Mixer(byBus((bus) => settings[bus].load()));
-  new SoundBoard(events, new Synth(mixer, 'sfx'));
+  playSoundsOf(events, new Synth(mixer, 'sfx'));
   const soundtrack = new Soundtrack(events, [musicTrack(mixer), ambienceTrack(mixer)], mixer);
   mixer.listenForUnlock(window);
   const following = new AbortController(); // the page's visibility, until the sound is stopped

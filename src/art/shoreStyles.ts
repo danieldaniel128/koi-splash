@@ -1,3 +1,4 @@
+import type { ShoreStyle } from '../config/pond';
 import { paintStone } from './pondProps';
 
 /**
@@ -11,12 +12,10 @@ export type ShorePainter = (
 ) => void;
 
 /**
- * The looks a pond's border can have, by name. To add one, write a painter for a single piece and list it here;
- * POND.shore.style picks which one a pond uses. Where the pieces go (and how big they are) is not the painter's
- * business: see ringAlongShore.
+ * The looks a pond's border can have, by name (Strategy). To add one, name it in ShoreStyle (src/config/pond.ts):
+ * the compiler then asks for its painter here, one piece at a time. POND.shore.style picks which one a pond uses.
+ * Where the pieces go (and how big they are) is not the painter's business: see ringAlongShore.
  */
-export const SHORE_STYLES = {
+export const SHORE_STYLES: Readonly<Record<ShoreStyle, ShorePainter>> = {
   stones: paintStone,
-} as const satisfies Record<string, ShorePainter>;
-
-export type ShoreStyle = keyof typeof SHORE_STYLES;
+};

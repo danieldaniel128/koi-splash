@@ -1,5 +1,4 @@
-import type { PadEvent } from './pads';
-import type { Kind } from './types';
+import type { Kind, PadEvent } from './types';
 
 /** What one cascade round did, as far as a goal cares. */
 export interface RoundOutcome {

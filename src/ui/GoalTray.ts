@@ -14,21 +14,24 @@ export interface GoalIcons {
 /**
  * The level's goals, one chip each: the goal's icon and how many are still to go (lotuses to bloom, koi of a colour
  * to clear, points to score), ticking down with a pop and turning into a check once that goal is met. The chips are
- * rebuilt only when the goals themselves change.
+ * built when a level starts.
  */
 export class GoalTray {
   readonly element = el('div', 'goal');
   private readonly row = el('div', 'goal__chips');
   private chips: GoalChip[] = [];
-  private shape = '';
 
   constructor(private readonly icons: GoalIcons) {
     this.element.append(this.row, el('span', 'label', 'goals'));
   }
 
+  /** A new level: a fresh chip per goal, showing what's to go with no pop. */
+  reset(goals: readonly GoalProgress[]): void {
+    this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal), this.icons.bonus));
+    this.row.replaceChildren(...this.chips.map((chip) => chip.element));
+  }
+
   update(goals: readonly GoalProgress[]): void {
-    const shape = goals.map((goal) => `${goal.kind}${goal.koi ?? ''}:${goal.target}`).join(',');
-    if (shape !== this.shape) this.build(goals, shape);
     goals.forEach((goal, i) => this.chips[i]?.update(goal));
   }
 
@@ -36,12 +39,6 @@ export class GoalTray {
   iconOf(kind: GoalProgress['kind']): HTMLElement {
     const chip = this.chips.find((c) => c.kind === kind) ?? this.chips[0];
     return chip?.icon ?? this.element;
-  }
-
-  private build(goals: readonly GoalProgress[], shape: string): void {
-    this.shape = shape;
-    this.chips = goals.map((goal) => new GoalChip(goal, this.iconFor(goal), this.icons.bonus));
-    this.row.replaceChildren(...this.chips.map((chip) => chip.element));
   }
 
   private iconFor(goal: GoalProgress): string | null {
@@ -57,7 +54,7 @@ class GoalChip {
   readonly icon = el('span', 'chip__icon');
   readonly kind: GoalProgress['kind'];
   private readonly count = el('span', 'number chip__count');
-  private left = -1;
+  private left: number;
 
   constructor(
     goal: GoalProgress,
@@ -72,20 +69,24 @@ class GoalChip {
       this.icon.append(picture);
     } else setIcon(this.icon, STAR);
     this.element = el('div', 'chip', this.icon, this.count);
+    this.left = leftOf(goal);
+    this.show();
   }
 
   update(goal: GoalProgress): void {
-    const left = Math.max(0, goal.target - goal.done);
+    const left = leftOf(goal);
     if (left === this.left) return;
-    const first = this.left < 0 || left > this.left; // the first show, or a restart
     this.left = left;
-    const done = left === 0;
+    this.show();
+    bump(this.element, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
+    if (left === 0 && this.bonus > 0) this.showBonus();
+  }
+
+  private show(): void {
+    const done = this.left === 0;
     this.element.classList.toggle('chip--done', done);
     if (done) setIcon(this.count, CHECK);
-    else this.count.textContent = `${left}`;
-    if (first) return;
-    bump(this.element, HUD_MOTION.goalBump, HUD_MOTION.goalSettle);
-    if (done && this.bonus > 0) this.showBonus();
+    else this.count.textContent = `${this.left}`;
   }
 
   /** The goal's bonus rises out of the chip in gold and fades. */
@@ -104,4 +105,9 @@ class GoalChip {
       label.remove();
     };
   }
+}
+
+/** How many a goal still needs. */
+function leftOf(goal: GoalProgress): number {
+  return Math.max(0, goal.target - goal.done);
 }

@@ -1,4 +1,5 @@
 import type { PointData } from 'pixi.js';
+import type { StatusDisplay } from '../game/GameScene';
 import type { GameStatus } from '../game/GameStatus';
 import type { Rect } from '../layout/gameLayout';
 import type { StarRule } from '../model/stars';
@@ -15,7 +16,7 @@ import { el } from './UiLayer';
  * under them. It shows the status the scene sends (StatusDisplay) and tells the Pixi side where the score and the
  * goal are, so points and lotuses fly to them. Display only.
  */
-export class Hud {
+export class Hud implements StatusDisplay {
   private readonly moves = new MovesCounter();
   private readonly score = new ScoreCounter();
   private readonly goal: GoalTray;
@@ -43,10 +44,16 @@ export class Hud {
     return this.layer.centreOf(this.goal.iconOf('lotus'));
   }
 
+  reset(status: GameStatus): void {
+    this.moves.reset(status.movesLeft);
+    this.score.reset(status.score);
+    this.goal.reset(status.goals);
+    this.stars.reset(status.score, status.stars);
+  }
+
   update(status: GameStatus): void {
     this.moves.update(status.movesLeft);
-    if (status.score === 0) this.score.reset();
-    else this.score.update(status.score);
+    this.score.update(status.score);
     this.goal.update(status.goals);
     this.stars.update(status.score, status.stars);
   }

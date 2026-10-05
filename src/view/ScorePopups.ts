@@ -2,12 +2,14 @@ import { gsap } from 'gsap';
 import { Container, Text } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { POINTS } from '../config/fx';
+import { runDetached } from '../core/detached';
+import type { MatchEffects } from './BoardAnimator';
 
 /**
  * The points each match earns: they pop up over the match, then fly up to the score and shrink into it.
  * Positions are in the board's space: this layer sits exactly on the board.
  */
-export class ScorePopups extends Container {
+export class ScorePopups extends Container implements MatchEffects {
   /** Labels are reused: making a Text draws a canvas, too slow to do for every match. */
   private readonly spareLabels: Text[] = [];
 
@@ -29,7 +31,7 @@ export class ScorePopups extends Container {
     label.alpha = 1;
     label.scale.set(0.4);
     this.addChild(label);
-    void this.popAndFly(label, at);
+    runDetached(this.popAndFly(label, at), 'a score popup');
   }
 
   private async popAndFly(label: Text, at: PointData): Promise<void> {

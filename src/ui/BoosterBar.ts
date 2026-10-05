@@ -1,17 +1,9 @@
 import type { BoosterButtons } from '../game/BoosterControl';
 import type { Rect } from '../layout/gameLayout';
-import type { BoosterType } from '../model/boosters';
+import type { BoosterSlot, BoosterType } from '../model/boosters';
 import { BOOSTER_ICONS, CHECK, setIcon } from './icons';
 import type { UiLayer } from './UiLayer';
 import { bump, el } from './UiLayer';
-
-/** One booster on the bar: which, its name, how many the level gives, and what the pill says while it's armed. */
-export interface BoosterSlot {
-  readonly type: BoosterType;
-  readonly name: string;
-  readonly count: number;
-  readonly tip: string;
-}
 
 /** One button's parts. */
 interface Button {

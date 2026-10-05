@@ -11,6 +11,8 @@ export const LEVEL = {
    * wins about 70% within 15; a player who ignores them wins about 10% even with 20.
    */
   moves: 15,
+  /** Moves left at which the level warns it's running out (the HUD warms, the music tenses), then that it's nearly over. */
+  movesWarning: { low: 5, last: 3 },
   /**
    * The board's shape, drawn row by row from the top: # is a cell, . is no cell (the bank comes in). A notch 1 cell
    * wide is too thin for stones on both its sides, so it gets one stone along it; a wider one gets a row on each side.

@@ -1,12 +1,9 @@
-import { parseShape } from '../model/shape';
-import type { BoardSpec } from '../model/rules';
-import { LEVEL } from './level';
+import { KOI_SET } from './koi';
 
-/** The board's shape for the level (drawn in LEVEL.shape). */
-export const SHAPE = parseShape(LEVEL.shape);
-
-/** The board the level is played on: its shape and how many koi colours are in play. */
-export const BOARD: BoardSpec = {
-  ...SHAPE,
-  kinds: 5,
-};
+/**
+ * The board the level is played on: one koi colour per entry of KOI_SET. Its shape is drawn in LEVEL.shape and read
+ * while the game boots (see measureScreen), so a slip in the drawing shows the error screen.
+ */
+export const BOARD = {
+  kinds: KOI_SET.length,
+} as const;

@@ -28,10 +28,11 @@ export class ScoreCounter {
     bump(this.value, HUD_MOTION.scoreBump, HUD_MOTION.countUp);
   }
 
-  reset(): void {
+  /** Shows this score at once, with no count up (a new level). */
+  reset(score: number): void {
     gsap.killTweensOf(this.shown);
-    this.shown.score = 0;
-    this.target = 0;
-    this.value.textContent = '0';
+    this.shown.score = score;
+    this.target = score;
+    this.value.textContent = `${score}`;
   }
 }

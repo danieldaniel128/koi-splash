@@ -171,3 +171,11 @@ function cellsOf(board: Board, kind: Kind): Cell[] {
 function countKind(board: Board, kind: Kind): number {
   return cellsOf(board, kind).length;
 }
+
+/** One booster on the bar: which, its name, how many a level gives, and what the pill says while it's armed. */
+export interface BoosterSlot {
+  readonly type: BoosterType;
+  readonly name: string;
+  readonly count: number;
+  readonly tip: string;
+}

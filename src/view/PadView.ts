@@ -3,8 +3,8 @@ import { Container, Sprite, Texture } from 'pixi.js';
 import type { PointData } from 'pixi.js';
 import { bakeLotusPad, bakeProp } from '../art/pondProps';
 import { BOARD_PADS } from '../config/pond';
-import type { Pad, PadEvent } from '../model/pads';
-import type { Cell } from '../model/types';
+import type { PadDisplay } from '../game/GameScene';
+import type { Cell, Pad, PadEvent } from '../model/types';
 import type { Circle, WaterSurface } from './water/PondWater';
 
 /** The water the pads float on: they push it, and it outlines them with foam (see PondWater.float). */
@@ -26,7 +26,7 @@ export interface PadViewLayout {
  * a hit opens a bud one stage, a bloom lifts the lotus and flies it to the goal, an empty pad drifts away. Every
  * frame it tells the water where the pads float, so the pond's shore foam outlines them like its own pads.
  */
-export class PadView extends Container {
+export class PadView extends Container implements PadDisplay {
   private readonly sprites = new Map<number, Sprite>();
   /** Every pad sprite still on the water, including ones blooming or drifting away (until they are gone). */
   private readonly floating = new Set<Sprite>();
